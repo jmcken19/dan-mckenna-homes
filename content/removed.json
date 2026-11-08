@@ -1,4 +1,10 @@
 {
   "_comment": "Listings that were taken off the website. Their old web address shows a friendly 'no longer available' page instead of an error. Managed by the owner editor; restore puts the listing back.",
-  "items": []
+  "items": [
+    {
+      "slug": "100-test-listing-lane-waxhaw-nc",
+      "address": "100 TEST Listing Lane, Waxhaw, NC 28173",
+      "removedAt": "2026-11-08T22:29:32.580Z"
+    }
+  ]
 }
