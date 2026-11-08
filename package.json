@@ -10,7 +10,7 @@
     "build": "node scripts/build.mjs",
     "build:preview": "BASE_PATH=/dan-mckenna-homes PREVIEW=1 node scripts/build.mjs",
     "images": "node scripts/prepare-site-images.mjs",
-    "test": "node --test tests/"
+    "test": "node --test tests/*.test.mjs"
   },
   "repository": {
     "type": "git",
