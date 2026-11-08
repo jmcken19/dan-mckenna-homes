@@ -276,8 +276,8 @@ async function editScreen(id) {
     <form id="lform" novalidate>
       <h2>1. Address</h2>
       ${input('street', 'Street address', values.street, { ph: '123 Main Street', auto: 'address-line1', err: E.street })}
-      <div class="row row--3">
-        ${input('city', 'City', values.city, { ph: 'Waxhaw', auto: 'address-level2', err: E.city })}
+      ${input('city', 'City', values.city, { ph: 'Waxhaw', auto: 'address-level2', err: E.city })}
+      <div class="row">
         <div class="field${E.state ? ' field--error' : ''}"><label for="f-state">State</label><select id="f-state" name="state"><option ${values.state === 'NC' ? 'selected' : ''}>NC</option><option ${values.state === 'SC' ? 'selected' : ''}>SC</option></select>${E.state ? `<p class="err">${esc(E.state)}</p>` : ''}</div>
         ${input('zip', 'ZIP', values.zip, { opt: true, mode: 'numeric', auto: 'postal-code', err: E.zip })}
       </div>

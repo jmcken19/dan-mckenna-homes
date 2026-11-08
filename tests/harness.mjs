@@ -109,7 +109,7 @@ async function bundle() {
 
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.txt': 'text/plain' };
 
-export async function startEditor({ resend = true, port, mirror = null, siteUrl = SITE } = {}) {
+export async function startEditor({ resend = true, port, mirror = null, siteUrl = SITE, persist = null } = {}) {
   const gh = new FakeGitHub();
   if (mirror) await mirror.attach(gh);
   const emails = [];
@@ -120,6 +120,7 @@ export async function startEditor({ resend = true, port, mirror = null, siteUrl 
     ...(port ? { port, host: '127.0.0.1' } : {}),
     modules: true, script, compatibilityDate: '2026-07-01',
     d1Databases: ['DB'], kvNamespaces: ['PHOTOS'],
+    ...(persist ? { d1Persist: persist + '/d1', kvPersist: persist + '/kv' } : {}),
     bindings: {
       GITHUB_REPO: 'test/dmh', GITHUB_BRANCH: 'main', GITHUB_TOKEN: 'fake-token',
       PUBLIC_SITE_URL: siteUrl, ACCESS_TEAM_DOMAIN: TEAM, ACCESS_AUD: AUD,
@@ -152,9 +153,9 @@ export async function startEditor({ resend = true, port, mirror = null, siteUrl 
   });
   const migration = await readFile(join(root, 'owner/migrations/0001_init.sql'), 'utf8');
   const db = await mf.getD1Database('DB');
-  for (const stmt of migration.replace(/--.*$/gm, '').split(';').map((s) => s.trim()).filter(Boolean)) await db.prepare(stmt).run();
-  const removed = await readFile(join(root, 'content/removed.json'), 'utf8');
-  gh.seed('content/removed.json', removed);
+  if (!persist || !existsSync(persist + '/.migrated')) for (const stmt of migration.replace(/--.*$/gm, '').split(';').map((s) => s.trim()).filter(Boolean)) await db.prepare(stmt).run();
+  if (persist) { mkdirSync(persist, { recursive: true }); writeFileSync(persist + '/.migrated', '1'); }
+  if (!mirror) gh.seed('content/removed.json', await readFile(join(root, 'content/removed.json'), 'utf8'));
   const url = port ? `http://127.0.0.1:${port}` : 'http://editor.test';
   const call = async (method, path, { as = OWNER, body, form, idem, headers = {}, token } = {}) => {
     const h = { 'X-DMH-Editor': '1', ...headers };
@@ -201,7 +202,7 @@ export function realMirror(dir, { repo = 'jmcken19/dan-mckenna-homes', branch = 
       gh = fake;
       git('pull', '-q', '--rebase', 'origin', branch);
       const walk = (rel) => { const abs = join(dir, rel); if (!existsSync(abs)) return []; return readdirSync(abs).flatMap((n) => { const r = rel + '/' + n; return statSync(join(dir, r)).isDirectory() ? walk(r) : [r]; }); };
-      for (const f of [...walk('content/listings'), ...walk('public/listings')]) gh.seed(f, readFileSync(join(dir, f)));
+      for (const f of ['content/removed.json', ...walk('content/listings'), ...walk('public/listings')]) gh.seed(f, readFileSync(join(dir, f)));
       fake.onCommit = async (sha, before, after, message) => {
         for (const [path, blob] of after) if (before.get(path) !== blob) { mkdirSync(dirname(join(dir, path)), { recursive: true }); writeFileSync(join(dir, path), gh.blobs.get(blob)); }
         for (const path of before.keys()) if (!after.has(path) && !path.startsWith('README-race')) rmSync(join(dir, path), { force: true });
