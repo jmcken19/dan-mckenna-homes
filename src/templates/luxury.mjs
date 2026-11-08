@@ -35,7 +35,7 @@ ${preview ? `<div class="preview-bar" role="note">Design option 2 – testing pr
   <div class="lx-header__in">
     <a class="lx-brand" href="${url('/')}">
       <span class="lx-brand__name">Dan McKenna</span>
-      <span class="lx-brand__sub">Keller Williams Ballantyne Charlotte</span>
+      <span class="lx-brand__sub">Keller Williams Ballantyne Area, Charlotte, NC</span>
     </a>
     <a class="lx-header__phone" href="${e(site.phoneHref)}">${e(site.phone)}</a>
     <button class="menu-btn lx-menu-btn" type="button" aria-expanded="false" aria-controls="site-nav"><span class="menu-btn__bars" aria-hidden="true"></span><span class="menu-btn__label">Menu</span></button>

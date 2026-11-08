@@ -5,7 +5,7 @@ maintaining this repository. `CLAUDE.md` only points here.
 
 ## What this is
 
-* **Public website** for Dan McKenna, NC/SC Broker/REALTOR® with Keller Williams Ballantyne Charlotte.
+* **Public website** for Dan McKenna, NC/SC Broker/REALTOR® with Keller Williams Ballantyne Area, Charlotte, NC.
   A plain static site: `scripts/build.mjs` turns the files in `content/` and `src/templates/`
   into HTML in `dist/`. No framework, no database.
 * **Owner editor** (`owner/`): a small Cloudflare Worker that Dan uses on his phone to add
