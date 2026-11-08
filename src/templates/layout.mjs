@@ -44,7 +44,7 @@ ${ogImage ? `<meta property="og:image" content="${e(ogImage)}">` : ''}
 </head>
 <body class="${e(bodyClass)}">
 <a class="skip" href="#main">Skip to main content</a>
-${preview ? `<div class="preview-bar" role="note">Testing preview – not the live website. <a href="${e(site.liveUrl || 'https://www.danmckennahomes.com/')}">Go to the live site</a></div>` : ''}
+${preview ? `<div class="preview-bar" role="note">Testing preview – not the live website. <a href="${e(site.liveUrl || 'https://www.danmckennahomes.com/')}">Go to the live site</a>${ctx.altUrl ? ` · <a href="${e(ctx.altUrl)}">See design option 2</a>` : ''}</div>` : ''}
 <div class="topbar">
   <div class="wrap topbar__in">
     <a href="${e(site.phoneHref)}">${ICON.phone}<span>${e(site.phone)}</span></a>

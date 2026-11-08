@@ -74,7 +74,7 @@ export function listingsIndexPage(ctx) {
   </section>`).join('');
   const empty = anyCurrent ? '' : `<div class="empty">
     <h2>No homes listed here right now</h2>
-    <p>Dan's new listings appear on this page as soon as they hit the market. Looking for something specific? Call or text Dan and he'll tell you what's available, including homes that haven't been listed yet.</p>
+    <p>Dan's new listings appear on this page as soon as they hit the market. Looking for something specific? Call or text Dan and tell him what you're looking for.</p>
     <p><a class="btn btn--accent" href="${e(site.phoneHref)}">Call ${e(site.phone)}</a> <a class="btn" href="mailto:${e(site.email)}">Email Dan</a></p>
   </div>`;
   return `<div class="wrap page page--wide">

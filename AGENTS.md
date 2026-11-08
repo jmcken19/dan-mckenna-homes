@@ -105,6 +105,13 @@ anything in `content/listings/` is public as soon as it is pushed to `main`.
 `npm run images`, then add `{ "src": "/assets/img/hero-N", "alt": "describe the photo", "focus": "50% 50%" }`
 to `heroSlides` in `content/site.json`. One slide = still photo; two or more = slow slideshow with a pause button.
 
+## Two designs (testing)
+
+The preview publishes two designs from the same content: **classic** (matches the original site)
+at `/dan-mckenna-homes/` and **design option 2** (`THEME=luxury`: serif type, full-screen photos, listing-led
+slideshow; `src/templates/luxury.mjs` + `src/styles/luxury.css`) at `/dan-mckenna-homes/v2/`.
+Content edits apply to both. When Dan picks one, build production with that `THEME` and delete the other.
+
 ## Preview, test, publish
 
 ```bash

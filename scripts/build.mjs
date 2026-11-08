@@ -14,6 +14,7 @@ import { validatePublicListing } from '../src/lib/listing.mjs';
 import { layout } from '../src/templates/layout.mjs';
 import { listingDetail } from '../src/templates/listing.mjs';
 import * as P from '../src/templates/pages.mjs';
+import { luxLayout, luxHome } from '../src/templates/luxury.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const out = join(root, process.env.OUT_DIR || 'dist');
@@ -21,6 +22,8 @@ const out = join(root, process.env.OUT_DIR || 'dist');
 const BASE = (process.env.BASE_PATH || '').replace(/\/$/, '');
 const PREVIEW = process.env.PREVIEW === '1';
 const SITE_URL = process.env.SITE_URL || '';
+const THEME = process.env.THEME === 'luxury' ? 'luxury' : 'classic';
+const ALT_URL = process.env.ALT_URL || '';
 let BUILD_ID = process.env.BUILD_ID || '';
 if (!BUILD_ID) { try { BUILD_ID = execSync('git rev-parse HEAD', { cwd: root }).toString().trim(); } catch { BUILD_ID = 'dev'; } }
 
@@ -66,14 +69,22 @@ async function main() {
     preview: PREVIEW,
     siteUrl: SITE_URL,
     buildId: BUILD_ID.slice(0, 12),
+    theme: THEME,
+    altUrl: ALT_URL,
     url: (p) => (/^(https?:|mailto:|tel:|sms:)/.test(p) ? p : BASE + p),
   };
   if (existsSync(out)) await rm(out, { recursive: true, force: true });
   await mkdir(out, { recursive: true });
   await cp(join(root, 'public'), out, { recursive: true });
+  const page = THEME === 'luxury' ? luxLayout : layout;
+  if (THEME === 'luxury') {
+    const base = await readFile(join(root, 'public/assets/css/site.css'), 'utf8');
+    const lux = await readFile(join(root, 'src/styles/luxury.css'), 'utf8');
+    await writeFile(join(out, 'assets/css/luxury.css'), base + '\n' + lux);
+  }
 
   const pages = [
-    ['/', 'Home', P.homePage, { bodyClass: 'home' }],
+    ['/', 'Home', THEME === 'luxury' ? luxHome : P.homePage, { bodyClass: 'home' }],
     ['/about-us/', 'About us', P.aboutPage, { description: 'Meet Dan McKenna, full-time NC/SC Broker/REALTOR® with Keller Williams Ballantyne Area, CLHMS and GUILD member, serving the Charlotte area.' }],
     ['/listings/', 'Listings', P.listingsIndexPage, { description: 'Homes for sale represented by Dan McKenna in the Charlotte area.' }],
     ['/new-construction/', 'New Construction Buyer Agent', P.newConstructionPage, { description: 'Why work with an experienced buyer\'s agent when purchasing new construction in the Charlotte area.' }],
@@ -84,22 +95,22 @@ async function main() {
     ['/dmca-compliance-2/', 'Copyright', P.dmcaPage, {}],
   ];
   for (const [path, title, fn, opts] of pages) {
-    await writePage(path, layout(ctx, { path, title, body: fn(ctx), ...opts }));
+    await writePage(path, page(ctx, { path, title, body: fn(ctx), ...opts }));
   }
   for (const t of content.testimonials) {
     const path = `/testimonial/${t.slug}/`;
-    await writePage(path, layout(ctx, { path, title: t.title, description: t.text[0].slice(0, 150), body: P.testimonialPage(ctx, t) }));
+    await writePage(path, page(ctx, { path, title: t.title, description: t.text[0].slice(0, 150), body: P.testimonialPage(ctx, t) }));
   }
   for (const l of content.listings) {
     const path = `/listings/${l.slug}/`;
     const desc = `${l.address.street}, ${l.address.city}, ${l.address.state}. ${(l.description || '').slice(0, 120)}`;
-    await writePage(path, layout(ctx, { path, title: `${l.address.street}, ${l.address.city}`, description: desc, body: listingDetail(ctx, l), ogImage: SITE_URL ? SITE_URL.replace(/\/$/, '') + l.photos[0].large : '' }));
+    await writePage(path, page(ctx, { path, title: `${l.address.street}, ${l.address.city}`, description: desc, body: listingDetail(ctx, l), ogImage: SITE_URL ? SITE_URL.replace(/\/$/, '') + l.photos[0].large : '' }));
   }
   for (const r of content.removed) {
     const path = `/listings/${r.slug}/`;
-    await writePage(path, layout(ctx, { path, title: 'Home no longer available', body: P.removedListingPage(ctx, r) }));
+    await writePage(path, page(ctx, { path, title: 'Home no longer available', body: P.removedListingPage(ctx, r) }));
   }
-  await writePage('404.html', layout(ctx, { path: '/404', title: 'Page not found', body: P.notFoundPage(ctx) }));
+  await writePage('404.html', page(ctx, { path: '/404', title: 'Page not found', body: P.notFoundPage(ctx) }));
 
   // Machine-readable files used by the owner editor to confirm a change is live.
   await writeFile(join(out, 'version.json'), JSON.stringify({ build: BUILD_ID, builtAt: new Date().toISOString() }));

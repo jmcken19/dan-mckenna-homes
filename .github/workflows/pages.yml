@@ -25,10 +25,20 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm test
-      - name: Build preview
+      - name: Build preview (classic design)
         run: node scripts/build.mjs
         env:
           BASE_PATH: /${{ github.event.repository.name }}
+          ALT_URL: /${{ github.event.repository.name }}/v2/
+          PREVIEW: "1"
+          BUILD_ID: ${{ github.sha }}
+      - name: Build design option 2 into /v2/
+        run: node scripts/build.mjs
+        env:
+          THEME: luxury
+          OUT_DIR: dist/v2
+          BASE_PATH: /${{ github.event.repository.name }}/v2
+          ALT_URL: /${{ github.event.repository.name }}/
           PREVIEW: "1"
           BUILD_ID: ${{ github.sha }}
       - uses: actions/configure-pages@v5
