@@ -1,0 +1,23 @@
+{
+  "_comment": "Site-wide facts. Every value here was copied from the live danmckennahomes.com in Nov 2026. Do not add facts that Dan has not confirmed.",
+  "name": "Dan McKenna Homes",
+  "agent": "Dan McKenna",
+  "agentTitle": "NC/SC Broker/REALTOR®",
+  "tagline": "Experience Counts. Buy. Sell. Build. Relocate.",
+  "phone": "704-441-4556",
+  "phoneHref": "tel:+17044414556",
+  "smsHref": "sms:+17044414556",
+  "email": "danmckenna@kw.com",
+  "brokerage": "Keller Williams Ballantyne Area",
+  "serviceAreas": ["Charlotte", "Waxhaw", "Weddington", "Marvin"],
+  "serviceAreaSentence": "Serving Charlotte, Waxhaw, Weddington, Marvin, and surrounding communities in North Carolina and South Carolina.",
+  "metaDescription": "Dan McKenna, NC/SC Broker/REALTOR® with Keller Williams Ballantyne Area. Serving Charlotte, Waxhaw, Weddington, Marvin, and surrounding communities.",
+  "heroSlides": [
+    {
+      "src": "/assets/img/hero-1",
+      "alt": "Backyard patio with a stone fire pit, wicker chairs, and a pool surrounded by trees",
+      "focus": "50% 70%"
+    }
+  ],
+  "heroSlideSeconds": 7
+}

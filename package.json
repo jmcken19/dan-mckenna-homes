@@ -1,0 +1,30 @@
+{
+  "name": "dan-mckenna-homes",
+  "version": "1.0.0",
+  "description": "Dan McKenna Homes website + owner editor",
+  "directories": {
+    "doc": "docs",
+    "test": "tests"
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "build:preview": "BASE_PATH=/dan-mckenna-homes PREVIEW=1 node scripts/build.mjs",
+    "images": "node scripts/prepare-site-images.mjs",
+    "test": "node --test tests/"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jmcken19/dan-mckenna-homes.git"
+  },
+  "bugs": {
+    "url": "https://github.com/jmcken19/dan-mckenna-homes/issues"
+  },
+  "homepage": "https://github.com/jmcken19/dan-mckenna-homes#readme",
+  "devDependencies": {
+    "@fontsource/montserrat": "^5.3.0",
+    "@fontsource/source-sans-pro": "^5.3.0",
+    "sharp": "^0.35.5"
+  },
+  "private": true,
+  "type": "module"
+}
