@@ -1,0 +1,45 @@
+{
+  "id": "lst-enl608829f",
+  "slug": "100-test-listing-lane-waxhaw-nc",
+  "revision": 18,
+  "status": "sold",
+  "address": {
+    "street": "100 TEST Listing Lane",
+    "city": "Waxhaw",
+    "state": "NC",
+    "zip": "28173"
+  },
+  "price": 499000,
+  "beds": 4,
+  "baths": 3,
+  "sqft": null,
+  "description": "TEST LISTING created by the automated acceptance test. This is not a real home and will be removed.",
+  "isTest": true,
+  "photos": [
+    {
+      "id": "p-lmvljca0mb",
+      "large": "/listings/lst-enl608829f/p-lmvljca0mb-1800.jpg",
+      "small": "/listings/lst-enl608829f/p-lmvljca0mb-900.jpg",
+      "width": 1350,
+      "height": 1800,
+      "alt": ""
+    },
+    {
+      "id": "p-jbj2z7no99",
+      "large": "/listings/lst-enl608829f/p-jbj2z7no99-1800.jpg",
+      "small": "/listings/lst-enl608829f/p-jbj2z7no99-900.jpg",
+      "width": 1350,
+      "height": 1800,
+      "alt": ""
+    },
+    {
+      "id": "p-xprcin26w5",
+      "large": "/listings/lst-enl608829f/p-xprcin26w5-1800.jpg",
+      "small": "/listings/lst-enl608829f/p-xprcin26w5-900.jpg",
+      "width": 1350,
+      "height": 1800,
+      "alt": ""
+    }
+  ],
+  "updatedAt": "2026-11-08T22:30:28.076Z"
+}
