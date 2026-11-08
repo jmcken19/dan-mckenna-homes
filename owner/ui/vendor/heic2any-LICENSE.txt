@@ -1,0 +1,2 @@
+heic2any v0.0.4 – MIT License – https://github.com/alexcorvi/heic2any
+Includes libheif (LGPL-3.0) compiled to JavaScript. Loaded only when a HEIC photo cannot be opened natively.

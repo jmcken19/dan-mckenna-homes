@@ -1,0 +1,41 @@
+# Dan McKenna Homes – owner editor (Cloudflare Worker, free plan).
+# Setup steps: see docs/MAINTAINER.md → "Connect the editor".
+name = "dmh-owner"
+main = "src/index.mjs"
+compatibility_date = "2026-10-01"
+workers_dev = true
+
+[assets]
+directory = "./ui"
+binding = "ASSETS"
+run_worker_first = true
+
+[[d1_databases]]
+binding = "DB"
+database_name = "dmh-owner"
+database_id = "REPLACE_WITH_D1_ID"
+migrations_dir = "migrations"
+
+[[kv_namespaces]]
+binding = "PHOTOS"
+id = "REPLACE_WITH_KV_ID"
+
+[vars]
+GITHUB_REPO = "jmcken19/dan-mckenna-homes"
+GITHUB_BRANCH = "main"
+# Where the public site lives. Preview now; change to https://www.danmckennahomes.com at launch.
+PUBLIC_SITE_URL = "https://jmcken19.github.io/dan-mckenna-homes"
+# Cloudflare Access (Zero Trust) team domain and the application's AUD tag.
+ACCESS_TEAM_DOMAIN = "REPLACE.cloudflareaccess.com"
+ACCESS_AUD = "REPLACE_WITH_ACCESS_AUD"
+# Who may edit. Comma-separated. Must ALSO be allowed in the Access policy.
+OWNER_EMAILS = "danmckenna@kw.com"
+MAINTAINER_EMAILS = "REPLACE_WITH_JAMES_EMAIL"
+# Change requests are emailed here (Resend). NOTIFY_FROM must be a verified Resend sender.
+NOTIFY_TO = "REPLACE_WITH_JAMES_EMAIL"
+SUPPORT_NAME = "James McKenna"
+SUPPORT_EMAIL = "REPLACE_WITH_JAMES_EMAIL"
+SUPPORT_PHONE = ""
+
+# Secrets (never in this file):  npx wrangler secret put GITHUB_TOKEN
+#                                npx wrangler secret put RESEND_API_KEY
