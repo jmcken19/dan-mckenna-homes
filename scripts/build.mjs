@@ -85,7 +85,7 @@ async function main() {
 
   const pages = [
     ['/', 'Home', THEME === 'luxury' ? luxHome : P.homePage, { bodyClass: 'home' }],
-    ['/about-us/', 'About us', P.aboutPage, { description: 'Meet Dan McKenna, full-time NC/SC Broker/REALTOR® with Keller Williams Ballantyne Area, CLHMS and GUILD member, serving the Charlotte area.' }],
+    ['/about-us/', 'About us', P.aboutPage, { description: 'Meet Dan McKenna, full-time NC/SC Broker/REALTOR® with Keller Williams Ballantyne Charlotte, CLHMS and GUILD member, serving the Charlotte area.' }],
     ['/listings/', 'Listings', P.listingsIndexPage, { description: 'Homes for sale represented by Dan McKenna in the Charlotte area.' }],
     ['/new-construction/', 'New Construction Buyer Agent', P.newConstructionPage, { description: 'Why work with an experienced buyer\'s agent when purchasing new construction in the Charlotte area.' }],
     ['/luxury-home-marketing/', 'Luxury Home Marketing', P.luxuryPage, { description: 'Luxury home marketing in the Charlotte area by Dan McKenna, Certified Luxury Home Marketing Specialist and GUILD member.' }],

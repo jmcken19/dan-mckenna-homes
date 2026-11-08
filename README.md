@@ -1,6 +1,6 @@
 # Dan McKenna Homes
 
-Website for Dan McKenna, NC/SC Broker/REALTOR® – Keller Williams Ballantyne Area.
+Website for Dan McKenna, NC/SC Broker/REALTOR® – Keller Williams Ballantyne Charlotte.
 
 * **Testing preview:** https://jmcken19.github.io/dan-mckenna-homes/ (not indexed)
 * **Dan's guide:** [docs/OWNER-GUIDE.md](docs/OWNER-GUIDE.md)

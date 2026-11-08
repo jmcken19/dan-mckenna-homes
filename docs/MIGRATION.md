@@ -18,7 +18,7 @@ Audited Nov 8, 2026 at desktop and phone widths. Verified = page loads on the pr
 | Site-wide "Have a question?" form (name/email/phone/message, math captcha) | replaced by Call / Text / Email buttons in the same spot | Preview: intentionally no form |
 | "Share this listing" / "Hold on! redirecting to listing data" modals | not carried over (no IDX search exists on the old site) | n/a |
 
-Contact facts verified against source: **704-441-4556**, **danmckenna@kw.com**, brokerage **Keller Williams Ballantyne Area** (from the KW logo and page sign-offs), service areas **Charlotte, Waxhaw, Weddington, Marvin, and surrounding communities in NC and SC**. (The old homepage meta description also lists Fort Mill, Indian Land, Lake Norman, Mooresville, Huntersville, Denver, Sherrills Ford – not used because no page states them; confirm with Dan.)
+Contact facts verified against source: **704-441-4556**, **danmckenna@kw.com**, brokerage **Keller Williams Ballantyne Charlotte** (old site said "Ballantyne Area"; renamed at the client's request, Nov 8 2026), service areas **Charlotte, Waxhaw, Weddington, Marvin, and surrounding communities in NC and SC**. (The old homepage meta description also lists Fort Mill, Indian Land, Lake Norman, Mooresville, Huntersville, Denver, Sherrills Ford – not used because no page states them; confirm with Dan.)
 
 ## Third-party items needing permission or replacement
 

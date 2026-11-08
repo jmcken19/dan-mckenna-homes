@@ -124,7 +124,7 @@ export function aboutPage(ctx) {
 <h2>Experience &amp; Recognition</h2>
 <p>My commitment to my clients and consistent real estate production have earned recognition throughout my career, including:</p>
 <ul>
-<li>2022 #1 Individual Real Estate Agent — Keller Williams Ballantyne office, among approximately 500 agents</li>
+<li>2022 #1 Individual Real Estate Agent — Keller Williams Ballantyne Charlotte office, among approximately 500 agents</li>
 <li>Consistent Keller Williams Top Producer — Recognized for production annually since 2015</li>
 <li>Nextdoor Neighborhood Favorite — 2017, 2018, 2019, 2023 &amp; 2024</li>
 <li>Multiple recognitions from the Keller Williams Carolinas Region</li>
@@ -162,7 +162,7 @@ export function newConstructionPage(ctx) {
 <h2>Build with Confidence</h2>
 <p>Whether you're considering a move-in-ready new home, selecting a homesite in a new community, or building a fully customized residence, having an experienced REALTOR® on your side provides valuable guidance and peace of mind.</p>
 <p>Let my experience work for you.</p>
-<p class="signoff"><strong>Dan McKenna</strong><br>Dan McKenna Homes | Keller Williams Ballantyne Area<br>Serving Charlotte, Waxhaw, Weddington, Marvin, and surrounding communities in North Carolina and South Carolina.</p>`,
+<p class="signoff"><strong>Dan McKenna</strong><br>Dan McKenna Homes | Keller Williams Ballantyne Charlotte<br>Serving Charlotte, Waxhaw, Weddington, Marvin, and surrounding communities in North Carolina and South Carolina.</p>`,
   });
 }
 
@@ -198,7 +198,7 @@ export function luxuryPage(ctx) {
 <h2>Experience Counts</h2>
 <p>Exceptional homes deserve exceptional representation.</p>
 <p>My commitment is to provide knowledgeable guidance, personalized service, and a thoughtful approach to every real estate transaction.</p>
-<p class="signoff"><strong>Dan McKenna</strong><br>Certified Luxury Home Marketing Specialist™ | GUILD™ Recognition<br>Dan McKenna Homes | Keller Williams Luxury<br>Keller Williams Ballantyne/Charlotte</p>`,
+<p class="signoff"><strong>Dan McKenna</strong><br>Certified Luxury Home Marketing Specialist™ | GUILD™ Recognition<br>Dan McKenna Homes | Keller Williams Luxury<br>Keller Williams Ballantyne Charlotte</p>`,
   });
 }
 
