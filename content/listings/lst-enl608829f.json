@@ -1,8 +1,8 @@
 {
   "id": "lst-enl608829f",
   "slug": "100-test-listing-lane-waxhaw-nc",
-  "revision": 12,
-  "status": "pending",
+  "revision": 14,
+  "status": "sold",
   "address": {
     "street": "100 TEST Listing Lane",
     "city": "Waxhaw",
@@ -41,5 +41,5 @@
       "alt": ""
     }
   ],
-  "updatedAt": "2026-11-08T22:26:43.536Z"
+  "updatedAt": "2026-11-08T22:28:33.143Z"
 }
