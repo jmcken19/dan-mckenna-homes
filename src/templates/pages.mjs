@@ -62,7 +62,7 @@ export function homePage(ctx) {
   ${multi ? '<button class="hero__pause sr-focus" type="button" aria-pressed="false">Pause slideshow</button>' : ''}
 </section>
 ${listingsSection}
-<section class="home-testimonials" aria-labelledby="ht-h">
+<section class="home-testimonials" aria-labelledby="ht-h" data-reveal>
   <div class="wrap">
     <h2 id="ht-h" class="section-title">What Clients Say About Working With Us</h2>
     <div class="carousel" data-carousel data-marquee>

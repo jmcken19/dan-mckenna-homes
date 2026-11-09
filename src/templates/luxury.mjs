@@ -168,7 +168,7 @@ export function luxHome(ctx) {
   </div>
 </section>
 
-<section class="lx-quotes" aria-labelledby="q-h">
+<section class="lx-quotes" aria-labelledby="q-h" data-reveal>
   <div class="lx-wrap">
     <h2 id="q-h" class="lx-eyebrow lx-eyebrow--dark">What clients say</h2>
     <div class="carousel" data-carousel data-marquee>

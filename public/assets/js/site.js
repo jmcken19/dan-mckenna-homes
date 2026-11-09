@@ -1,6 +1,16 @@
 // Small progressive enhancements. Everything works without JavaScript.
 document.documentElement.classList.remove('no-js');
 (function () {
+  // Sections marked data-reveal fade in when they scroll into view.
+  var reveals = document.querySelectorAll('[data-reveal]');
+  if (reveals.length && 'IntersectionObserver' in window) {
+    document.documentElement.classList.add('reveal-ready');
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (en) { if (en.isIntersecting) { en.target.classList.add('is-revealed'); io.unobserve(en.target); } });
+    }, { threshold: 0.15 });
+    reveals.forEach(function (r) { io.observe(r); });
+  }
+
   // Testing banner: let the viewer hide it (remembered in this browser)
   document.querySelectorAll('[data-hide-preview]').forEach(function (b) {
     b.addEventListener('click', function () {

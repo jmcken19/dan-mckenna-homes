@@ -237,3 +237,9 @@ p { margin: 0 0 1rem; }
 .hero__pause.sr-focus:focus { width: auto; height: auto; border-radius: 4px; padding: .6rem 1rem; font: 600 .9rem var(--body); color: #fff; background: rgba(0,0,0,.7); }
 .carousel.is-marquee .carousel__track { cursor: grab; user-select: none; -webkit-user-select: none; }
 .carousel.is-marquee.is-dragging .carousel__track { cursor: grabbing; }
+
+/* Fade in as it scrolls into view (only when JavaScript is running, so nothing stays hidden without it). */
+.reveal-ready [data-reveal] > * > * { opacity: 0; transform: translateY(28px); transition: opacity 1s ease, transform 1s ease; }
+.reveal-ready [data-reveal] > * > *:nth-child(2) { transition-delay: .2s; }
+.reveal-ready [data-reveal] > * > *:nth-child(n+3) { transition-delay: .4s; }
+.reveal-ready [data-reveal].is-revealed > * > * { opacity: 1; transform: none; }
