@@ -23,20 +23,8 @@
       "src": "/assets/img/hero-1",
       "alt": "Backyard patio with a stone fire pit, wicker chairs, and a pool surrounded by trees",
       "focus": "50% 70%"
-    },
-    {
-      "id": "s-ve2gk14qxy",
-      "src": "/assets/img/hero/s-ve2gk14qxy",
-      "alt": "Homepage photo",
-      "focus": "50% 50%"
-    },
-    {
-      "id": "s-1ijaz2hvc1",
-      "src": "/assets/img/hero/s-1ijaz2hvc1",
-      "alt": "Homepage photo",
-      "focus": "50% 50%"
     }
   ],
-  "heroSlideSeconds": 4,
-  "heroFade": true
+  "heroSlideSeconds": 7,
+  "heroFade": false
 }
