@@ -298,7 +298,6 @@ async function route() {
 function startScreen() {
   setScreen(`
   <h1>What would you like to do?</h1>
-  <div class="note"><p><strong>To come back here next time:</strong> click your <strong>Website Editor</strong> bookmark. (No bookmark yet? Press <strong>Ctrl + D</strong> now to save one.)</p></div>
   <div class="big-choices">
     <a class="big-choice" href="#/listings"><strong>Manage listings</strong>Add a home, change price or photos, mark it Pending or Sold, or take it off the website.</a>
     <a class="big-choice" href="#/homepage"><strong>Homepage photos</strong>Choose the photos that rotate at the top of your homepage, their order, and how fast they change.</a>
