@@ -88,6 +88,15 @@ HTTPS, same account as the editor):
   Access (tokens signed by the test harness with the same verification code), Resend delivery, and
   phone photo picking on a real device (iPhone HEIC path untested on hardware). Re-check these in step 8.
 
+### Homepage photos (added Nov 8)
+* Editor screen **Homepage photos**: upload, drag to reorder (touch + mouse + arrow keys), "keep in view" focus,
+  speed (default Normal 7 s), fade (default off), preview in either design, publish. Drafts are private (D1 `settings` row
+  + KV); publish = one commit to `content/site.json` + `public/assets/img/hero/`. Migration `0002_settings.sql` –
+  run `npx wrangler d1 migrations apply dmh-owner --remote` when connecting.
+* Verified: API tests; phone-size UI run (finger drag, keyboard, drop-a-file on desktop); a real publish of a 3-photo,
+  4 s, fade-on slideshow to the preview (both designs rotated on schedule), then restored to the original single photo
+  through the editor (test photo files removed, status reported ✓ live).
+
 ## Recovery
 
 * **Undo a published change:** `git log --oneline -- content public/listings` → `git revert <sha>` → push.

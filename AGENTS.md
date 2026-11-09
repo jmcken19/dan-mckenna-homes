@@ -101,9 +101,14 @@ anything in `content/listings/` is public as soon as it is pushed to `main`.
 
 **Change page text:** `src/templates/pages.mjs`. Contact details: `content/site.json`.
 
-**Homepage slideshow:** add the photo as `assets-src/hero-N.jpg` (N = 2…5), run
-`npm run images`, then add `{ "src": "/assets/img/hero-N", "alt": "describe the photo", "focus": "50% 50%" }`
-to `heroSlides` in `content/site.json`. One slide = still photo; two or more = slow slideshow with a pause button.
+**Homepage slideshow:** Dan manages it in the editor (**Homepage photos**) – prefer that. It lives in
+`content/site.json`: `heroSlides` = `[{ "id": "s-xxxxxx", "src": "/assets/img/hero/s-xxxxxx", "alt": "…", "focus": "50% 15%" }]`
+(files `<src>-800.jpg`, `-1400.jpg`, `-2000.jpg`, metadata stripped; first = shown first; 1–12 photos),
+`heroSlideSeconds` (Slow 10 / Normal 7 / Fast 4; 2–30 allowed) and `heroFade` (true/false, default false).
+One photo = still image; two or more = slideshow with a pause button. `npm test` validates all of it.
+
+**Favicon:** `public/favicon.ico` + `public/assets/img/{favicon-32,favicon,apple-touch-icon,icon-192,icon-512}.png`
+(made from `assets-src/kw-mark-red.png`) and `public/site.webmanifest`; copies for the editor live in `owner/ui/`.
 
 ## Two designs (testing)
 

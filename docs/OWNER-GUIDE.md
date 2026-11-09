@@ -28,7 +28,8 @@ in. That's it. No password to remember.
 
 ### Change photos or price
 Open the home (search by street address). Change the price and tap **Save draft**.
-Under **Photos**: **Make cover**, **↑ Earlier / ↓ Later** to change the order, **Replace**, or **Remove**.
+Under **Photos**: hold **⠿ Drag** and slide a photo to change the order (the top one is the cover), or use
+**Make cover**, **Replace**, or **Remove**. On a computer you can drag photos onto the **+ Add photos** box.
 Then tap **Publish changes**. Changed your mind? **Undo my unpublished changes**.
 
 ![Photos](img/07-edited.jpg)
@@ -38,6 +39,19 @@ Open the home → **Mark Pending** or **Mark Sold** → confirm. The website upd
 Sold homes stay on your website under "Recently Sold".
 
 ![Marked pending](img/08-pending-done.jpg)
+
+### Change the photos at the top of your homepage
+Tap **Homepage photos**.
+* **+ Add photos** – pick one or several. (On a computer you can also drag photos onto that box.)
+* **Change the order** – hold **⠿ Drag** and slide the photo up or down. **Photo 1 shows first.**
+  Or tap **Show first** on any photo.
+* **On phones, keep in view: Top / Middle / Bottom** – phones show a narrower slice of the photo;
+  choose the part that matters (a roofline → Top, a patio → Bottom).
+* **Speed** – Slow, **Normal** (recommended) or Fast.  **Fade** – Off (recommended) or On.
+* **Replace** or **Remove** a photo (there must always be at least one).
+* Tap **Preview** to watch it, then **Publish**. Wide photos look best.
+
+![Homepage photos](img/20-homepage-photos.jpg)
 
 ### Take it down (and put it back)
 Open the home → **Take off website** → confirm. Buyers no longer see it; anyone with the old link
