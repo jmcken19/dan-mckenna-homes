@@ -93,84 +93,117 @@ document.documentElement.classList.remove('no-js');
   }
 
   // Reviews drifting slowly sideways in an endless loop, starting at a random review.
-  // Pauses while someone touches/hovers/focuses it; keyboard users get a Pause button.
+  // Moved with a GPU transform (smooth on phones). Drag with mouse or finger; a flick keeps gliding.
+  // Pauses while the mouse is over it or a card has keyboard focus; keyboard users also get a Pause button.
   document.querySelectorAll('[data-marquee]').forEach(function (c) {
     var track = c.querySelector('.carousel__track');
     var originals = Array.prototype.slice.call(track.children);
     if (originals.length < 2) { c.removeAttribute('data-marquee'); return; }
     c.removeAttribute('data-carousel');
     c.classList.add('is-marquee');
+    var inner = document.createElement('div');
+    inner.className = 'marquee__inner';
+    originals.forEach(function (el) { inner.appendChild(el); });
     // Copy the cards once so the row can loop without a jump. Copies are hidden from screen readers and keyboard.
     originals.forEach(function (el) {
       var copy = el.cloneNode(true);
       copy.setAttribute('aria-hidden', 'true');
       copy.setAttribute('inert', '');
       copy.querySelectorAll('a, button').forEach(function (a) { a.setAttribute('tabindex', '-1'); });
-      track.appendChild(copy);
+      inner.appendChild(copy);
     });
-    var pauseBtn = c.querySelector('.marquee-pause');
-    var speed = 0.35; // pixels per frame ≈ 21 px/second: slow enough to read
-    var userPaused = false, holdUntil = 0, inside = false, pos = 0, last = 0;
-    var loopWidth = function () { return track.children[originals.length].offsetLeft - track.children[0].offsetLeft; };
-    var start = originals[Math.floor(Math.random() * originals.length)];
-    pos = start.offsetLeft - track.children[0].offsetLeft;
-    track.scrollLeft = pos;
-    var hold = function (ms) { holdUntil = Date.now() + ms; };
-    ['pointerenter', 'focusin', 'touchstart'].forEach(function (ev) { track.addEventListener(ev, function () { inside = true; }, { passive: true }); });
-    // Mouse leaves → carry on right away. After a finger swipe, wait a moment so the swipe can glide to a stop.
-    ['pointerleave', 'focusout'].forEach(function (ev) { track.addEventListener(ev, function (e) { if (e.pointerType === 'touch') return; inside = false; pos = track.scrollLeft; }, { passive: true }); });
-    track.addEventListener('touchend', function () { inside = false; hold(1200); pos = track.scrollLeft; }, { passive: true });
-    // Keep the loop endless when someone drags or swipes past either end.
-    var wrap = function () {
-      var w = loopWidth();
-      if (track.scrollLeft >= w) track.scrollLeft -= w;
-      else if (track.scrollLeft < 2) track.scrollLeft += w;
-      pos = track.scrollLeft;
-    };
-    track.addEventListener('scroll', function () { if (inside || dragging) wrap(); }, { passive: true });
+    track.appendChild(inner);
 
-    // Drag with the mouse (phones and touchpads already swipe natively).
-    var dragging = false, moved = 0, startX = 0, startLeft = 0;
+    var pauseBtn = c.querySelector('.marquee-pause');
+    var SPEED = 0.022;            // px per ms ≈ 22 px/second: slow enough to read
+    var x = 0, vel = 0, last = 0;
+    var userPaused = false, hover = false, focused = false, dragging = false, holdUntil = 0;
+    var loopW = function () { return inner.children[originals.length].offsetLeft - inner.children[0].offsetLeft; };
+    var wrap = function () { var w = loopW(); if (w > 0) { x = ((x % w) + w) % w; } };
+    var paint = function () { inner.style.transform = 'translate3d(' + (-x).toFixed(2) + 'px,0,0)'; };
+    x = originals[Math.floor(Math.random() * originals.length)].offsetLeft - originals[0].offsetLeft;
+    paint();
+    // The track never scrolls itself (focus could otherwise nudge it).
+    track.addEventListener('scroll', function () { track.scrollLeft = 0; }, { passive: true });
+
+    // Dragging with mouse, finger or pen. Vertical finger moves still scroll the page (touch-action: pan-y).
+    var startX = 0, startY = 0, startOff = 0, moved = 0, pid = null, decided = false, lastMoveX = 0, lastMoveT = 0;
     track.addEventListener('pointerdown', function (e) {
-      if (e.pointerType !== 'mouse' || e.button !== 0) return;
-      dragging = true; moved = 0; startX = e.clientX; startLeft = track.scrollLeft;
-      c.classList.add('is-dragging');
+      if (e.pointerType === 'mouse' && e.button !== 0) return;
+      pid = e.pointerId; startX = lastMoveX = e.clientX; startY = e.clientY; startOff = x; moved = 0; vel = 0;
+      decided = e.pointerType === 'mouse'; dragging = decided; lastMoveT = performance.now();
+      if (dragging) { c.classList.add('is-dragging'); try { track.setPointerCapture(pid); } catch (err) {} }
     });
-    window.addEventListener('pointermove', function (e) {
+    track.addEventListener('pointermove', function (e) {
+      if (e.pointerId !== pid) return;
+      var dx = e.clientX - startX, dy = e.clientY - startY;
+      if (!decided) {
+        if (Math.abs(dx) < 6 && Math.abs(dy) < 6) return;
+        decided = true;
+        if (Math.abs(dy) > Math.abs(dx)) { pid = null; return; } // a page scroll, not a swipe
+        dragging = true; c.classList.add('is-dragging'); // touches are already captured by the browser
+      }
       if (!dragging) return;
-      var dx = e.clientX - startX; moved = Math.max(moved, Math.abs(dx));
-      track.scrollLeft = startLeft - dx; wrap(); startLeft = track.scrollLeft + dx;
-      if (moved > 3) e.preventDefault();
+      moved = Math.max(moved, Math.abs(dx));
+      var now = performance.now(), dt = Math.max(now - lastMoveT, 1);
+      vel = 0.8 * vel + 0.2 * (-(e.clientX - lastMoveX) / dt); // px per ms, smoothed
+      lastMoveX = e.clientX; lastMoveT = now;
+      x = startOff - dx; wrap(); paint();
+      if (e.cancelable) e.preventDefault();
     });
-    window.addEventListener('pointerup', function () {
+    var endDrag = function (e) {
+      if (e.pointerId !== pid) return;
+      pid = null;
       if (!dragging) return;
-      dragging = false; c.classList.remove('is-dragging'); pos = track.scrollLeft;
-    });
+      dragging = false; c.classList.remove('is-dragging');
+      if (performance.now() - lastMoveT > 80) vel = 0;  // held still before letting go: no glide
+      vel = Math.max(-3, Math.min(3, vel));
+    };
+    track.addEventListener('pointerup', endDrag);
+    track.addEventListener('pointercancel', endDrag);
     // A drag shouldn't also count as clicking "Read more".
     track.addEventListener('click', function (e) { if (moved > 5) { e.preventDefault(); e.stopPropagation(); moved = 0; } }, true);
     track.addEventListener('dragstart', function (e) { e.preventDefault(); });
+
+    // Mouse over → pause; mouse leaves → carry on right away.
+    track.addEventListener('pointerenter', function (e) { if (e.pointerType === 'mouse') hover = true; });
+    track.addEventListener('pointerleave', function (e) { if (e.pointerType === 'mouse') hover = false; });
+    // Keyboard: pause while a card has focus and bring it into view; arrow keys move one card.
+    track.addEventListener('focusin', function (e) {
+      focused = true;
+      var card = e.target.closest('.marquee__inner > *');
+      if (card) { x = card.offsetLeft - inner.children[0].offsetLeft; wrap(); paint(); }
+    });
+    track.addEventListener('focusout', function () { focused = false; });
+    track.addEventListener('keydown', function (e) {
+      if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+      e.preventDefault();
+      var step = (inner.children[1].offsetLeft - inner.children[0].offsetLeft) || 300;
+      x += e.key === 'ArrowRight' ? step : -step; wrap(); paint(); holdUntil = performance.now() + 4000;
+    });
     if (pauseBtn) {
       pauseBtn.hidden = false;
       pauseBtn.addEventListener('click', function () {
         userPaused = !userPaused;
         pauseBtn.setAttribute('aria-pressed', String(userPaused));
         pauseBtn.textContent = userPaused ? 'Play reviews' : 'Pause reviews';
-        pos = track.scrollLeft;
       });
     }
-    var step = function (now) {
+    window.addEventListener('resize', function () { wrap(); paint(); });
+
+    var frame = function (now) {
       var dt = last ? Math.min(now - last, 50) : 16; last = now;
-      if (!userPaused && !inside && !dragging && !document.hidden && Date.now() > holdUntil) {
-        pos += speed * dt / 16;
-        var w = loopWidth();
-        if (pos >= w) pos -= w;
-        track.scrollLeft = pos;
-      } else if (track.scrollLeft >= loopWidth()) {
-        track.scrollLeft -= loopWidth(); pos = track.scrollLeft;
+      if (!dragging && !document.hidden) {
+        if (Math.abs(vel) > 0.01) {                    // gliding after a flick
+          x += vel * dt; vel *= Math.pow(0.94, dt / 16); wrap(); paint();
+          if (Math.abs(vel) <= 0.01) { vel = 0; holdUntil = now + 600; }
+        } else if (!userPaused && !hover && !focused && now > holdUntil) {
+          x += SPEED * dt; wrap(); paint();
+        }
       }
-      window.requestAnimationFrame(step);
+      window.requestAnimationFrame(frame);
     };
-    window.requestAnimationFrame(step);
+    window.requestAnimationFrame(frame);
   });
 
   // Testimonial carousel dots (native scroll-snap does the swiping).
