@@ -14,13 +14,14 @@ document.documentElement.classList.remove('no-js');
     });
   }
 
-  // Homepage slideshow: slow crossfade, pause button, still for reduced-motion visitors.
+  // Homepage slideshow: starts by itself when there are 2+ photos and Dan chose "Moving".
   var hero = document.querySelector('.hero[data-interval]');
   if (hero) {
     var slides = hero.querySelectorAll('.hero__slide');
     var pause = hero.querySelector('.hero__pause');
-    var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    var i = 0, timer = null, paused = reduce;
+    // Owner's choice: when the slideshow is set to Moving it always starts by itself,
+    // for every visitor (no Play button to press). Keyboard users can still pause it.
+    var i = 0, timer = null, paused = false;
     var show = function (n) {
       slides[i].classList.remove('is-active'); slides[i].setAttribute('aria-hidden', 'true');
       i = (n + slides.length) % slides.length;
@@ -29,22 +30,21 @@ document.documentElement.classList.remove('no-js');
     };
     var start = function () { stop(); timer = setInterval(function () { show(i + 1); }, (Number(hero.dataset.interval) || 7) * 1000); };
     var stop = function () { if (timer) clearInterval(timer); timer = null; };
+    var hover = false;
     var sync = function () {
       pause.setAttribute('aria-pressed', String(paused));
-      pause.querySelector('.sr').textContent = paused ? 'Play slideshow' : 'Pause slideshow';
-      paused ? stop() : start();
+      pause.textContent = paused ? 'Play slideshow' : 'Pause slideshow';
+      (paused || hover) ? stop() : start();
     };
     pause.addEventListener('click', function () { paused = !paused; sync(); });
-    document.addEventListener('visibilitychange', function () { if (document.hidden) stop(); else if (!paused) start(); });
+
+    document.addEventListener('visibilitychange', function () { if (document.hidden) stop(); else if (!paused && !hover) start(); });
     sync();
   }
 
   // Reviews drifting slowly sideways in an endless loop, starting at a random review.
-  // Pauses while someone touches/hovers/focuses it, has a Pause button, and stays still
-  // (normal swipe row) for visitors who ask for reduced motion.
-  var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  // Pauses while someone touches/hovers/focuses it; keyboard users get a Pause button.
   document.querySelectorAll('[data-marquee]').forEach(function (c) {
-    if (reduceMotion) { c.removeAttribute('data-marquee'); return; }
     var track = c.querySelector('.carousel__track');
     var originals = Array.prototype.slice.call(track.children);
     if (originals.length < 2) { c.removeAttribute('data-marquee'); return; }

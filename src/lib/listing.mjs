@@ -192,5 +192,6 @@ export function validateHomepage(site) {
   const n = site?.heroSlideSeconds;
   if (!(typeof n === 'number' && n >= 2 && n <= 30)) p.push('heroSlideSeconds must be a number from 2 to 30');
   if (typeof site?.heroFade !== 'boolean') p.push('heroFade must be true or false');
+  if (site?.heroAutoplay !== undefined && typeof site.heroAutoplay !== 'boolean') p.push('heroAutoplay must be true or false');
   return p;
 }

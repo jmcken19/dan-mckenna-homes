@@ -26,5 +26,6 @@
     }
   ],
   "heroSlideSeconds": 7,
-  "heroFade": false
+  "heroFade": false,
+  "heroAutoplay": true
 }

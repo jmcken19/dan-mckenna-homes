@@ -99,7 +99,6 @@ p { margin: 0 0 1rem; }
 .hero__pause { position: absolute; z-index: 2; right: 1rem; bottom: 1rem; width: 48px; height: 48px; border-radius: 50%; border: 2px solid #fff; background: rgba(0,0,0,.45); color: #fff; cursor: pointer; display: grid; place-items: center; }
 .hero__pause-icon { width: 14px; height: 16px; border-left: 4px solid #fff; border-right: 4px solid #fff; }
 .hero__pause[aria-pressed="true"] .hero__pause-icon { width: 0; height: 0; border-style: solid; border-width: 8px 0 8px 14px; border-color: transparent transparent transparent #fff; margin-left: 4px; }
-@media (prefers-reduced-motion: reduce) { .hero--fade .hero__slide { transition: none; } }
 
 /* Sections */
 .section-title { text-align: center; text-transform: uppercase; font-size: clamp(1.35rem, 4.5vw, 1.7rem); margin: 0 0 2rem; }
@@ -224,3 +223,7 @@ p { margin: 0 0 1rem; }
 .marquee-pause { display: block; margin: 1.25rem auto 1.5rem; min-height: 44px; padding: .5rem 1.1rem; border: 1px solid var(--ink); background: #fff; color: var(--ink); font: 600 .8rem/1 var(--body); letter-spacing: .08em; text-transform: uppercase; cursor: pointer; }
 .marquee-pause[hidden] { display: none; }
 .carousel.is-marquee .carousel__track { -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 7%, #000 93%, transparent 100%); mask-image: linear-gradient(90deg, transparent 0, #000 7%, #000 93%, transparent 100%); }
+
+/* Pause controls stay out of sight; they appear only when reached with the keyboard (Tab). */
+.sr-focus:not(:focus):not(:focus-visible) { position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.hero__pause.sr-focus:focus { width: auto; height: auto; border-radius: 4px; padding: .6rem 1rem; font: 600 .9rem var(--body); color: #fff; background: rgba(0,0,0,.7); }

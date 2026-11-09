@@ -160,7 +160,7 @@ export async function startEditor({ resend = true, port, mirror = null, siteUrl 
     gh.seed('content/removed.json', await readFile(join(root, 'content/removed.json'), 'utf8'));
     const site = JSON.parse(await readFile(join(root, 'content/site.json'), 'utf8'));
     site.heroSlides = [{ id: 's-hero1', src: '/assets/img/hero-1', alt: 'Backyard patio', focus: '50% 70%' }];
-    site.heroSlideSeconds = 7; site.heroFade = false;
+    site.heroSlideSeconds = 7; site.heroFade = false; site.heroAutoplay = true;
     gh.seed('content/site.json', JSON.stringify(site, null, 2));
     for (const w of [800, 1400, 2000]) gh.seed(`public/assets/img/hero-1-${w}.jpg`, await readFile(join(root, `public/assets/img/hero-1-${w}.jpg`)));
   }

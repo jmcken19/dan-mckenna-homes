@@ -36,7 +36,7 @@ export function homePage(ctx) {
         <img src="${url(s.src)}-1400.jpg" srcset="${url(s.src)}-800.jpg 800w, ${url(s.src)}-1400.jpg 1400w, ${url(s.src)}-2000.jpg 2000w" sizes="100vw" alt="${e(s.alt)}" style="object-position:${e(s.focus || '50% 50%')}" ${i === 0 ? 'fetchpriority="high"' : 'loading="lazy"'} decoding="async">
       </picture>
     </div>`).join('');
-  const multi = site.heroSlides.length > 1;
+  const multi = site.heroSlides.length > 1 && site.heroAutoplay !== false;
 
   const shown = listings.filter((l) => l.status !== 'sold').slice(0, 6);
   const listingsSection = shown.length ? `<section class="home-listings" aria-labelledby="hl-h">
@@ -58,7 +58,7 @@ export function homePage(ctx) {
       <a class="btn btn--accent" href="${e(site.phoneHref)}">Call Dan ${e(site.phone)}</a>
     </p>
   </div>
-  ${multi ? '<button class="hero__pause" type="button" aria-pressed="false"><span class="sr">Pause slideshow</span><span aria-hidden="true" class="hero__pause-icon"></span></button>' : ''}
+  ${multi ? '<button class="hero__pause sr-focus" type="button" aria-pressed="false">Pause slideshow</button>' : ''}
 </section>
 ${listingsSection}
 <section class="home-testimonials" aria-labelledby="ht-h">
@@ -67,7 +67,7 @@ ${listingsSection}
     <div class="carousel" data-carousel data-marquee>
       <div class="carousel__track" tabindex="0" aria-label="Client reviews – scroll sideways to read more">${t.map((x) => testimonialCard(ctx, x)).join('')}</div>
       <div class="carousel__dots" role="group" aria-label="Choose testimonial"></div>
-      <button class="marquee-pause" type="button" aria-pressed="false" hidden>Pause reviews</button>
+      <button class="marquee-pause sr-focus" type="button" aria-pressed="false" hidden>Pause reviews</button>
     </div>
     <p class="center"><a class="btn btn--dark btn--wide" href="${url('/testimonials/')}">View all</a></p>
   </div>

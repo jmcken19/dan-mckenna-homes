@@ -286,7 +286,12 @@ test('homepage slideshow: starts from the website, add/reorder/focus/speed/fade,
   assert.equal(H.draft.slides[0].focus, '50% 15%');
   const bad = await E.call('PUT', '/api/homepage/settings', { body: { seconds: 999, fade: true, baseRevision: H.revision } });
   assert.equal(bad.status, 400);
-  H = (await E.call('PUT', '/api/homepage/settings', { body: { seconds: 4, fade: true, baseRevision: H.revision } })).data;
+  assert.equal(H.draft.autoplay, true, 'moving by default');
+  H = (await E.call('PUT', '/api/homepage/settings', { body: { seconds: 4, fade: true, autoplay: false, baseRevision: H.revision } })).data;
+  assert.equal(H.draft.autoplay, false);
+  const still = await E.call('GET', '/api/homepage/preview');
+  assert.doesNotMatch(still.data, /data-interval/, 'still = no rotation');
+  H = (await E.call('PUT', '/api/homepage/settings', { body: { seconds: 4, fade: true, autoplay: true, baseRevision: H.revision } })).data;
   assert.equal(H.hasUnpublishedChanges, true);
   // Stale revision is refused.
   assert.equal((await E.call('PUT', '/api/homepage/settings', { as: MAINT, body: { seconds: 10, fade: false, baseRevision: H.revision - 1 } })).status, 409);
@@ -304,7 +309,8 @@ test('homepage slideshow: starts from the website, add/reorder/focus/speed/fade,
   assert.equal(p.status, 200, JSON.stringify(p.data));
   const site = JSON.parse(E.gh.read('content/site.json'));
   assert.deepEqual(site.heroSlides.map((s) => s.id), [c, a, b]);
-  assert.equal(site.heroSlideSeconds, 4); assert.equal(site.heroFade, true);
+  assert.equal(site.heroSlideSeconds, 4); assert.equal(site.heroFade, true); assert.equal(site.heroAutoplay, true);
+  assert.doesNotMatch(pv.data, /hero__pause-icon/, 'no visible pause icon');
   assert.equal(site.phone, '704-441-4556', 'other site settings untouched');
   for (const w of [800, 1400, 2000]) {
     const bytes = E.gh.read(`public/assets/img/hero/${c}-${w}.jpg`);

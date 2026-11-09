@@ -101,7 +101,7 @@ export function luxHome(ctx) {
       : `<img src="${url(s.img.large)}" srcset="${url(s.img.small)} 900w, ${url(s.img.large)} 1800w" sizes="100vw" alt="${e(s.img.alt || s.caption)}" ${i ? 'loading="lazy"' : 'fetchpriority="high"'} decoding="async">`;
     return `<div class="hero__slide${i === 0 ? ' is-active' : ''}"${i ? ' aria-hidden="true"' : ''}>${img}${s.caption ? `<a class="lx-hero__caption" href="${s.href}">${e(s.caption)} <span aria-hidden="true">→</span></a>` : ''}</div>`;
   }).join('');
-  const multi = slides.length > 1;
+  const multi = slides.length > 1 && site.heroAutoplay !== false;
 
   const quotes = newestFirst(testimonials.filter((t) => t.text[0].length < 480));
 
@@ -113,7 +113,7 @@ export function luxHome(ctx) {
     <p class="lx-hero__sub">Buy. Sell. Build. Relocate.</p>
     <p class="lx-actions"><a class="lx-btn lx-btn--light" href="${url('/listings/')}">View Listings</a><a class="lx-btn lx-btn--ghost" href="${url('/contact/')}">Contact Dan</a></p>
   </div>
-  ${multi ? '<button class="hero__pause" type="button" aria-pressed="false"><span class="sr">Pause slideshow</span><span aria-hidden="true" class="hero__pause-icon"></span></button>' : ''}
+  ${multi ? '<button class="hero__pause sr-focus" type="button" aria-pressed="false">Pause slideshow</button>' : ''}
 </section>
 
 <section class="lx-intro" aria-labelledby="intro-h">
@@ -166,7 +166,7 @@ export function luxHome(ctx) {
     <div class="carousel" data-carousel data-marquee>
       <div class="carousel__track lx-quotes__track" tabindex="0" aria-label="Client reviews – scroll sideways to read more">${quotes.map((t) => `<figure class="lx-quote"><blockquote><p>${e(t.text[0])}</p></blockquote><figcaption>${t.client ? e(t.client) + ' · ' : ''}${e(t.title)}</figcaption></figure>`).join('')}</div>
       <div class="carousel__dots" role="group" aria-label="Choose testimonial"></div>
-      <button class="marquee-pause" type="button" aria-pressed="false" hidden>Pause reviews</button>
+      <button class="marquee-pause sr-focus" type="button" aria-pressed="false" hidden>Pause reviews</button>
     </div>
     <p class="center"><a class="lx-link" href="${url('/testimonials/')}">Read all testimonials</a></p>
   </div>

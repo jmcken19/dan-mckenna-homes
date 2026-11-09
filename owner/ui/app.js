@@ -659,17 +659,25 @@ async function homepageScreen() {
     <ul class="upload-list" id="uploads" aria-live="polite"></ul>
     <p class="hint">Wide (landscape) photos look best. Tall photos get trimmed at the top and bottom.</p>
 
-    <h2>2. Speed</h2>
+    <h2>2. Slideshow</h2>
+    <fieldset><legend class="sr">Should the photos change by themselves?</legend><div class="radios">
+      <label class="radio"><input type="radio" name="autoplay" value="on" ${d.autoplay !== false ? 'checked' : ''}> <span><strong>Moving</strong> (recommended)<br><span class="hint">The photos change by themselves</span></span></label>
+      <label class="radio"><input type="radio" name="autoplay" value="off" ${d.autoplay === false ? 'checked' : ''}> <span><strong>Still</strong><br><span class="hint">Only Photo 1 shows</span></span></label>
+    </div></fieldset>
+
+    <div ${d.autoplay === false ? 'hidden' : ''}>
+    <h2>3. Speed</h2>
     <fieldset><legend class="sr">How fast should the photos change?</legend><div class="radios">
       ${SPEEDS.map((sp) => `<label class="radio"><input type="radio" name="speed" value="${sp.v}" ${speed === sp.v ? 'checked' : ''}> <span><strong>${sp.label}</strong>${sp.v === 7 ? ' (recommended)' : ''}<br><span class="hint">${sp.sub}</span></span></label>`).join('')}
     </div></fieldset>
 
-    <h2>3. Fade</h2>
+    <h2>4. Fade</h2>
     <fieldset><legend class="sr">Fade between photos?</legend><div class="radios">
       <label class="radio"><input type="radio" name="fade" value="off" ${d.fade ? '' : 'checked'}> <span><strong>Off</strong> (recommended)<br><span class="hint">Photos switch cleanly</span></span></label>
       <label class="radio"><input type="radio" name="fade" value="on" ${d.fade ? 'checked' : ''}> <span><strong>On</strong><br><span class="hint">Each photo slowly fades into the next</span></span></label>
     </div></fieldset>
-    <p class="hint">Visitors who have "reduce motion" turned on in their device settings see Photo 1 only.</p>
+    ${d.slides.length < 2 ? '<p class="hint">Add a second photo to see the slideshow move.</p>' : ''}
+    </div>
 
     ${H.hasUnpublishedChanges ? '<p style="margin-top:1.5rem"><button type="button" class="btn btn--small" data-discard>Undo my unpublished changes</button></p>' : ''}
     <p class="hint" style="margin-top:1rem">Want to see it in design option 2? <a href="/api/homepage/preview?design=option2" target="_blank" rel="noopener">Preview option 2</a></p>
@@ -737,10 +745,11 @@ async function homepageScreen() {
       if (!(await confirmBox({ title: 'Remove this photo from the slideshow?', body: 'Visitors keep seeing it until you publish. You can undo before publishing.', yes: 'Remove photo', danger: true }))) return;
       try { H = await api('DELETE', `/homepage/photos/${b.dataset.remove}?baseRevision=${H.revision}`); ok(''); toast('Photo removed. Click Publish when you\'re ready.'); } catch (err) { showError(err); }
     }));
-    app.querySelectorAll('input[name=speed], input[name=fade]').forEach((r) => r.addEventListener('change', async () => {
+    app.querySelectorAll('input[name=speed], input[name=fade], input[name=autoplay]').forEach((r) => r.addEventListener('change', async () => {
       const seconds = Number(app.querySelector('input[name=speed]:checked').value);
       const fade = app.querySelector('input[name=fade]:checked').value === 'on';
-      if (await save('PUT', '/homepage/settings', { seconds, fade })) { ok(''); toast('Saved. Click Preview to watch it, or Publish to put it live.'); }
+      const autoplay = app.querySelector('input[name=autoplay]:checked').value === 'on';
+      if (await save('PUT', '/homepage/settings', { seconds, fade, autoplay })) { ok(''); toast('Saved. Click Preview to watch it, or Publish to put it live.'); }
     }));
     app.querySelector('[data-discard]')?.addEventListener('click', async () => {
       if (!(await confirmBox({ title: 'Undo unpublished changes?', body: 'The slideshow goes back to exactly what is on the website now.', yes: 'Undo changes', danger: true }))) return;
@@ -748,7 +757,7 @@ async function homepageScreen() {
     });
     document.getElementById('msg').addEventListener('click', async (e) => { if (e.target.matches('[data-reload]')) { H = await api('GET', '/homepage'); ok(''); } });
     app.querySelector('[data-publish]').addEventListener('click', async () => {
-      if (!(await confirmBox({ title: 'Put these photos on your homepage?', body: `${H.draft.slides.length} photo${H.draft.slides.length === 1 ? '' : 's'}, ${SPEEDS.find((x) => x.v === nearestSpeed(H.draft.seconds)).label.toLowerCase()} speed, fade ${H.draft.fade ? 'on' : 'off'}.`, yes: 'Yes, publish' }))) return;
+      if (!(await confirmBox({ title: 'Put these photos on your homepage?', body: H.draft.autoplay === false ? `${H.draft.slides.length} photo${H.draft.slides.length === 1 ? '' : 's'}, still (only Photo 1 shows).` : `${H.draft.slides.length} photo${H.draft.slides.length === 1 ? '' : 's'}, moving, ${SPEEDS.find((x) => x.v === nearestSpeed(H.draft.seconds)).label.toLowerCase()} speed, fade ${H.draft.fade ? 'on' : 'off'}.`, yes: 'Yes, publish' }))) return;
       app.querySelectorAll('button').forEach((b) => { b.disabled = true; });
       try {
         const r = await api('POST', '/homepage/publish', { baseRevision: H.revision }, { idem: uuid() });

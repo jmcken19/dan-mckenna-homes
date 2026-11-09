@@ -21,6 +21,7 @@ export function homepageRoutes(H) {
     slides: (site.heroSlides || []).map((s, i) => ({ id: s.id || `s-legacy${i + 1}`, src: s.src, alt: s.alt || '', focus: s.focus || '50% 50%' })),
     seconds: typeof site.heroSlideSeconds === 'number' ? site.heroSlideSeconds : 7,
     fade: site.heroFade === true,
+    autoplay: site.heroAutoplay !== false,
   });
   const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 
@@ -100,7 +101,8 @@ export function homepageRoutes(H) {
       const seconds = Number(body.seconds);
       if (!(seconds >= 2 && seconds <= 30)) throw new HttpError(400, 'Choose Slow, Normal, or Fast.');
       if (typeof body.fade !== 'boolean') throw new HttpError(400, 'Choose fade on or off.');
-      const updated = await write(A, row, { draft: { ...row.draft, seconds, fade: body.fade } }, rev);
+      const autoplay = typeof body.autoplay === 'boolean' ? body.autoplay : row.draft.autoplay !== false;
+      const updated = await write(A, row, { draft: { ...row.draft, seconds, fade: body.fade, autoplay } }, rev);
       await logEvent(A, 'save-homepage-settings');
       return json(view(updated));
     },
@@ -202,7 +204,7 @@ export function homepageRoutes(H) {
       const design = A.url.searchParams.get('design') === 'option2' ? 'option2' : 'classic';
       const base = publicBase(A.env) + (design === 'option2' ? (A.env.PUBLIC_SITE_V2_PATH ?? '/v2') : '');
       const srcToId = new Map(row.draft.slides.map((s) => [s.src, s.id]));
-      const site = { ...siteContent, heroSlides: row.draft.slides, heroSlideSeconds: row.draft.seconds, heroFade: row.draft.fade };
+      const site = { ...siteContent, heroSlides: row.draft.slides, heroSlideSeconds: row.draft.seconds, heroFade: row.draft.fade, heroAutoplay: row.draft.autoplay !== false };
       const ctx = {
         site, preview: true, siteUrl: '', buildId: 'preview', listings: [], removed: [], testimonials: testimonialsContent.items,
         url: (p) => {
@@ -237,11 +239,12 @@ export function homepageRoutes(H) {
       try {
         const d = row.draft;
         const gh = github(A.env);
-        const result = await gh.commit(`Update homepage slideshow (${d.slides.length} photo${d.slides.length === 1 ? '' : 's'}, ${d.seconds}s, fade ${d.fade ? 'on' : 'off'})\n\nBy ${A.user.email} via the owner editor.`, async () => {
+        const result = await gh.commit(`Update homepage slideshow (${d.slides.length} photo${d.slides.length === 1 ? '' : 's'}, ${d.autoplay === false ? 'still' : `moving, ${d.seconds}s, fade ${d.fade ? 'on' : 'off'}`})\n\nBy ${A.user.email} via the owner editor.`, async () => {
           const site = JSON.parse(await gh.getText('content/site.json'));
           site.heroSlides = d.slides.map(({ id, src, alt, focus }) => ({ id, src, alt, focus }));
           site.heroSlideSeconds = d.seconds;
           site.heroFade = d.fade;
+          site.heroAutoplay = d.autoplay !== false;
           const problems = validateHomepage(site);
           if (problems.length) throw new HttpError(422, 'Something about the slideshow is not ready: ' + problems[0]);
           const changes = [{ path: 'content/site.json', content: JSON.stringify(site, null, 2) + '\n' }];
