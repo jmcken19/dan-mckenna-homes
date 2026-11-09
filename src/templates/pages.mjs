@@ -65,11 +65,11 @@ ${listingsSection}
   <div class="wrap">
     <h2 id="ht-h" class="section-title">What Clients Say About Working With Us</h2>
     <div class="carousel" data-carousel data-marquee>
-      <div class="carousel__track" tabindex="0" aria-label="Client reviews – scroll sideways to read more">${t.map((x) => testimonialCard(ctx, x)).join('')}</div>
+      <div class="carousel__track" tabindex="0" aria-label="Client reviews – drag or scroll sideways to read more">${t.map((x) => testimonialCard(ctx, x)).join('')}</div>
       <div class="carousel__dots" role="group" aria-label="Choose testimonial"></div>
       <button class="marquee-pause sr-focus" type="button" aria-pressed="false" hidden>Pause reviews</button>
     </div>
-    <p class="center"><a class="btn btn--dark btn--wide" href="${url('/testimonials/')}">View all</a></p>
+    <p class="center"><a class="btn btn--dark btn--wide" href="${url('/testimonials/')}">View all reviews</a></p>
   </div>
 </section>`;
 }

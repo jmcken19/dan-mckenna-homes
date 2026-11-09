@@ -68,7 +68,35 @@ document.documentElement.classList.remove('no-js');
     var hold = function (ms) { holdUntil = Date.now() + ms; };
     ['pointerenter', 'focusin', 'touchstart'].forEach(function (ev) { track.addEventListener(ev, function () { inside = true; }, { passive: true }); });
     ['pointerleave', 'focusout', 'touchend'].forEach(function (ev) { track.addEventListener(ev, function () { inside = false; hold(2500); pos = track.scrollLeft; }, { passive: true }); });
-    track.addEventListener('scroll', function () { if (inside) pos = track.scrollLeft; }, { passive: true });
+    // Keep the loop endless when someone drags or swipes past either end.
+    var wrap = function () {
+      var w = loopWidth();
+      if (track.scrollLeft >= w) track.scrollLeft -= w;
+      else if (track.scrollLeft < 2) track.scrollLeft += w;
+      pos = track.scrollLeft;
+    };
+    track.addEventListener('scroll', function () { if (inside || dragging) wrap(); }, { passive: true });
+
+    // Drag with the mouse (phones and touchpads already swipe natively).
+    var dragging = false, moved = 0, startX = 0, startLeft = 0;
+    track.addEventListener('pointerdown', function (e) {
+      if (e.pointerType !== 'mouse' || e.button !== 0) return;
+      dragging = true; moved = 0; startX = e.clientX; startLeft = track.scrollLeft;
+      c.classList.add('is-dragging');
+    });
+    window.addEventListener('pointermove', function (e) {
+      if (!dragging) return;
+      var dx = e.clientX - startX; moved = Math.max(moved, Math.abs(dx));
+      track.scrollLeft = startLeft - dx; wrap(); startLeft = track.scrollLeft + dx;
+      if (moved > 3) e.preventDefault();
+    });
+    window.addEventListener('pointerup', function () {
+      if (!dragging) return;
+      dragging = false; c.classList.remove('is-dragging'); hold(2500); pos = track.scrollLeft;
+    });
+    // A drag shouldn't also count as clicking "Read more".
+    track.addEventListener('click', function (e) { if (moved > 5) { e.preventDefault(); e.stopPropagation(); moved = 0; } }, true);
+    track.addEventListener('dragstart', function (e) { e.preventDefault(); });
     if (pauseBtn) {
       pauseBtn.hidden = false;
       pauseBtn.addEventListener('click', function () {
@@ -80,7 +108,7 @@ document.documentElement.classList.remove('no-js');
     }
     var step = function (now) {
       var dt = last ? Math.min(now - last, 50) : 16; last = now;
-      if (!userPaused && !inside && !document.hidden && Date.now() > holdUntil) {
+      if (!userPaused && !inside && !dragging && !document.hidden && Date.now() > holdUntil) {
         pos += speed * dt / 16;
         var w = loopWidth();
         if (pos >= w) pos -= w;

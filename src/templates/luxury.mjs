@@ -90,6 +90,12 @@ function luxCard(ctx, l) {
 </li>`;
 }
 
+function shorten(text, max) {
+  if (text.length <= max) return text;
+  const cut = text.lastIndexOf(' ', max - 1);
+  return text.slice(0, cut > 0 ? cut : max) + '…';
+}
+
 export function luxHome(ctx) {
   const { site, url, listings, testimonials } = ctx;
   const current = listings.filter((l) => l.status !== 'sold');
@@ -103,7 +109,7 @@ export function luxHome(ctx) {
   }).join('');
   const multi = slides.length > 1 && site.heroAutoplay !== false;
 
-  const quotes = newestFirst(testimonials.filter((t) => t.text[0].length < 480));
+  const quotes = newestFirst(testimonials);
 
   return `<section class="hero lx-hero${site.heroFade ? ' hero--fade' : ''}" aria-label="Welcome"${multi ? ` data-interval="${heroSeconds(site)}"` : ''}>
   <div class="hero__slides">${slideHtml}</div>
@@ -164,11 +170,11 @@ export function luxHome(ctx) {
   <div class="lx-wrap">
     <h2 id="q-h" class="lx-eyebrow lx-eyebrow--dark">What clients say</h2>
     <div class="carousel" data-carousel data-marquee>
-      <div class="carousel__track lx-quotes__track" tabindex="0" aria-label="Client reviews – scroll sideways to read more">${quotes.map((t) => `<figure class="lx-quote"><blockquote><p>${e(t.text[0])}</p></blockquote><figcaption>${t.client ? e(t.client) + ' · ' : ''}${e(t.title)}</figcaption></figure>`).join('')}</div>
+      <div class="carousel__track lx-quotes__track" tabindex="0" aria-label="Client reviews – drag or scroll sideways to read more">${quotes.map((t) => `<figure class="lx-quote"><blockquote><p>${e(shorten(t.text[0], 260))}</p></blockquote><figcaption>${t.client ? e(t.client) + ' · ' : ''}${e(t.title)}${t.text[0].length > 260 ? ` · <a href="${url(`/testimonial/${t.slug}/`)}">Read the full review</a>` : ''}</figcaption></figure>`).join('')}</div>
       <div class="carousel__dots" role="group" aria-label="Choose testimonial"></div>
       <button class="marquee-pause sr-focus" type="button" aria-pressed="false" hidden>Pause reviews</button>
     </div>
-    <p class="center"><a class="lx-link" href="${url('/testimonials/')}">Read all testimonials</a></p>
+    <p class="center"><a class="lx-link" href="${url('/testimonials/')}">View all reviews</a></p>
   </div>
 </section>`;
 }
