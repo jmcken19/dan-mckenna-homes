@@ -283,9 +283,8 @@ export function homepageRoutes(H) {
       const html = design === 'option2'
         ? luxLayout(ctx, { path: pg.path, title: pg.title, body: (pg.lux || pg.classic)(ctx) })
         : layout(ctx, { path: pg.path, title: pg.title, body: pg.classic(ctx) });
-      const note = `<div style="position:fixed;left:0;right:0;bottom:0;z-index:99;background:#fff4c2;color:#3d3200;font:600 18px system-ui;padding:14px;text-align:center;border-top:1px solid #e6d27a">Preview only – visitors still see the current website until you click Publish. You can close this tab when you're done looking.</div>`;
       const origin = publicBase(A.env) ? new URL(publicBase(A.env)).origin : "'self'";
-      return new Response(html.replace('</body>', note + '</body>'), {
+      return new Response(html, {
         headers: {
           'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store', 'X-Robots-Tag': 'noindex',
           'Content-Security-Policy': `default-src 'none'; img-src 'self' ${origin}; style-src ${origin} 'unsafe-inline'; font-src ${origin}; script-src ${origin}; manifest-src ${origin}; frame-ancestors 'self'; base-uri 'none'; form-action 'none'`,

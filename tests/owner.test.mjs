@@ -307,7 +307,7 @@ test('homepage slideshow: starts from the website, add/reorder/focus/speed/fade,
     const img = await E.mf.dispatchFetch(E.url + m[1], { headers: { 'Cf-Access-Jwt-Assertion': accessToken(OWNER) } });
     assert.equal(img.status, 200); assert.equal(img.headers.get('content-type'), 'image/jpeg'); await img.arrayBuffer();
   }
-  assert.match(pv.data, /hero--fade/); assert.match(pv.data, /data-interval="4"/); assert.match(pv.data, /Preview only/);
+  assert.match(pv.data, /hero--fade/); assert.match(pv.data, /data-interval="4"/); assert.doesNotMatch(pv.data, /Preview only/); assert.match(pv.data, /preview-bar/);
   assert.equal((await E.call('GET', '/api/homepage/preview', { as: null })).status, 401);
   const pv2 = await E.call('GET', '/api/homepage/preview?design=option2');
   assert.match(pv2.data, /lx-hero/);
