@@ -15,7 +15,8 @@ document.documentElement.classList.remove('no-js');
   document.querySelectorAll('[data-hide-preview]').forEach(function (b) {
     b.addEventListener('click', function () {
       document.documentElement.classList.add('preview-hidden');
-      try { localStorage.setItem('dmhHidePreview', '1'); } catch (e) {}
+      // In the editor's preview, hiding lasts only until the page is refreshed.
+      if (location.pathname.indexOf('/api/') !== 0) { try { localStorage.setItem('dmhHidePreview', '1'); } catch (e) {} }
     });
   });
 
