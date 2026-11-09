@@ -3,7 +3,6 @@ import { escapeHtml as e } from '../lib/listing.mjs';
 export const NAV = [
   { href: '/', label: 'Home' },
   { href: '/about-us/', label: 'About us' },
-  { href: '/listings/', label: 'Listings' },
   { href: '/new-construction/', label: 'New Construction' },
   { href: '/luxury-home-marketing/', label: 'Luxury Home Marketing' },
   { href: '/testimonials/', label: 'Testimonials' },

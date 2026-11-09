@@ -119,7 +119,7 @@ export function luxHome(ctx) {
     <p class="lx-eyebrow">Charlotte · Waxhaw · Weddington · Marvin</p>
     <h1>Experience Counts.</h1>
     <p class="lx-hero__sub">Buy. Sell. Build. Relocate.</p>
-    <p class="lx-actions"><a class="lx-btn lx-btn--light" href="${url('/listings/')}">View Listings</a><a class="lx-btn lx-btn--ghost" href="${url('/contact/')}">Contact Dan</a></p>
+    <p class="lx-actions"><a class="lx-btn lx-btn--ghost" href="${url('/contact/')}">Contact Dan</a></p>
   </div>
   ${multi ? '<button class="hero__pause sr-focus" type="button" aria-pressed="false">Pause slideshow</button>' : ''}
 </section>
@@ -135,15 +135,6 @@ export function luxHome(ctx) {
       <p class="lx-contact-line"><a href="${e(site.phoneHref)}">${e(site.phone)}</a><span aria-hidden="true">|</span><a href="mailto:${e(site.email)}">${e(site.email)}</a></p>
       <p><a class="lx-link" href="${url('/about-us/')}">Meet Dan</a></p>
     </div>
-  </div>
-</section>
-
-<section class="lx-listings" aria-labelledby="fl-h">
-  <div class="lx-wrap">
-    <div class="lx-section-head"><h2 id="fl-h" class="lx-display">Featured Listings</h2>${current.length ? `<a class="lx-link" href="${url('/listings/')}">View all</a>` : ''}</div>
-    ${current.length
-      ? `<ul class="lx-cards">${current.slice(0, 6).map((l) => luxCard(ctx, l)).join('')}</ul>`
-      : `<div class="lx-empty"><p class="lx-lede">New listings are added here as soon as they come to market.</p><p>Looking for something specific? Call or text Dan and tell him what you're looking for.</p><p><a class="lx-btn" href="${e(site.phoneHref)}">Call ${e(site.phone)}</a></p></div>`}
   </div>
 </section>
 

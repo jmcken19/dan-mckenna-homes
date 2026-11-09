@@ -55,13 +55,11 @@ export function homePage(ctx) {
     <h1>${e(site.name)}</h1>
     <p>${e(site.tagline)}</p>
     <p class="hero__actions">
-      <a class="btn btn--light" href="${url('/listings/')}">View Listings</a>
       <a class="btn btn--accent" href="${e(site.phoneHref)}">Call Dan ${e(site.phone)}</a>
     </p>
   </div>
   ${multi ? '<button class="hero__pause sr-focus" type="button" aria-pressed="false">Pause slideshow</button>' : ''}
 </section>
-${listingsSection}
 <section class="home-testimonials" aria-labelledby="ht-h" data-reveal>
   <div class="wrap">
     <h2 id="ht-h" class="section-title">What Clients Say About Working With Us</h2>
@@ -103,7 +101,7 @@ export function removedListingPage(ctx, r) {
     heading: 'This home is no longer on Dan’s website',
     content: `<p><strong>${e(r.address)}</strong> has been taken off the website. It may have sold or been withdrawn from the market.</p>
 <p>Dan can tell you what happened with this home and show you similar ones nearby.</p>
-<p><a class="btn btn--dark" href="${ctx.url('/listings/')}">See current listings</a></p>`,
+<p><a class="btn btn--dark" href="${ctx.url('/contact/')}">Contact Dan</a></p>`,
   });
 }
 
@@ -285,7 +283,7 @@ export function notFoundPage(ctx) {
   return pageWithSidebar(ctx, {
     heading: 'Page not found',
     content: `<p>Sorry, we couldn't find that page. It may have moved when the website was updated.</p>
-<ul><li><a href="${ctx.url('/')}">Home page</a></li><li><a href="${ctx.url('/listings/')}">Current listings</a></li><li><a href="${ctx.url('/contact/')}">Contact Dan</a></li></ul>`,
+<ul><li><a href="${ctx.url('/')}">Home page</a></li><li><a href="${ctx.url('/contact/')}">Contact Dan</a></li></ul>`,
   });
 }
 

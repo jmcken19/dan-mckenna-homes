@@ -895,7 +895,7 @@ async function requestScreen() {
       <label class="radio"><input type="radio" name="kind" value="question"> Just a question – show me first, don't change anything yet</label>
     </div></fieldset>
     <div class="field"><label for="r-page">Which page? <span class="opt">(optional)</span></label>
-      <select id="r-page" name="page"><option value="">Not sure / whole website</option>${['Home', 'About us', 'Listings', 'New Construction', 'Luxury Home Marketing', 'Testimonials', 'Contact'].map((p) => `<option>${p}</option>`).join('')}</select></div>
+      <select id="r-page" name="page"><option value="">Not sure / whole website</option>${['Home', 'About us', 'New Construction', 'Luxury Home Marketing', 'Testimonials', 'Contact'].map((p) => `<option>${p}</option>`).join('')}</select></div>
     <div class="field" id="r-message-field"><label for="r-message">What would you like?</label><textarea id="r-message" name="message" required></textarea></div>
     <div class="field" id="r-photo-field"><label for="r-photo">Attach photos <span class="opt">(optional, up to 3)</span></label><input id="r-photo" type="file" accept="image/*,.heic,.heif" multiple></div>
     <button class="btn btn--primary btn--block" type="submit">Send to James</button>

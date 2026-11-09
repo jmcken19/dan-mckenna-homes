@@ -97,7 +97,6 @@ async function main() {
   const pages = [
     ['/', 'Home', THEME === 'luxury' ? luxHome : P.homePage, { bodyClass: 'home' }],
     ['/about-us/', 'About us', P.aboutPage, { description: 'Meet Dan McKenna, full-time NC/SC Broker/REALTOR® with Keller Williams Ballantyne Area in Charlotte, NC, a CLHMS and GUILD member, serving the Charlotte area.' }],
-    ['/listings/', 'Listings', P.listingsIndexPage, { description: 'Homes for sale represented by Dan McKenna in the Charlotte area.' }],
     ['/new-construction/', 'New Construction Buyer Agent', P.newConstructionPage, { description: 'Why work with an experienced buyer\'s agent when purchasing new construction in the Charlotte area.' }],
     ['/luxury-home-marketing/', 'Luxury Home Marketing', P.luxuryPage, { description: 'Luxury home marketing in the Charlotte area by Dan McKenna, Certified Luxury Home Marketing Specialist and GUILD member.' }],
     ['/testimonials/', 'Testimonials', P.testimonialsPage, { description: 'What clients say about working with Dan McKenna.' }],
@@ -121,6 +120,8 @@ async function main() {
     const path = `/listings/${r.slug}/`;
     await writePage(path, page(ctx, { path, title: 'Home no longer available', body: P.removedListingPage(ctx, r) }));
   }
+  // Listings were removed from the website: the old address sends visitors to the homepage.
+  { const home = ctx.url('/'); await writePage('/listings/', `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Dan McKenna Homes</title><meta name="robots" content="noindex"><link rel="canonical" href="${home}"><meta http-equiv="refresh" content="0; url=${home}"></head><body><p><a href="${home}">Continue to Dan McKenna Homes</a></p></body></html>`); }
   await writePage('404.html', page(ctx, { path: '/404', title: 'Page not found', body: P.notFoundPage(ctx) }));
 
   // Machine-readable files used by the owner editor to confirm a change is live.
