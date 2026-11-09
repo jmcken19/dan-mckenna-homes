@@ -1,14 +1,14 @@
 # Your website – one-page guide
 
-## Start here: the folder on your desktop
+## Start here: your Website Editor bookmark
 
 **Your editor:** `EDITOR LINK – James fills this in when the editor is switched on`
 Use your **laptop** – the editor is set up for the laptop only (on a phone it will ask you to use your laptop).
-On your laptop's desktop, open the **Dan McKenna Homes** folder → double-click **Website Editor**.
-(**Website** in the same folder opens your website.)
+Click your **Website Editor** bookmark (https://dmh-owner.danmckenna.workers.dev).
+(Optional: James can also put a **Dan McKenna Homes** folder on your desktop with the same two links.)
 **Photos from your phone:** send them to your laptop first (email or Google Photos), then add them.
 
-**Signing in:** double-click **Website Editor**. The Cloudflare login page opens – type the email and
+**Signing in:** click the **Website Editor** bookmark. The Cloudflare login page opens – type the email and
 password of your **Cloudflare account** (danmckenna@kw.com) and click **Log in**. You stay signed in for 30 days
 on that laptop. Forgot the password? Click **Forgot your password?** on that page, or ask James.
 
