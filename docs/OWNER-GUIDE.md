@@ -2,7 +2,7 @@
 
 ## Start here: your Website Editor bookmark
 
-**Your editor:** `EDITOR LINK – James fills this in when the editor is switched on`
+**Your editor:** https://dmh-owner.danmckenna.workers.dev (your **Website Editor** bookmark)
 Use your **laptop** – the editor is set up for the laptop only (on a phone it will ask you to use your laptop).
 Click your **Website Editor** bookmark (https://dmh-owner.danmckenna.workers.dev).
 **Photos from your phone:** send them to your laptop first (email or Google Photos), then add them.
@@ -11,7 +11,7 @@ Click your **Website Editor** bookmark (https://dmh-owner.danmckenna.workers.dev
 password of your **Cloudflare account** (danmckenna@kw.com) and click **Log in**. You stay signed in for 30 days
 on that laptop. Forgot the password? Click **Forgot your password?** on that page, or ask James.
 
-**Your website (testing version for now):** https://jmcken19.github.io/dan-mckenna-homes/
+**Your website:** https://www.danmckennahomes.com
 
 ---
 
@@ -46,5 +46,5 @@ Want a different change – text, a new page, a listing? Just **text James**.
 * **Signed out** – click **Sign in again**; your typing stays on the page.
 
 ### Can't sign in at all?
-Call or text **James McKenna: `PHONE – fill in`**, or email **`EMAIL – fill in`**. He can make the
+Text or call **James**, or email **jmck2134@gmail.com**. He can make the
 change for you, and can add a second email address (for example Wendy's) to the editor.
