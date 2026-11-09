@@ -5,7 +5,6 @@
 **Your editor:** `EDITOR LINK – James fills this in when the editor is switched on`
 Use your **laptop** – the editor is set up for the laptop only (on a phone it will ask you to use your laptop).
 Click your **Website Editor** bookmark (https://dmh-owner.danmckenna.workers.dev).
-(Optional: James can also put a **Dan McKenna Homes** folder on your desktop with the same two links.)
 **Photos from your phone:** send them to your laptop first (email or Google Photos), then add them.
 
 **Signing in:** click the **Website Editor** bookmark. The Cloudflare login page opens – type the email and
