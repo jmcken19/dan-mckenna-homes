@@ -157,7 +157,7 @@ p { margin: 0 0 1rem; }
 .feature img { width: 100%; height: auto; aspect-ratio: 4 / 3; object-fit: cover; }
 .feature figcaption { padding: .75rem 0; font-size: 1rem; }
 .ask { align-self: start; background: var(--wash); padding: 1.5rem; border-top: 4px solid var(--red); display: grid; gap: .75rem; }
-@media (min-width: 1000px) { .ask { position: sticky; top: 1.5rem; } }
+/* (The box used to stay pinned while scrolling; with the message form it is taller than the screen, so it scrolls normally.) */
 .ask h2 { margin: 0; font-size: 1.5rem; text-align: center; }
 .ask p { margin: 0 0 .25rem; text-align: center; color: var(--ink-soft); }
 .contact-card { display: grid; gap: 1.5rem; margin-bottom: 2rem; }
@@ -243,3 +243,22 @@ p { margin: 0 0 1rem; }
 .reveal-ready [data-reveal] > * > *:nth-child(2) { transition-delay: .2s; }
 .reveal-ready [data-reveal] > * > *:nth-child(n+3) { transition-delay: .4s; }
 .reveal-ready [data-reveal].is-revealed > * > * { opacity: 1; transform: none; }
+
+/* Contact form ("Or send Dan a message") */
+.cform { margin-top: 1.5rem; padding-top: 1.25rem; border-top: 1px solid #ddd; text-align: left; }
+.cform__title { font-size: 1.1rem; margin: 0 0 .75rem; }
+.cform__field { margin-bottom: .75rem; }
+.cform__field label { display: block; font-weight: 600; margin-bottom: .25rem; }
+.cform__opt { font-weight: 400; color: #666; }
+.cform input, .cform textarea { width: 100%; box-sizing: border-box; font: inherit; padding: .65rem .75rem; border: 1px solid #bbb; border-radius: 3px; background: #fff; }
+.cform input:focus, .cform textarea:focus { outline: 2px solid var(--red, #c41e1d); outline-offset: 1px; border-color: transparent; }
+.cform__send { width: 100%; }
+.cform__send[disabled] { opacity: .55; cursor: not-allowed; }
+.cform__trap { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+.cform__status:empty { display: none; }
+.cform__status { margin: .75rem 0 0; font-weight: 600; }
+.cform__status.is-ok { color: #1b6e2f; }
+.cform__status.is-bad { color: #a11; }
+.cform__note { background: #fff4c2; padding: .5rem .75rem; font-size: .95rem; }
+.contact-form { max-width: 560px; }
+.ask .cform p { text-align: left; }

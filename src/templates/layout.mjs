@@ -115,7 +115,36 @@ export function askBox(ctx, { heading = 'Have a question?', about = '' } = {}) {
   <a class="btn btn--accent" href="${e(site.phoneHref)}">Call ${e(site.phone)}</a>
   <a class="btn" href="${e(site.smsHref)}">Text Dan</a>
   <a class="btn" href="mailto:${e(site.email)}${subject}">Email Dan</a>
+  ${contactForm(ctx, { id: 'ask', about })}
 </aside>`;
+}
+
+/**
+ * "Send Dan a message" form. Messages go through FormSubmit (formsubmit.co, free, no account)
+ * to site.contactFormTo. Off on testing previews (no lead collection there).
+ */
+export function contactForm(ctx, { id = 'cf', about = '' } = {}) {
+  const { site } = ctx;
+  if (!site.contactFormTo) return '';
+  const to = encodeURIComponent(site.contactFormTo);
+  const off = ctx.preview;
+  const next = ctx.siteUrl ? `${ctx.siteUrl.replace(/\/$/, '')}/contact/?sent=1` : '';
+  const f = (name, label, type, opts = '') => `<div class="cform__field"><label for="${id}-${name}">${label}</label><input id="${id}-${name}" name="${name}" type="${type}" ${opts}></div>`;
+  return `<form class="cform" data-cform action="https://formsubmit.co/${to}" method="post" data-ajax="https://formsubmit.co/ajax/${to}">
+  <h3 class="cform__title">Or send Dan a message</h3>
+  ${off ? '<p class="cform__note">Testing preview – this form is switched off here.</p>' : ''}
+  ${f('name', 'Name', 'text', 'autocomplete="name" required maxlength="100"')}
+  ${f('email', 'Email', 'email', 'autocomplete="email" required maxlength="200"')}
+  ${f('phone', 'Phone <span class="cform__opt">(optional)</span>', 'tel', 'autocomplete="tel" maxlength="40"')}
+  <div class="cform__field"><label for="${id}-message">Message</label><textarea id="${id}-message" name="message" rows="4" required maxlength="3000">${about ? e(`I have a question about ${about}.`) : ''}</textarea></div>
+  <input type="hidden" name="_subject" value="New message from danmckennahomes.com">
+  <input type="hidden" name="_template" value="table">
+  <input type="hidden" name="_captcha" value="false">
+  ${next ? `<input type="hidden" name="_next" value="${e(next)}">` : ''}
+  <div class="cform__trap" aria-hidden="true"><label>Leave this empty<input type="text" name="_honey" tabindex="-1" autocomplete="off"></label></div>
+  <button class="btn btn--accent cform__send" type="submit"${off ? ' disabled' : ''}>Send message</button>
+  <p class="cform__status" role="status" aria-live="polite"></p>
+</form>`;
 }
 
 export function pageWithSidebar(ctx, { heading, intro = '', content, about }) {

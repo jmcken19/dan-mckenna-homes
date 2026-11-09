@@ -1,6 +1,6 @@
 // Page bodies. Copy is Dan McKenna's own text from danmckennahomes.com (Nov 2026).
 import { escapeHtml as e, STATUS_LABEL } from '../lib/listing.mjs';
-import { pageWithSidebar, askBox } from './layout.mjs';
+import { pageWithSidebar, askBox, contactForm } from './layout.mjs';
 import { listingCard } from './listing.mjs';
 import { sitePhoto } from '../lib/photos.mjs';
 
@@ -255,6 +255,7 @@ export function contactPage(ctx) {
       </div>
     </div>
     <p>${e(site.serviceAreaSentence)}</p>
+    <div class="contact-form">${contactForm(ctx, { id: 'contact' })}</div>
   </div>
 </div>`;
 }

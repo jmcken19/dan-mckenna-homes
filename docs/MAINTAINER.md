@@ -170,3 +170,11 @@ node tests/acceptance-ui.mjs   # end-to-end against the real repo – pushes com
   registered). Google Workspace mail records (5 MX, SPF + `dc-aa8e722993._spfm` helper, 2 site-verification TXT)
   were copied from GoDaddy – **never delete them**.
 * Placester: cancelled Nov 8, 2026.
+
+## Contact form
+* "Or send Dan a message" (name, email, phone optional, message) under the Call/Text/Email buttons and on the
+  Contact page. Sent through **FormSubmit** (formsubmit.co: free, no account) to `contactFormTo` in
+  `content/site.json`. Off on the testing link (no lead collection there).
+* First message ever triggers a one-time **Activate Form** email to that address – Dan must click it.
+  After activation FormSubmit gives a random alias: put it in `contactFormTo` so Dan's address isn't in the page code.
+* If sending fails, visitors are told to call or text Dan instead.

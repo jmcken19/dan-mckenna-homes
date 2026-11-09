@@ -11,6 +11,35 @@ document.documentElement.classList.remove('no-js');
     reveals.forEach(function (r) { io.observe(r); });
   }
 
+  // Contact form: send without leaving the page; on any problem, point to call/text instead.
+  document.querySelectorAll('[data-cform]').forEach(function (form) {
+    var status = form.querySelector('.cform__status');
+    var btn = form.querySelector('.cform__send');
+    form.addEventListener('submit', function (e) {
+      if (!window.fetch || !window.FormData) return; // falls back to a normal form post
+      e.preventDefault();
+      if (btn.disabled) return;
+      if (form._honey && form._honey.value) return; // spam trap
+      btn.disabled = true; var label = btn.textContent; btn.textContent = 'Sending…';
+      status.className = 'cform__status'; status.textContent = '';
+      var data = {};
+      new FormData(form).forEach(function (v, k) { if (k !== '_next') data[k] = v; });
+      fetch(form.dataset.ajax, { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify(data) })
+        .then(function (r) { return r.json().catch(function () { return {}; }).then(function (j) { if (!r.ok || String(j.success) === 'false') throw new Error(j.message || 'failed'); }); })
+        .then(function () {
+          form.reset();
+          status.classList.add('is-ok');
+          status.textContent = 'Thank you! Your message was sent. Dan will get back to you soon.';
+          btn.textContent = 'Sent ✓';
+        })
+        .catch(function () {
+          status.classList.add('is-bad');
+          status.textContent = 'Sorry, your message could not be sent right now. Please call or text Dan instead.';
+          btn.disabled = false; btn.textContent = label;
+        });
+    });
+  });
+
   // Testing banner: let the viewer hide it (remembered in this browser)
   document.querySelectorAll('[data-hide-preview]').forEach(function (b) {
     b.addEventListener('click', function () {
