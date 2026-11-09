@@ -12,6 +12,8 @@ maintaining this repository. `CLAUDE.md` only points here.
   listings and send change requests. (Nov 2026: the **listings part is switched off in the editor UI**
   at Dan's request – he sends listings as change requests and the maintainer adds them per the schema below.
   The API routes still exist; re-enable by restoring the routes/box marked in `owner/ui/app.js`.)
+* **Reviews:** Dan can add/edit/remove client reviews himself in the editor (Nov 2026). AI assistants still never
+  write or reword a client's words; removed reviews' old addresses forward to /testimonials/ (`removedSlugs`).
 * **Listings are off the public website too** (Nov 2026, Dan's request): no menu link, no Listings page,
   no "View Listings" buttons or homepage listings section in either design; `/listings/` redirects to the
   homepage. Listing files/templates are kept so this can be reversed (`git log -S listingsIndexPage`). Sign-in is Cloudflare Access (email code). It publishes by

@@ -111,7 +111,7 @@ export function askBox(ctx, { heading = 'Have a question?', about = '' } = {}) {
   const subject = about ? `?subject=${encodeURIComponent('Question about ' + about)}` : '';
   return `<aside class="ask" aria-labelledby="ask-h">
   <h2 id="ask-h">${e(heading)}</h2>
-  <p>${about ? `Ask Dan about <strong>${e(about)}</strong>.` : 'Dan answers his own phone. Call, text, or email any time.'}</p>
+  <p>${about ? `Ask Dan about <strong>${e(about)}</strong>.` : 'Dan answers his own phone.'}</p>
   <a class="btn btn--accent" href="${e(site.phoneHref)}">Call ${e(site.phone)}</a>
   <a class="btn" href="${e(site.smsHref)}">Text Dan</a>
   <a class="btn" href="mailto:${e(site.email)}${subject}">Email Dan</a>

@@ -1,0 +1,53 @@
+name: Update owner editor (Cloudflare)
+
+# Puts a new version of Dan's editor (owner/) live when its code changes.
+# Edits Dan publishes only touch content/ and public/, so for those this does nothing.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: owner-editor
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Did the editor change?
+        id: changed
+        run: |
+          BEFORE="${{ github.event.before }}"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] || [ -z "$BEFORE" ] || [ "$BEFORE" = "0000000000000000000000000000000000000000" ] || ! git cat-file -e "$BEFORE" 2>/dev/null; then
+            echo "deploy=yes" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          if git diff --name-only "$BEFORE" "${{ github.sha }}" | grep -qE '^(owner/|src/|content/site.json|content/testimonials.json)'; then
+            # Content-only changes made by the editor itself don't need a new editor.
+            if git diff --name-only "$BEFORE" "${{ github.sha }}" | grep -qE '^(owner/|src/)'; then echo "deploy=yes" >> "$GITHUB_OUTPUT"; else echo "deploy=no" >> "$GITHUB_OUTPUT"; fi
+          else
+            echo "deploy=no" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/setup-node@v4
+        if: steps.changed.outputs.deploy == 'yes'
+        with:
+          node-version: 22
+          cache: npm
+      - if: steps.changed.outputs.deploy == 'yes'
+        run: npm ci
+      - if: steps.changed.outputs.deploy == 'yes'
+        run: npm test
+      - name: Deploy editor
+        if: steps.changed.outputs.deploy == 'yes'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ]; then echo "::notice::No CLOUDFLARE_API_TOKEN secret – editor deploy skipped."; exit 0; fi
+          ACC=$(grep '^account_id' site/wrangler.toml | cut -d'"' -f2)
+          cd owner && CLOUDFLARE_ACCOUNT_ID="$ACC" npx wrangler deploy

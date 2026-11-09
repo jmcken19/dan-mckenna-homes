@@ -390,6 +390,47 @@ test('website photos: replace headshot and page photos, undo, preview the right 
   assert.equal(th2.status, 200); await th2.arrayBuffer();
 });
 
+test('client reviews: add, edit, remove, preview, publish; old address of a removed review forwards', async () => {
+  assert.equal((await E.call('GET', '/api/reviews', { as: null })).status, 401);
+  let R = (await E.call('GET', '/api/reviews')).data;
+  const start = R.draft.items.length;
+  assert.ok(start >= 13, 'starts from the website reviews');
+  const bad = await E.call('POST', '/api/reviews', { body: { fields: { title: '', text: '', date: '2099-01-01' }, baseRevision: R.revision } });
+  assert.equal(bad.status, 422); assert.match(bad.data.error, /title/i);
+  let r = await E.call('POST', '/api/reviews', { body: { fields: { title: 'Made selling easy', client: 'Pat Q.', role: 'Seller', date: '2026-10-01', text: 'Dan was great.\n\nWould hire again.' }, baseRevision: R.revision } });
+  assert.equal(r.status, 200, JSON.stringify(r.data)); R = r.data;
+  const added = R.draft.items[0];
+  assert.equal(added.slug, 'made-selling-easy'); assert.deepEqual(added.text, ['Dan was great.', 'Would hire again.']);
+  // Edit an existing (excerpt) review: wording changes, address stays, excerpt flag goes.
+  const ex = R.draft.items.find((x) => x.excerptOnly);
+  r = await E.call('PUT', `/api/reviews/item/${ex.slug}`, { body: { fields: { title: ex.title, client: 'J. D.', role: '', date: ex.date, text: 'The full review text from Dan.' }, baseRevision: R.revision } });
+  assert.equal(r.status, 200, JSON.stringify(r.data)); R = r.data;
+  const edited = R.draft.items.find((x) => x.slug === ex.slug);
+  assert.equal(edited.client, 'J. D.'); assert.equal(edited.excerptOnly, undefined); assert.equal(edited.role, undefined);
+  // Remove one.
+  const gone = R.draft.items[R.draft.items.length - 1].slug;
+  R = (await E.call('DELETE', `/api/reviews/item/${gone}?baseRevision=${R.revision}`)).data;
+  assert.equal(R.draft.items.length, start);
+  assert.equal((await E.call('DELETE', `/api/reviews/item/${gone}?baseRevision=${R.revision}`)).status, 404);
+  assert.equal((await E.call('POST', '/api/reviews', { as: MAINT, body: { fields: { title: 'x', text: 'y', date: '2026-01-01' }, baseRevision: R.revision - 1 } })).status, 409, 'stale save refused');
+  // Website unchanged until publish; preview shows the draft.
+  assert.equal(JSON.parse(E.gh.read('content/testimonials.json')).items.length, start);
+  const pv = await E.call('GET', '/api/reviews/preview');
+  assert.equal(pv.status, 200); assert.match(pv.data, /Made selling easy/); assert.match(pv.data, /The full review text from Dan/);
+  const p = await E.call('POST', '/api/reviews/publish', { body: { baseRevision: R.revision } });
+  assert.equal(p.status, 200, JSON.stringify(p.data));
+  const file = JSON.parse(E.gh.read('content/testimonials.json'));
+  assert.equal(file.items.length, start); assert.ok(file._comment, 'file comment kept');
+  assert.ok(file.items.some((x) => x.slug === 'made-selling-easy'));
+  assert.deepEqual(file.removedSlugs, [gone]);
+  assert.equal(await waitLive(p.data.commit), 'live');
+  R = p.data.reviews; assert.equal(R.hasUnpublishedChanges, false);
+  // Undo works; can't remove the last review.
+  R = (await E.call('DELETE', `/api/reviews/item/made-selling-easy?baseRevision=${R.revision}`)).data;
+  R = (await E.call('POST', '/api/reviews/discard', { body: { baseRevision: R.revision } })).data;
+  assert.ok(R.draft.items.some((x) => x.slug === 'made-selling-easy'));
+});
+
 test('laptop only: phone browsers are refused, laptops are allowed', async () => {
   const iphone = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148 Safari/604.1';
   const android = 'Mozilla/5.0 (Linux; Android 15; Pixel 9) AppleWebKit/537.36 Chrome/130.0 Mobile Safari/537.36';

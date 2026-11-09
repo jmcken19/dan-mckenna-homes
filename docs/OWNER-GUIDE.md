@@ -36,6 +36,13 @@ Click **Change slideshow photos**.
 
 ![Homepage photos](img/20-homepage-photos.jpg)
 
+### Add, change or remove a client review
+On the editor's main page, click **Add, edit or remove reviews**.
+* **+ Add a review** – paste the client's words, add a short title and the date (the name is optional – only
+  if the client is OK with it). Click **Save**.
+* **Edit** – fix a review, then **Save**. **Remove** – takes it off the website.
+* Click **Preview** to look, then **Publish** at the bottom → **Yes, publish**.
+
 ### Anything else
 Want a different change – text, a new page, a listing? Just **text James**.
 

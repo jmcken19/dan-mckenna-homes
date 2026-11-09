@@ -159,3 +159,20 @@ main { max-width: 900px; }
 .btn--publish { font-size: 1.35rem; }
 .choice-box { border: 2px solid var(--ink); border-radius: 12px; padding: 1rem 1.25rem 1.25rem; margin: 1.25rem 0 2rem; background: var(--wash); }
 .choice-box h2 { margin-top: 0; }
+
+/* Reviews */
+.section-h { font-size: 1.5rem; margin: 2rem 0 .5rem; color: var(--ink); }
+.spot--reviews { grid-template-columns: 1fr; }
+.reviews { list-style: none; padding: 0; margin: 1.25rem 0 2rem; display: grid; gap: 1rem; }
+.review { border: 2px solid var(--line); border-radius: 12px; padding: 1rem 1.25rem; background: #fff; }
+.review--changed { border-color: #f0d08a; background: #fffcf3; }
+.review__head { display: flex; flex-wrap: wrap; gap: .25rem 1rem; align-items: baseline; }
+.review__title { font-size: 1.3rem; }
+.review__meta { color: var(--muted, #555); }
+.review__text { margin: .5rem 0 .75rem; }
+.review__btns { display: flex; gap: .6rem; margin: 0; }
+.rform .field { margin-bottom: 1.25rem; }
+.rform label { display: block; font-weight: 700; margin-bottom: .35rem; }
+.rform input, .rform textarea, .rform select { width: 100%; max-width: 760px; font: inherit; padding: .7rem .8rem; border: 2px solid var(--line); border-radius: 8px; box-sizing: border-box; }
+.rform .opt { font-weight: 400; color: var(--muted, #555); }
+.actions__in .btn { font-size: 1.2rem; }

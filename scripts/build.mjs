@@ -32,7 +32,9 @@ const readJson = async (p) => JSON.parse(await readFile(join(root, p), 'utf8'));
 
 export async function loadContent() {
   const site = await readJson('content/site.json');
-  const testimonials = (await readJson('content/testimonials.json')).items;
+  const tFile = await readJson('content/testimonials.json');
+  const testimonials = tFile.items;
+  const removedReviewSlugs = (tFile.removedSlugs || []).filter((s) => /^[a-z0-9-]+$/.test(s) && !testimonials.some((t) => t.slug === s));
   const removed = (await readJson('content/removed.json')).items;
   const dir = join(root, 'content/listings');
   const files = existsSync(dir) ? (await readdir(dir)).filter((f) => f.endsWith('.json')) : [];
@@ -64,7 +66,7 @@ export async function loadContent() {
   if (problems.length) throw new Error('Listing content has problems:\n' + problems.join('\n'));
   const order = { active: 0, pending: 1, sold: 2 };
   listings.sort((a, b) => order[a.status] - order[b.status] || b.updatedAt.localeCompare(a.updatedAt));
-  return { site, testimonials, removed, listings };
+  return { site, testimonials, removed, listings, removedReviewSlugs };
 }
 
 async function writePage(path, html) {
@@ -119,6 +121,11 @@ async function main() {
   for (const r of content.removed) {
     const path = `/listings/${r.slug}/`;
     await writePage(path, page(ctx, { path, title: 'Home no longer available', body: P.removedListingPage(ctx, r) }));
+  }
+  // Reviews Dan removed: their old address forwards to the reviews page.
+  for (const s of content.removedReviewSlugs || []) {
+    const to = ctx.url('/testimonials/');
+    await writePage(`/testimonial/${s}/`, `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Client reviews</title><meta name="robots" content="noindex"><link rel="canonical" href="${to}"><meta http-equiv="refresh" content="0; url=${to}"></head><body><p><a href="${to}">See Dan's client reviews</a></p></body></html>`);
   }
   // Listings were removed from the website: the old address sends visitors to the homepage.
   { const home = ctx.url('/'); await writePage('/listings/', `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Dan McKenna Homes</title><meta name="robots" content="noindex"><link rel="canonical" href="${home}"><meta http-equiv="refresh" content="0; url=${home}"></head><body><p><a href="${home}">Continue to Dan McKenna Homes</a></p></body></html>`); }

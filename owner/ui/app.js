@@ -293,6 +293,9 @@ async function route() {
     // if (h === 'new') return editScreen(null);
     // if (h.startsWith('listing/')) return editScreen(h.split('/')[1]);
     if (h === 'homepage') return homepageScreen();
+    if (h === 'reviews') return reviewsScreen();
+    if (h === 'reviews/new') return reviewEditScreen(null);
+    if (h.startsWith('reviews/edit/')) return reviewEditScreen(decodeURIComponent(h.slice('reviews/edit/'.length)));
     if (h === 'request' || h === 'requests') return requestScreen();
     return startScreen();
   } catch (err) {
@@ -319,7 +322,8 @@ async function startScreen() {
     const d = H.draft;
     const first = d.slides[0];
     app.innerHTML = `
-    <h1>Your website photos</h1>
+    <h1>Your website</h1>
+    <h2 class="section-h">Photos</h2>
     ${how(['Find the photo you want to change below.', 'Click <strong>Replace photo</strong> and pick a new one — or drag a photo from a folder onto it.', 'Click <strong>Preview</strong> to see how the page will look.', 'When you like it, click the <strong>Publish</strong> button at the bottom of the screen.'])}
     <div id="msg">${banner}</div>
     <div id="pub"></div>
@@ -352,6 +356,15 @@ async function startScreen() {
         </div>
       </li>`).join('')}
     </ul>
+
+    <h2 class="section-h">Client reviews</h2>
+    <ul class="spots"><li class="spot spot--reviews">
+      <div class="spot__body">
+        <h2>Client reviews</h2>
+        <p class="spot__where">The reviews that slide across your homepage and fill the Testimonials page.</p>
+        <p><a class="btn btn--primary" href="#/reviews">Add, edit or remove reviews</a></p>
+      </div>
+    </li></ul>
 
     <p class="hint">See your website: <a href="${esc(me.site.url)}/" target="_blank" rel="noopener">${esc(me.site.url.replace(/^https?:\/\//, ''))}</a></p>
     <p class="hint">Need something else changed on the website? Just text James.${me.role === 'maintainer' ? ` · <a href="#/request">Change requests${me.openRequests ? ` (${me.openRequests} waiting)` : ''}</a>` : ''}</p>
@@ -875,6 +888,122 @@ async function homepageScreen() {
     });
   }
   render();
+}
+
+/* ---------------- client reviews ---------------- */
+
+const ROLES = ['', 'Buyer', 'Seller', 'Buyer and seller'];
+const fmtDay = (d) => { try { return new Date(d + 'T12:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }); } catch { return d; } };
+
+function reviewsPublishBar(R) {
+  return `<div class="actions"><p class="actions__state">${R.hasUnpublishedChanges ? 'You have review changes that are not on the website yet' : 'The website is up to date'}</p><div class="actions__in actions__in--2">
+      <a class="btn" href="/api/reviews/preview" target="_blank" rel="noopener">Preview</a>
+      <button type="button" class="btn btn--primary" data-publish ${R.hasUnpublishedChanges ? '' : 'disabled'}>Publish</button>
+    </div></div>`;
+}
+
+async function bindReviewsPublish(getR, setR, rerender, showError) {
+  app.querySelector('[data-publish]')?.addEventListener('click', async () => {
+    const R = getR();
+    if (!(await confirmBox({ title: 'Put your review changes on the website?', body: `Your website will show ${R.draft.items.length} review${R.draft.items.length === 1 ? '' : 's'}.`, yes: 'Yes, publish' }))) return;
+    app.querySelectorAll('button').forEach((x) => { x.disabled = true; });
+    try {
+      const r = await api('POST', '/reviews/publish', { baseRevision: R.revision }, { idem: uuid() });
+      setR(r.reviews);
+      store.set('dmh-publishing', { id: 'reviews', commit: r.commit, url: me.site.url + '/testimonials/', verb: 'your reviews are on the website', linkLabel: 'View your reviews', at: Date.now() });
+      rerender();
+    } catch (err) { rerender(); showError(err); }
+  });
+}
+
+async function reviewsScreen() {
+  setScreen('<p class="loading">Loading your reviews…</p>');
+  let R = await api('GET', '/reviews');
+  let banner = '';
+  const liveBySlug = () => new Map(R.live.items.map((x) => [x.slug, JSON.stringify(x)]));
+
+  function render() {
+    const live = liveBySlug();
+    const shown = R.draft.items.slice().sort((a, b) => String(b.date).localeCompare(String(a.date)));
+    const removedCount = R.live.items.filter((x) => !R.draft.items.some((d) => d.slug === x.slug)).length;
+    app.innerHTML = `
+    <a class="back" href="#/">← Back</a>
+    <h1>Client reviews</h1>
+    ${how(['To add a review, click <strong>+ Add a review</strong> and paste it in.', 'To fix one, click <strong>Edit</strong> next to it. To take one off, click <strong>Remove</strong>.', 'Click <strong>Preview</strong> to look, then <strong>Publish</strong> at the bottom.'])}
+    <div id="msg">${banner}</div>
+    <div id="pub"></div>
+    <p><a class="btn btn--primary" href="#/reviews/new">+ Add a review</a></p>
+    ${removedCount ? `<p class="chip chip--draft">${removedCount} review${removedCount === 1 ? '' : 's'} removed – not published yet</p>` : ''}
+    <ul class="reviews">${shown.map((t) => {
+      const state = !live.has(t.slug) ? 'New – not published yet' : live.get(t.slug) !== JSON.stringify(t) ? 'Changed – not published yet' : '';
+      return `<li class="review${state ? ' review--changed' : ''}">
+        <div class="review__head"><strong class="review__title">${esc(t.title)}</strong><span class="review__meta">${t.client ? esc(t.client) + ' · ' : ''}${t.role ? esc(t.role) + ' · ' : ''}${esc(fmtDay(t.date))}</span></div>
+        ${state ? `<p class="chip chip--draft">${state}</p>` : ''}
+        <p class="review__text">${esc((t.text || []).join(' ').slice(0, 220))}${(t.text || []).join(' ').length > 220 ? '…' : ''}</p>
+        <p class="review__btns"><a class="btn btn--small" href="#/reviews/edit/${encodeURIComponent(t.slug)}">Edit</a><button type="button" class="btn btn--small btn--danger" data-remove="${esc(t.slug)}">Remove</button></p>
+      </li>`;
+    }).join('')}</ul>
+    ${R.hasUnpublishedChanges ? '<p><button type="button" class="btn btn--small" data-discard>Undo my unpublished changes</button></p>' : ''}
+    ${reviewsPublishBar(R)}`;
+    bind();
+    const job = store.get('dmh-publishing');
+    if (job?.id === 'reviews') watchPublish(document.getElementById('pub'), job);
+  }
+  const showError = (err) => { const m = document.getElementById('msg'); m.innerHTML = errorNote(err); m.scrollIntoView({ block: 'center' }); };
+  function bind() {
+    app.querySelectorAll('[data-remove]').forEach((b) => b.addEventListener('click', async () => {
+      const t = R.draft.items.find((x) => x.slug === b.dataset.remove);
+      if (!(await confirmBox({ title: 'Remove this review?', body: `"${esc(t?.title || '')}" comes off the website when you publish. You can undo before publishing.`, yes: 'Remove review', danger: true }))) return;
+      try { R = await api('DELETE', `/reviews/item/${encodeURIComponent(b.dataset.remove)}?baseRevision=${R.revision}`); banner = ''; render(); toast('Review removed. Click Publish when you\'re ready.'); } catch (err) { showError(err); }
+    }));
+    app.querySelector('[data-discard]')?.addEventListener('click', async () => {
+      if (!(await confirmBox({ title: 'Undo unpublished changes?', body: 'The reviews go back to exactly what is on the website now.', yes: 'Undo changes', danger: true }))) return;
+      try { R = await api('POST', '/reviews/discard', { baseRevision: R.revision }); banner = '<div class="note note--ok"><p>Changes undone.</p></div>'; render(); } catch (err) { showError(err); }
+    });
+    document.getElementById('msg').addEventListener('click', async (e) => { if (e.target.matches('[data-reload]')) { R = await api('GET', '/reviews'); banner = ''; render(); } });
+    bindReviewsPublish(() => R, (x) => { R = x; }, () => { banner = ''; render(); }, showError);
+  }
+  render();
+}
+
+async function reviewEditScreen(slug) {
+  setScreen('<p class="loading">Loading…</p>');
+  let R = await api('GET', '/reviews');
+  const t = slug ? R.draft.items.find((x) => x.slug === slug) : null;
+  if (slug && !t) { setScreen('<a class="back" href="#/reviews">← Back to reviews</a><div class="note note--bad"><p>That review is no longer there.</p></div>'); return; }
+  const today = new Date().toISOString().slice(0, 10);
+  const v = { title: t?.title || '', client: t?.client || '', role: t?.role || '', date: t?.date || today, text: (t?.text || []).join('\n\n') };
+  let dirty = false;
+  unsavedGuard = () => dirty;
+  app.innerHTML = `
+    <a class="back" href="#/reviews">← Back to reviews</a>
+    <h1>${t ? 'Edit review' : 'Add a review'}</h1>
+    ${how([t ? 'Change what you need below.' : 'Fill in the boxes below. Only the review, a short title and the date are needed.', 'Click <strong>Save</strong>. Then click <strong>Publish</strong> on the reviews page to put it on your website.'])}
+    <div id="msg"></div>
+    <form id="rform" class="rform" novalidate>
+      <div class="field"><label for="r-text">The review</label><textarea id="r-text" rows="9" maxlength="6000">${esc(v.text)}</textarea><p class="hint">Paste the client's words. Leave an empty line between paragraphs.</p></div>
+      <div class="field"><label for="r-title">Short title</label><input id="r-title" maxlength="120" value="${esc(v.title)}" placeholder="For example: Made selling easy"><p class="hint">Shown in bold above the review.</p></div>
+      <div class="field"><label for="r-client">Client's name <span class="opt">(optional)</span></label><input id="r-client" maxlength="80" value="${esc(v.client)}" placeholder="For example: Sarah M."><p class="hint">Only include a name if the client is OK with it.</p></div>
+      <div class="field"><label for="r-role">Buyer or seller? <span class="opt">(optional)</span></label><select id="r-role">${ROLES.map((r) => `<option value="${esc(r)}"${r === v.role ? ' selected' : ''}>${r || '— Don\'t show —'}</option>`).join('')}</select></div>
+      <div class="field"><label for="r-date">Date of the review</label><input id="r-date" type="date" max="${today}" value="${esc(v.date)}"></div>
+      <p><button type="submit" class="btn btn--primary">Save</button> <a class="btn" href="#/reviews">Cancel</a></p>
+    </form>`;
+  app.querySelectorAll('#rform input, #rform textarea, #rform select').forEach((el) => el.addEventListener('input', () => { dirty = true; }));
+  document.getElementById('rform').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const fields = { text: app.querySelector('#r-text').value, title: app.querySelector('#r-title').value, client: app.querySelector('#r-client').value, role: app.querySelector('#r-role').value, date: app.querySelector('#r-date').value };
+    const btn = e.target.querySelector('button[type=submit]'); btn.disabled = true; btn.textContent = 'Saving…';
+    try {
+      R = t ? await api('PUT', `/reviews/item/${encodeURIComponent(t.slug)}`, { fields, baseRevision: R.revision }) : await api('POST', '/reviews', { fields, baseRevision: R.revision });
+      dirty = false; unsavedGuard = null;
+      location.hash = '#/reviews';
+      setTimeout(() => toast('Saved. Click Publish at the bottom when you\'re ready.'), 300);
+    } catch (err) {
+      btn.disabled = false; btn.textContent = 'Save';
+      const m = document.getElementById('msg'); m.innerHTML = errorNote(err); m.scrollIntoView({ block: 'center' });
+      if (err.status === 409) { try { R = await api('GET', '/reviews'); } catch { /* ignore */ } }
+    }
+  });
 }
 
 /* ---------------- change requests ---------------- */

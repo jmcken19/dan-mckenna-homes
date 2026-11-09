@@ -178,3 +178,7 @@ node tests/acceptance-ui.mjs   # end-to-end against the real repo – pushes com
 * First message ever triggers a one-time **Activate Form** email to that address – Dan must click it.
   After activation FormSubmit gives a random alias: put it in `contactFormTo` so Dan's address isn't in the page code.
 * If sending fails, visitors are told to call or text Dan instead.
+
+## Editor updates
+* `.github/workflows/editor.yml` deploys `owner/` (dmh-owner) when `owner/` or `src/` changes, using the same
+  `CLOUDFLARE_API_TOKEN` secret. Dan's content publishes don't trigger it.

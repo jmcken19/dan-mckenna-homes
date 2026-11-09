@@ -48,9 +48,9 @@ try {
 
   await page.goto(E.url + '/', { waitUntil: 'networkidle0' });
   await shot('01-start');
-  assert.match(await page.$eval('main', (m) => m.innerText), /Your website photos/);
+  assert.match(await page.$eval('main', (m) => m.innerText), /Your website/);
   assert.doesNotMatch(await page.$eval('main', (m) => m.innerText), /Manage listings|Request a website change/, 'photos only');
-  assert.equal(await page.$$eval('.spot', (a) => a.length), 4, 'slideshow + 3 photo spots');
+  assert.equal(await page.$$eval('.spot', (a) => a.length), 5, 'slideshow + 3 photo spots + reviews');
   await page.click('a[href="#/homepage"]');
   await page.waitForSelector('#hphotos');
   assert.equal((await ids('#hphotos')).length, 1);
@@ -125,6 +125,38 @@ try {
   const site2 = JSON.parse(E.gh.read('content/site.json'));
   assert.deepEqual(Object.keys(site2.photos).sort(), ['headshot', 'luxury']);
   console.log('website photos ok');
+
+  // Reviews: add one, edit it, remove another, publish.
+  await page.goto(E.url + '/#/', { waitUntil: 'networkidle0' });
+  await click('a[href="#/reviews"]');
+  await page.waitForSelector('.reviews');
+  const n0 = await page.$$eval('.review', (a) => a.length);
+  await click('a[href="#/reviews/new"]');
+  await page.waitForSelector('#r-text');
+  await page.click('#r-title'); await page.keyboard.press('Enter'); // submitting empty shows a plain error
+  await page.type('#r-text', 'Dan made our move painless.\n\nHighly recommend.');
+  await page.click('button[type=submit]');
+  await page.waitForFunction(() => /title/i.test(document.getElementById('msg').innerText));
+  await page.type('#r-title', 'Painless move'); await page.type('#r-client', 'The Smiths'); await page.select('#r-role', 'Buyer');
+  await page.click('button[type=submit]');
+  await page.waitForFunction((n) => document.querySelectorAll('.review').length === n + 1, {}, n0);
+  assert.match(await page.$eval('.reviews', (u) => u.innerText), /Painless move[\s\S]*New – not published yet/);
+  await shot('08-reviews-added');
+  await click('a[href="#/reviews/edit/painless-move"]');
+  await page.waitForSelector('#r-client');
+  await page.$eval('#r-client', (i) => { i.value = ''; }); await page.type('#r-client', 'J. and K. Smith');
+  await page.click('button[type=submit]');
+  await page.waitForFunction(() => /J\. and K\. Smith/.test(document.querySelector('.reviews')?.innerText || ''));
+  const lastReview = await page.$$eval('[data-remove]', (b) => b[b.length - 1].dataset.remove);
+  await click(`[data-remove="${lastReview}"]`); await page.click('dialog[open] button[value=yes]');
+  await page.waitForFunction((n) => document.querySelectorAll('.review').length === n, {}, n0);
+  await click('[data-publish]'); await page.click('dialog[open] button[value=yes]');
+  await page.waitForFunction(() => /✓ Done/.test(document.body.innerText), { timeout: 60000 });
+  await shot('09-reviews-published');
+  const tf = JSON.parse(E.gh.read('content/testimonials.json'));
+  assert.ok(tf.items.some((x) => x.slug === 'painless-move' && x.client === 'J. and K. Smith' && x.role === 'Buyer'));
+  assert.deepEqual(tf.removedSlugs, [lastReview]);
+  console.log('reviews ok');
 
   // A phone gets the friendly laptop-only screen.
   const phone = await browser.newPage();

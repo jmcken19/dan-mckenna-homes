@@ -10,6 +10,7 @@ import { layout } from '../../src/templates/layout.mjs';
 import { listingDetail } from '../../src/templates/listing.mjs';
 import siteContent from '../../content/site.json';
 import { homepageRoutes } from './homepage.mjs';
+import { reviewsRoutes } from './reviews.mjs';
 
 const JSON_HEADERS = { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' };
 const DAILY_LIMITS = { upload: 400, request: 30, publish: 120, save: 1000 };
@@ -101,6 +102,7 @@ async function handleApi(request, env, url, ctx) {
     if (parts[2] === 'discard' && method === 'POST') return json(await discardDraft(A, id));
   }
   if (parts[0] === 'homepage') return homepageHandler()(A, parts, method);
+  if (parts[0] === 'reviews') return reviewsHandler()(A, parts, method, idempotent);
   if (parts[0] === 'photo' && method === 'GET') return servePhoto(A, parts[1], parts[2], parts[3]);
   if (parts[0] === 'publish-status' && method === 'GET') return json(await publishStatus(A, parts[1]));
   if (parts[0] === 'publish-retry' && method === 'POST') return json(await publishRetry(A, parts[1]));
@@ -114,6 +116,11 @@ async function handleApi(request, env, url, ctx) {
 }
 
 /* ---------- helpers ---------- */
+
+let _reviews;
+function reviewsHandler() {
+  return (_reviews ||= reviewsRoutes({ HttpError, json, now, readJsonBody, needRevision, rateLimit, logEvent, publicBase }));
+}
 
 let _homepage;
 function homepageHandler() {
