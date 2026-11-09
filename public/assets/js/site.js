@@ -1,6 +1,14 @@
 // Small progressive enhancements. Everything works without JavaScript.
 document.documentElement.classList.remove('no-js');
 (function () {
+  // Testing banner: let the viewer hide it (remembered in this browser)
+  document.querySelectorAll('[data-hide-preview]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      document.documentElement.classList.add('preview-hidden');
+      try { localStorage.setItem('dmhHidePreview', '1'); } catch (e) {}
+    });
+  });
+
   // Mobile menu
   var btn = document.querySelector('.menu-btn');
   var nav = document.getElementById('site-nav');

@@ -21,6 +21,7 @@ export function luxLayout(ctx, { path, title, description, body, bodyClass = '',
 <title>${e(fullTitle)}</title>
 <meta name="description" content="${e(description || site.metaDescription)}">
 ${preview ? '<meta name="robots" content="noindex, nofollow, noarchive">' : ''}
+${preview ? '<script>try{if(localStorage.getItem("dmhHidePreview")==="1")document.documentElement.classList.add("preview-hidden")}catch(e){}</script>' : ''}
 <meta property="og:title" content="${e(fullTitle)}">
 ${ogImage ? `<meta property="og:image" content="${e(ogImage)}">` : ''}
 <meta name="theme-color" content="#1d1d1f">
@@ -34,7 +35,7 @@ ${ogImage ? `<meta property="og:image" content="${e(ogImage)}">` : ''}
 </head>
 <body class="lux ${isHome ? 'lux--home' : ''} ${e(bodyClass)}">
 <a class="skip" href="#main">Skip to main content</a>
-${preview ? `<div class="preview-bar" role="note">Design option 2 – testing preview. <a href="${e(ctx.altUrl || '#')}">See the classic design</a></div>` : ''}
+${preview ? `<div class="preview-bar" role="note">Design option 2 – testing preview. <a href="${e(ctx.altUrl || '#')}">See the classic design</a><button type="button" class="preview-bar__hide" data-hide-preview aria-label="Hide this testing banner">Hide ×</button></div>` : ''}
 <header class="lx-header${isHome ? ' lx-header--over' : ''}">
   <div class="lx-header__in">
     <a class="lx-brand" href="${url('/')}">
