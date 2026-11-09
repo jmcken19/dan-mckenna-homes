@@ -788,7 +788,6 @@ async function homepageScreen() {
     </div>
 
     ${H.hasUnpublishedChanges ? '<p style="margin-top:1.5rem"><button type="button" class="btn btn--small" data-discard>Undo my unpublished changes</button></p>' : ''}
-    <p class="hint" style="margin-top:1rem">Want to see it in design option 2? <a href="/api/homepage/preview?design=option2" target="_blank" rel="noopener">Preview option 2</a></p>
 
     <div class="actions"><p class="actions__state">${H.hasUnpublishedChanges ? 'You have changes that are not on the website yet' : 'The website is up to date'}</p><div class="actions__in actions__in--2">
       <a class="btn" href="/api/homepage/preview" target="_blank" rel="noopener">Preview</a>
