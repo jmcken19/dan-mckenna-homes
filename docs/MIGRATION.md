@@ -24,8 +24,8 @@ Contact facts verified against source: **704-441-4556**, **danmckenna@kw.com**, 
 
 | Item | Source | Action |
 |---|---|---|
-| Hero photo (pool/fire-pit patio), construction photo, 2515 Forest Lawn photo | Uploaded to Placester by Dan; photographer unknown | **Dan to confirm** he owns/licensed them for his own site (Forest Lawn: builder Tiara Homes / listing photographer) |
-| Dan's headshot (2019) | Placester upload | Dan to confirm; easy to replace via change request |
+| Hero photo (pool/fire-pit patio), construction photo, 2515 Forest Lawn photo | Uploaded to Placester by Dan | ✅ **Confirmed Nov 8, 2026: Dan owns all the photos.** (was: Dan to confirm he owns/licensed them for his own site (Forest Lawn: builder Tiara Homes / listing photographer) |
+| Dan's headshot (2019) | Placester upload | ✅ Owned by Dan (confirmed Nov 8, 2026) |
 | Keller Williams Charlotte Ballantyne logos | KW brand assets | Allowed for KW agents under KW brand guidelines – Dan to confirm current logo version with his office |
 | Testimonials | Dan's clients, posted on his site | Kept verbatim. Full text of the three 09/09/2025 testimonials was never published on the old site (only cut-off excerpts) – **ask Dan for the full text** |
 | UserWay accessibility widget, Placester footer credit, compliance@placester.com | Placester | Removed |
@@ -39,3 +39,8 @@ Contact facts verified against source: **704-441-4556**, **danmckenna@kw.com**, 
 3. DMCA / accessibility page wording – OK as simplified, or keep Placester-style legal text?
 4. Should the site show "Equal Housing Opportunity" / a license number in the footer? (Not on the old site; ask his broker.)
 5. More homepage slideshow photos (he can send them through "Request a website change").
+
+
+## Cutover
+Live on Cloudflare since Nov 8, 2026 (www.danmckennahomes.com). Placester account cancelled Nov 8, 2026.
+Remaining open items: see `docs/CIRCLE-BACK.md`.

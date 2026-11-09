@@ -169,4 +169,4 @@ node tests/acceptance-ui.mjs   # end-to-end against the real repo – pushes com
 * DNS lives in Cloudflare (nameservers darwin/frida.ns.cloudflare.com, set at GoDaddy, where the domain is still
   registered). Google Workspace mail records (5 MX, SPF + `dc-aa8e722993._spfm` helper, 2 site-verification TXT)
   were copied from GoDaddy – **never delete them**.
-* Placester: keep until the new site has run cleanly for about a week, then cancel in Dan's Placester account.
+* Placester: cancelled Nov 8, 2026.
