@@ -280,13 +280,15 @@ async function route() {
   }
   unsavedGuard = null;
   route.last = location.hash;
+  document.body.classList.remove('is-visual');
   const h = location.hash.replace(/^#\/?/, '');
   try {
     if (!me) {
       try { me = await api('GET', '/me'); } catch (e) { if (e.data?.laptopOnly) return laptopOnlyScreen(); throw e; }
       document.getElementById('who').textContent = `Signed in as ${me.email}`;
     }
-    if (h === '' ) return startScreen();
+    if (h === '') return visualScreen();
+    if (h === 'list') return startScreen();
     // Listings editing is switched off: Dan doesn't add listings himself.
     // To bring it back, restore these routes and the start-screen box.
     // if (h === 'listings') return listingsScreen();
@@ -303,7 +305,243 @@ async function route() {
   }
 }
 
-/* ---------------- start ---------------- */
+
+/* ---------------- edit on the page (the main editor screen) ---------------- */
+// Shows the owner's real page (a private draft preview) with a ✎ button on everything they can change.
+// Which buttons appear is decided by the page itself: every editable part carries data-edit="<kind>"
+// (src/lib/editables.mjs). KIND_TOOLS says what each kind opens. Unknown kinds are simply skipped.
+
+const KIND_TOOLS = {
+  slideshow: { title: 'Homepage photos', button: '✎ Change these photos', open: (body, ctx) => homepageScreen(body, { embedded: true, H: ctx.H, onChange: ctx.onChange }) },
+  photo: { title: (key) => SPOT_INFO[key]?.label || 'Photo', button: '✎ Change photo', open: (body, ctx) => spotPanel(body, ctx) },
+  reviews: { title: 'Client reviews', button: '✎ Change reviews', open: (body, ctx) => reviewsPanel(body, ctx, null) },
+  review: { title: 'Edit this review', button: '✎ Edit', open: (body, ctx) => reviewsPanel(body, ctx, ctx.key) },
+};
+
+// Reviews in the side panel: the list (slug = null) or one review's form; "← All reviews" goes back to the list.
+function reviewsPanel(body, ctx, slug) {
+  const showList = () => { ctx.setTitle('Client reviews'); reviewsScreen(body, { embedded: true, R: ctx.getR(), onChange: ctx.onReviews, edit: showForm }); };
+  const showForm = (s) => { ctx.setTitle(s ? 'Edit this review' : 'Add a review'); reviewEditScreen(s, body, { embedded: true, R: ctx.getR(), onChange: ctx.onReviews, back: showList }); };
+  if (slug) showForm(slug); else showList();
+}
+
+const PEN_CSS = `
+[data-edit]{cursor:pointer;outline:4px solid transparent;outline-offset:-4px;transition:outline-color .15s}
+[data-edit].jte-hover,[data-edit].jte-on{outline-color:#1f4f99}
+.jte-pen{position:absolute;z-index:60;display:inline-flex;align-items:center;gap:.4rem;min-height:52px;padding:.55rem 1.1rem;border:3px solid #fff;border-radius:999px;background:#1f4f99;color:#fff;font:700 19px/1.1 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;box-shadow:0 4px 14px rgba(0,0,0,.35);cursor:pointer}
+.jte-pen:hover{background:#173c75}
+.jte-pen:focus-visible{outline:4px solid #ffbf47;outline-offset:2px}
+.preview-bar{display:none!important}`;
+
+async function visualScreen() {
+  document.body.classList.add('is-visual');
+  setScreen('<p class="loading">Loading your website…</p>');
+  let H = await api('GET', '/homepage');
+  let R = await api('GET', '/reviews');
+  const dirty = () => !!(H.hasUnpublishedChanges || R?.hasUnpublishedChanges);
+  const pages = me.pages?.length ? me.pages : [{ path: '/', title: 'Home' }];
+  let path = pages.some((p) => p.path === store.get('dmh-editor-page')) ? store.get('dmh-editor-page') : '/';
+  let device = store.get('dmh-editor-device') === 'phone' ? 'phone' : 'laptop';
+  let open = null; // { kind, key }
+
+  app.innerHTML = `
+  <div class="vis">
+    <div class="vis__top">
+      <div class="vis__group" role="group" aria-label="Which page">
+        <span class="vis__label">Page:</span>
+        ${pages.map((p) => `<button type="button" class="seg" data-page="${esc(p.path)}">${esc(p.title)}</button>`).join('')}
+      </div>
+      <div class="vis__group" role="group" aria-label="See it as">
+        <span class="vis__label">See it on:</span>
+        <button type="button" class="seg" data-device="laptop">Computer</button>
+        <button type="button" class="seg" data-device="phone">Phone</button>
+      </div>
+    </div>
+    <p class="vis__help">Click anything with a blue <strong>✎ Change</strong> button. Your change shows on the page right away. When you're happy, click <strong>Publish</strong> at the bottom.</p>
+    <div id="msg"></div>
+    <div id="pub"></div>
+    <div class="vis__body">
+      <div class="vis__stage" id="stage"><iframe id="frame" title="Your website, with your unpublished changes"></iframe></div>
+      <aside class="drawer" id="drawer" hidden aria-labelledby="drawer-title">
+        <div class="drawer__head"><h2 id="drawer-title"></h2><button type="button" class="btn btn--small btn--dark" data-close>Done</button></div>
+        <div class="drawer__body" id="drawer-body"></div>
+      </aside>
+    </div>
+    <p class="hint vis__foot">Prefer a simple list of your photos? <a href="#/list">Open the list view</a>. Need something else changed? Contact ${supportLine()}.</p>
+    <div class="actions"><p class="actions__state" id="state"></p><div class="actions__in actions__in--2">
+      <button type="button" class="btn" data-undo-all>Undo all changes</button>
+      <button type="button" class="btn btn--primary btn--publish" data-publish>Publish</button>
+    </div></div>
+  </div>`;
+
+  const frame = app.querySelector('#frame');
+  const drawer = app.querySelector('#drawer');
+  const dBody = app.querySelector('#drawer-body');
+  let keepScroll = 0;
+
+  const paintBar = () => {
+    app.querySelector('#state').textContent = dirty() ? 'You have changes that are not on the website yet' : 'The website is up to date';
+    app.querySelector('[data-publish]').disabled = !dirty();
+    app.querySelector('[data-undo-all]').hidden = !dirty();
+    app.querySelectorAll('[data-page]').forEach((b) => { const on = b.dataset.page === path; b.classList.toggle('is-on', on); b.setAttribute('aria-pressed', String(on)); });
+    app.querySelectorAll('[data-device]').forEach((b) => { const on = b.dataset.device === device; b.classList.toggle('is-on', on); b.setAttribute('aria-pressed', String(on)); });
+    app.querySelector('#stage').classList.toggle('vis__stage--phone', device === 'phone');
+  };
+
+  const load = (keep = false) => {
+    keepScroll = keep ? (frame.contentWindow?.scrollY || 0) : 0;
+    frame.src = `/api/homepage/preview?edit=1&path=${encodeURIComponent(path)}&r=${H.revision}.${R?.revision || 0}&t=${Date.now()}`;
+  };
+
+  const onChange = (newH) => { H = newH; paintBar(); load(true); };
+  const onReviews = (newR) => { R = newR; paintBar(); load(true); };
+  const setTitle = (t) => { app.querySelector('#drawer-title').textContent = t; };
+
+  function openTool(kind, key, label) {
+    const tool = KIND_TOOLS[kind];
+    if (!tool) return;
+    if (tool.go) { location.hash = tool.go; return; }
+    open = { kind, key };
+    app.querySelector('#drawer-title').textContent = typeof tool.title === 'function' ? tool.title(key) : (label || tool.title);
+    drawer.hidden = false;
+    app.querySelector('.vis__body').classList.add('has-drawer');
+    tool.open(dBody, { H, key, onChange, onReviews, getR: () => R, setTitle });
+    markOpen();
+    drawer.querySelector('[data-close]').focus();
+  }
+  function closeTool() {
+    open = null; drawer.hidden = true; dBody.innerHTML = '';
+    app.querySelector('.vis__body').classList.remove('has-drawer');
+    markOpen();
+  }
+  function markOpen() {
+    const doc = frame.contentDocument; if (!doc) return;
+    doc.querySelectorAll('[data-edit]').forEach((el) => el.classList.toggle('jte-on', !!open && el.dataset.edit === open.kind && (el.dataset.editKey || '') === (open.key || '')));
+  }
+
+  // Put a ✎ button on every editable thing in the page, and keep clicks inside the editor.
+  frame.addEventListener('load', () => {
+    const doc = frame.contentDocument; if (!doc) return;
+    const st = doc.createElement('style'); st.textContent = PEN_CSS; doc.head.appendChild(st);
+    doc.querySelectorAll('[data-edit]').forEach((el) => {
+      const tool = KIND_TOOLS[el.dataset.edit];
+      if (!tool) return;
+      const host = el.tagName === 'IMG' ? el.parentElement : el;
+      if (doc.defaultView.getComputedStyle(host).position === 'static') host.style.position = 'relative';
+      const pen = doc.createElement('button');
+      pen.type = 'button'; pen.className = 'jte-pen'; pen.textContent = tool.button;
+      pen.setAttribute('aria-label', `${tool.button.replace('✎ ', '')}: ${el.dataset.editLabel || ''}`);
+      const place = () => {
+        if (el.dataset.edit === 'review') { pen.style.bottom = '10px'; pen.style.right = '10px'; return; } // clear of the title
+        if (el === host) { pen.style.top = '14px'; pen.style.right = '14px'; return; }
+        pen.style.top = (el.offsetTop + 12) + 'px';
+        pen.style.left = Math.max(8, el.offsetLeft + el.offsetWidth - pen.offsetWidth - 12) + 'px';
+      };
+      host.appendChild(pen); place();
+      el.addEventListener('load', place); doc.defaultView.addEventListener('resize', place);
+      pen.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); openTool(el.dataset.edit, el.dataset.editKey || '', el.dataset.editLabel || ''); });
+    });
+    doc.addEventListener('click', (e) => {
+      if (e.target.closest('.jte-pen') || e.target.closest('[data-hide-preview]')) return;
+      const ed = e.target.closest('[data-edit]');
+      if (ed && KIND_TOOLS[ed.dataset.edit]) { e.preventDefault(); return openTool(ed.dataset.edit, ed.dataset.editKey || '', ed.dataset.editLabel || ''); }
+      const a = e.target.closest('a[href]');
+      if (!a || e.target.closest('button')) return;
+      e.preventDefault();
+      let to = null;
+      try { const u = new URL(a.href, me.site.url + '/'); if (me.site.url && u.href.startsWith(me.site.url)) to = u.pathname.slice(new URL(me.site.url + '/').pathname.length - 1); } catch { /* ignore */ }
+      const pg = to && pages.find((p) => p.path === to || p.path === to + '/');
+      if (pg) { path = pg.path; store.set('dmh-editor-page', path); closeTool(); paintBar(); load(); }
+      else toast('Links are paused while you edit. Use the Page buttons at the top to switch pages.');
+    }, true);
+    // Outline only the innermost editable thing under the mouse (a review, not the whole reviews page).
+    let hov = null;
+    doc.addEventListener('mouseover', (e) => {
+      const t = e.target.closest('[data-edit]');
+      if (t === hov) return;
+      hov?.classList.remove('jte-hover'); hov = t && KIND_TOOLS[t.dataset.edit] ? t : null; hov?.classList.add('jte-hover');
+    });
+    doc.addEventListener('submit', (e) => { e.preventDefault(); toast('Forms are switched off while you edit.'); }, true);
+    if (keepScroll) doc.defaultView.scrollTo(0, keepScroll);
+    markOpen();
+  });
+
+  app.querySelectorAll('[data-page]').forEach((b) => b.addEventListener('click', () => { path = b.dataset.page; store.set('dmh-editor-page', path); closeTool(); paintBar(); load(); }));
+  app.querySelectorAll('[data-device]').forEach((b) => b.addEventListener('click', () => { device = b.dataset.device; store.set('dmh-editor-device', device); paintBar(); }));
+  drawer.querySelector('[data-close]').addEventListener('click', closeTool);
+  document.addEventListener('keydown', function esc_(e) { if (!document.body.contains(drawer)) return document.removeEventListener('keydown', esc_); if (e.key === 'Escape' && open) closeTool(); });
+
+  const showError = (err) => { const m = app.querySelector('#msg'); m.innerHTML = errorNote(err); m.scrollIntoView({ block: 'center' }); };
+  app.querySelector('#msg').addEventListener('click', async (e) => { if (e.target.matches('[data-reload]')) { H = await api('GET', '/homepage'); app.querySelector('#msg').innerHTML = ''; closeTool(); paintBar(); load(); } });
+  app.querySelector('[data-undo-all]').addEventListener('click', async () => {
+    if (!(await confirmBox({ title: 'Undo all your unpublished changes?', body: 'Your photos and reviews go back to exactly what is on the website now.', yes: 'Undo all changes', danger: true }))) return;
+    try {
+      if (H.hasUnpublishedChanges) H = await api('POST', '/homepage/discard', { baseRevision: H.revision });
+      if (R?.hasUnpublishedChanges) R = await api('POST', '/reviews/discard', { baseRevision: R.revision });
+      closeTool(); paintBar(); load(); toast('Back to what is on the website now.');
+    } catch (err) { showError(err); }
+  });
+  app.querySelector('[data-publish]').addEventListener('click', async () => {
+    if (!(await confirmBox({ title: 'Put your changes on the website?', body: 'Everyone visiting your website will see your changes in a few minutes.', yes: 'Yes, publish' }))) return;
+    const btn = app.querySelector('[data-publish]'); btn.disabled = true;
+    try {
+      // Photos and reviews are saved separately; each publish is one commit. The last commit's build has both.
+      let commit = null;
+      if (H.hasUnpublishedChanges) { const r = await api('POST', '/homepage/publish', { baseRevision: H.revision }, { idem: uuid() }); H = r.homepage; commit = r.commit; }
+      if (R?.hasUnpublishedChanges) { const r = await api('POST', '/reviews/publish', { baseRevision: R.revision }, { idem: uuid() }); R = r.reviews; commit = r.commit; }
+      closeTool(); paintBar();
+      const job = { id: 'homepage', commit, url: me.site.url + '/', verb: 'your changes are on the website', linkLabel: 'View your website', at: Date.now() };
+      store.set('dmh-publishing', job);
+      watchPublish(app.querySelector('#pub'), job);
+    } catch (err) { paintBar(); showError(err); }
+  });
+
+  paintBar(); load();
+  const job = store.get('dmh-publishing');
+  if (job?.id === 'homepage') watchPublish(app.querySelector('#pub'), job);
+}
+
+/* One photo spot, in the side panel: see it, replace it (click or drop), undo. */
+function spotPanel(root, ctx) {
+  let H = ctx.H; const k = ctx.key; const info = SPOT_INFO[k] || {};
+  const changed = () => JSON.stringify(H.draft.photos[k]) !== JSON.stringify(H.live.photos[k]);
+  function render(msg = '') {
+    root.innerHTML = `
+      <p><label class="btn btn--primary btn--block file-btn">Choose a new photo<input type="file" accept="image/*,.heic,.heif" id="pfile" aria-label="Choose a new photo for ${esc(info.label || k)}"></label></p>
+      <div id="pmsg" aria-live="polite">${msg}</div>
+      <p class="hint">Or drag a photo from a folder onto the photo below. It shows on your page right away.</p>
+      <div class="panel-photo" id="pp"><img src="/api/homepage/spot/${esc(k)}/img?r=${H.revision}" alt="The photo now"></div>
+      ${changed() ? '<p><button type="button" class="btn btn--block" data-undo>Undo – go back to the photo on the website</button></p>' : ''}
+      ${info.tip ? `<p class="hint">${esc(info.tip)}</p>` : ''}`;
+    root.querySelector('#pfile').addEventListener('change', (e) => { const f = e.target.files[0]; e.target.value = ''; if (f) replace(f); });
+    makeDropZone(root.querySelector('#pp'), (files) => replace(files[0]));
+    root.querySelector('[data-undo]')?.addEventListener('click', async () => {
+      try { H = await api('POST', `/homepage/spot/${k}/undo`, { baseRevision: H.revision }); render(); ctx.onChange(H); toast('Back to the photo that is on the website now.'); }
+      catch (err) { root.querySelector('#pmsg').innerHTML = errorNote(err); }
+    });
+  }
+  async function replace(file) {
+    const m = root.querySelector('#pmsg');
+    try {
+      m.innerHTML = '<p class="hint"><span class="spinner" aria-hidden="true"></span> Preparing your photo…</p>';
+      const p = await prepareHero(file, info.min);
+      m.innerHTML = '<p class="hint"><span class="spinner" aria-hidden="true"></span> Uploading…</p>';
+      const fd = new FormData();
+      for (const w of [2000, 1400, 800]) fd.append(`w${w}`, p[w].blob, `w${w}.jpg`);
+      if (file.size <= 24 * 1024 * 1024) fd.append('original', file, 'original');
+      fd.append('baseRevision', String(H.revision));
+      H = await api('POST', `/homepage/spot/${k}`, fd, { idem: uuid() });
+      render('<div class="note note--ok"><p>✓ New photo is on your page. Click <strong>Publish</strong> when you\'re happy.</p></div>');
+      ctx.onChange(H);
+    } catch (err) {
+      if (err.status === 409) { try { H = await api('GET', '/homepage'); } catch { /* ignore */ } }
+      m.innerHTML = errorNote(err);
+    }
+  }
+  render();
+}
+
+/* ---------------- start (list view) ---------------- */
 
 const SPOT_INFO = {
   headshot: { label: 'Your photo', where: 'About us page and Contact page (and the top of design option 2)', tip: 'A portrait photo (taller than wide) of you looks best.', min: 500, page: 'headshot' },
@@ -322,7 +560,8 @@ async function startScreen() {
     const d = H.draft;
     const first = d.slides[0];
     app.innerHTML = `
-    <h1>Your website</h1>
+    <p><a class="back" href="#/">← Back to editing on the page</a></p>
+    <h1>Your website (list view)</h1>
     <h2 class="section-h">Photos</h2>
     ${how(['Find the photo you want to change below.', 'Click <strong>Replace photo</strong> and pick a new one — or drag a photo from a folder onto it.', 'Click <strong>Preview</strong> to see how the page will look.', 'When you like it, click the <strong>Publish</strong> button at the bottom of the screen.'])}
     <div id="msg">${banner}</div>
@@ -741,19 +980,23 @@ async function prepareHero(file, minEdge = 1200) {
   return out;
 }
 
-async function homepageScreen() {
-  setScreen('<p class="loading">Loading your homepage photos…</p>');
-  let H = await api('GET', '/homepage');
+// Slideshow controls. Used full-screen (#/homepage) and inside the side panel of the on-page editor
+// (embedded: no Back link, no Preview/Publish bar; onChange(H) runs after every saved change).
+async function homepageScreen(root = app, opts = {}) {
+  const embedded = !!opts.embedded;
+  if (embedded) root.innerHTML = '<p class="loading">Loading your photos…</p>'; else setScreen('<p class="loading">Loading your homepage photos…</p>');
+  let H = opts.H || await api('GET', '/homepage');
+  let lastRev = H.revision;
+  const SAVED = embedded ? 'Saved – your page shows it now. Click Publish when you\'re happy.' : null;
   let banner = '';
-  const pubBox = () => document.getElementById('pub');
+  const pubBox = () => root.querySelector('#pub');
 
   function render() {
     const d = H.draft;
     const speed = nearestSpeed(d.seconds);
-    app.innerHTML = `
-    <a class="back" href="#/">← Back to all photos</a>
-    <h1>Homepage slideshow</h1>
-    ${how(['First choose <strong>Slideshow</strong> or <strong>One still photo</strong> in the box below.', 'Add photos with the <strong>+ Add photos</strong> box. <strong>Photo 1 shows first.</strong> Change the order by dragging <strong>⠿ Drag</strong>, or click <strong>Show first</strong>.', 'Click <strong>Preview</strong> to look, then <strong>Publish</strong> to put it on your website.'])}
+    root.innerHTML = `
+    ${embedded ? '' : '<a class="back" href="#/list">← Back to all photos</a>\n    <h1>Homepage slideshow</h1>'}
+    ${embedded ? '<p class="hint">Every change shows on your page right away.</p>' : how(['First choose <strong>Slideshow</strong> or <strong>One still photo</strong> in the box below.', 'Add photos with the <strong>+ Add photos</strong> box. <strong>Photo 1 shows first.</strong> Change the order by dragging <strong>⠿ Drag</strong>, or click <strong>Show first</strong>.', 'Click <strong>Preview</strong> to look, then <strong>Publish</strong> to put it on your website.'])}
     <div id="msg">${banner}</div>
     <div id="pub"></div>
 
@@ -802,27 +1045,28 @@ async function homepageScreen() {
 
     ${H.hasUnpublishedChanges ? '<p style="margin-top:1.5rem"><button type="button" class="btn btn--small" data-discard>Undo my unpublished changes</button></p>' : ''}
 
-    <div class="actions"><p class="actions__state">${H.hasUnpublishedChanges ? 'You have changes that are not on the website yet' : 'The website is up to date'}</p><div class="actions__in actions__in--2">
+    ${embedded ? '' : `<div class="actions"><p class="actions__state">${H.hasUnpublishedChanges ? 'You have changes that are not on the website yet' : 'The website is up to date'}</p><div class="actions__in actions__in--2">
       <a class="btn" href="/api/homepage/preview" target="_blank" rel="noopener">Preview</a>
       <button type="button" class="btn btn--primary" data-publish ${H.hasUnpublishedChanges ? '' : 'disabled'}>Publish</button>
-    </div></div>`;
+    </div></div>`}`;
     bind();
+    if (embedded && H.revision !== lastRev) { lastRev = H.revision; opts.onChange?.(H); }
     const job = store.get('dmh-publishing');
     if (job?.id === 'homepage') watchPublish(pubBox(), job);
   }
 
-  const showError = (err) => { const m = document.getElementById('msg'); m.innerHTML = errorNote(err); m.scrollIntoView({ block: 'center' }); };
+  const showError = (err) => { const m = root.querySelector('#msg'); m.innerHTML = errorNote(err); m.scrollIntoView({ block: 'center' }); };
   const ok = (msg) => { banner = msg ? `<div class="note note--ok"><p>${msg}</p></div>` : ''; render(); };
 
   async function save(method, path, body) {
     try { H = await api(method, path, { ...body, baseRevision: H.revision }); return true; } catch (err) { showError(err); return false; }
   }
   const order = () => H.draft.slides.map((x) => x.id);
-  const arrange = async (ord, focus) => { if (await save('PUT', '/homepage/photos', { order: ord, focus })) { ok(''); toast('Saved. Click Publish when you\'re ready.'); } };
+  const arrange = async (ord, focus) => { if (await save('PUT', '/homepage/photos', { order: ord, focus })) { ok(''); toast(SAVED || 'Saved. Click Publish when you\'re ready.'); } };
 
   async function upload(files, replaceId = null) {
     if (!files.length) return;
-    const list = document.getElementById('uploads');
+    const list = root.querySelector('#uploads');
     list.innerHTML = '';
     const rows = files.map((f, i) => { const li = document.createElement('li'); li.textContent = `Photo ${i + 1} of ${files.length}: waiting…`; list.appendChild(li); return li; });
     let failed = 0, tall = 0;
@@ -849,36 +1093,36 @@ async function homepageScreen() {
     const added = files.length - failed;
     banner = failed
       ? `<div class="note note--warn"><p>${added} of ${files.length} photos added. The others are listed below with what to do.</p></div>`
-      : `<div class="note note--ok"><p>${added === 1 ? 'Photo added' : added + ' photos added'} to the end of the slideshow. Drag to change the order, then click <strong>Publish</strong>.${tall ? ' Tip: tall photos get trimmed – use "Keep in view" to choose what shows.' : ''}</p></div>`;
+      : `<div class="note note--ok"><p>${added === 1 ? 'Photo added' : added + ' photos added'} to the end of the slideshow. ${embedded ? 'It shows on your page now. ' : ''}Drag to change the order, then click <strong>Publish</strong>.${tall ? ' Tip: tall photos get trimmed – use "Keep in view" to choose what shows.' : ''}</p></div>`;
     render();
-    if (failed) document.getElementById('uploads').innerHTML = summary;
+    if (failed) root.querySelector('#uploads').innerHTML = summary;
   }
 
   function bind() {
-    document.getElementById('addhero').addEventListener('change', (e) => { const f = [...e.target.files]; e.target.value = ''; upload(f); });
-    makeDropZone(document.getElementById('addhero').closest('.dropzone'), (f) => upload(f));
-    makeSortable(document.getElementById('hphotos'), (ord) => arrange(ord));
-    app.querySelectorAll('[data-replace]').forEach((inp) => inp.addEventListener('change', (e) => { const f = [...e.target.files].slice(0, 1); e.target.value = ''; upload(f, inp.dataset.replace); }));
-    app.querySelectorAll('[data-first]').forEach((b) => b.addEventListener('click', () => arrange([b.dataset.first, ...order().filter((x) => x !== b.dataset.first)])));
-    app.querySelectorAll('[data-focus]').forEach((b) => b.addEventListener('click', () => arrange(order(), { [b.dataset.focus]: b.dataset.v })));
-    app.querySelectorAll('[data-remove]').forEach((b) => b.addEventListener('click', async () => {
+    root.querySelector('#addhero').addEventListener('change', (e) => { const f = [...e.target.files]; e.target.value = ''; upload(f); });
+    makeDropZone(root.querySelector('#addhero').closest('.dropzone'), (f) => upload(f));
+    makeSortable(root.querySelector('#hphotos'), (ord) => arrange(ord));
+    root.querySelectorAll('[data-replace]').forEach((inp) => inp.addEventListener('change', (e) => { const f = [...e.target.files].slice(0, 1); e.target.value = ''; upload(f, inp.dataset.replace); }));
+    root.querySelectorAll('[data-first]').forEach((b) => b.addEventListener('click', () => arrange([b.dataset.first, ...order().filter((x) => x !== b.dataset.first)])));
+    root.querySelectorAll('[data-focus]').forEach((b) => b.addEventListener('click', () => arrange(order(), { [b.dataset.focus]: b.dataset.v })));
+    root.querySelectorAll('[data-remove]').forEach((b) => b.addEventListener('click', async () => {
       if (!(await confirmBox({ title: 'Remove this photo from the slideshow?', body: 'Visitors keep seeing it until you publish. You can undo before publishing.', yes: 'Remove photo', danger: true }))) return;
-      try { H = await api('DELETE', `/homepage/photos/${b.dataset.remove}?baseRevision=${H.revision}`); ok(''); toast('Photo removed. Click Publish when you\'re ready.'); } catch (err) { showError(err); }
+      try { H = await api('DELETE', `/homepage/photos/${b.dataset.remove}?baseRevision=${H.revision}`); ok(''); toast(SAVED || 'Photo removed. Click Publish when you\'re ready.'); } catch (err) { showError(err); }
     }));
-    app.querySelectorAll('input[name=speed], input[name=fade], input[name=autoplay]').forEach((r) => r.addEventListener('change', async () => {
-      const seconds = Number(app.querySelector('input[name=speed]:checked').value);
-      const fade = app.querySelector('input[name=fade]:checked').value === 'on';
-      const autoplay = app.querySelector('input[name=autoplay]:checked').value === 'on';
-      if (await save('PUT', '/homepage/settings', { seconds, fade, autoplay })) { ok(''); toast('Saved. Click Preview to watch it, or Publish to put it live.'); }
+    root.querySelectorAll('input[name=speed], input[name=fade], input[name=autoplay]').forEach((r) => r.addEventListener('change', async () => {
+      const seconds = Number(root.querySelector('input[name=speed]:checked').value);
+      const fade = root.querySelector('input[name=fade]:checked').value === 'on';
+      const autoplay = root.querySelector('input[name=autoplay]:checked').value === 'on';
+      if (await save('PUT', '/homepage/settings', { seconds, fade, autoplay })) { ok(''); toast(SAVED || 'Saved. Click Preview to watch it, or Publish to put it live.'); }
     }));
-    app.querySelector('[data-discard]')?.addEventListener('click', async () => {
+    root.querySelector('[data-discard]')?.addEventListener('click', async () => {
       if (!(await confirmBox({ title: 'Undo unpublished changes?', body: 'The slideshow goes back to exactly what is on the website now.', yes: 'Undo changes', danger: true }))) return;
       if (await save('POST', '/homepage/discard', {})) ok('Changes undone.');
     });
-    document.getElementById('msg').addEventListener('click', async (e) => { if (e.target.matches('[data-reload]')) { H = await api('GET', '/homepage'); ok(''); } });
-    app.querySelector('[data-publish]').addEventListener('click', async () => {
+    root.querySelector('#msg').addEventListener('click', async (e) => { if (e.target.matches('[data-reload]')) { H = await api('GET', '/homepage'); ok(''); } });
+    root.querySelector('[data-publish]')?.addEventListener('click', async () => {
       if (!(await confirmBox({ title: 'Put these photos on your homepage?', body: H.draft.autoplay === false ? `One still photo (Photo 1).` : `${H.draft.slides.length} photo${H.draft.slides.length === 1 ? '' : 's'}, slideshow, ${SPEEDS.find((x) => x.v === nearestSpeed(H.draft.seconds)).label.toLowerCase()} speed, ${H.draft.fade ? 'fading' : 'sliding'} between photos.`, yes: 'Yes, publish' }))) return;
-      app.querySelectorAll('button').forEach((b) => { b.disabled = true; });
+      root.querySelectorAll('button').forEach((b) => { b.disabled = true; });
       try {
         const r = await api('POST', '/homepage/publish', { baseRevision: H.revision }, { idem: uuid() });
         H = r.homepage;
@@ -916,9 +1160,13 @@ async function bindReviewsPublish(getR, setR, rerender, showError) {
   });
 }
 
-async function reviewsScreen() {
-  setScreen('<p class="loading">Loading your reviews…</p>');
-  let R = await api('GET', '/reviews');
+// Reviews list. Full screen (#/reviews) or inside the on-page editor's side panel (embedded: Edit/Add open
+// the form in the same panel through opts.edit(slug); opts.onChange(R) after every saved change).
+async function reviewsScreen(root = app, opts = {}) {
+  const embedded = !!opts.embedded;
+  if (embedded) root.innerHTML = '<p class="loading">Loading your reviews…</p>'; else setScreen('<p class="loading">Loading your reviews…</p>');
+  let R = opts.R || await api('GET', '/reviews');
+  const changed = (x) => { R = x; if (embedded) opts.onChange?.(R); };
   let banner = '';
   const liveBySlug = () => new Map(R.live.items.map((x) => [x.slug, JSON.stringify(x)]));
 
@@ -926,13 +1174,12 @@ async function reviewsScreen() {
     const live = liveBySlug();
     const shown = R.draft.items.slice().sort((a, b) => String(b.date).localeCompare(String(a.date)));
     const removedCount = R.live.items.filter((x) => !R.draft.items.some((d) => d.slug === x.slug)).length;
-    app.innerHTML = `
-    <a class="back" href="#/">← Back</a>
-    <h1>Client reviews</h1>
-    ${how(['To add a review, click <strong>+ Add a review</strong> and paste it in.', 'To fix one, click <strong>Edit</strong> next to it. To take one off, click <strong>Remove</strong>.', 'Click <strong>Preview</strong> to look, then <strong>Publish</strong> at the bottom.'])}
+    root.innerHTML = `
+    ${embedded ? '' : '<a class="back" href="#/">← Back</a>\n    <h1>Client reviews</h1>'}
+    ${embedded ? '<p class="hint">Click <strong>Edit</strong> to fix a review, or add a new one. Changes show on your page right away.</p>' : how(['To add a review, click <strong>+ Add a review</strong> and paste it in.', 'To fix one, click <strong>Edit</strong> next to it. To take one off, click <strong>Remove</strong>.', 'Click <strong>Preview</strong> to look, then <strong>Publish</strong> at the bottom.'])}
     <div id="msg">${banner}</div>
     <div id="pub"></div>
-    <p><a class="btn btn--primary" href="#/reviews/new">+ Add a review</a></p>
+    <p><a class="btn btn--primary${embedded ? ' btn--block' : ''}" href="#/reviews/new" data-add>+ Add a review</a></p>
     ${removedCount ? `<p class="chip chip--draft">${removedCount} review${removedCount === 1 ? '' : 's'} removed – not published yet</p>` : ''}
     <ul class="reviews">${shown.map((t) => {
       const state = !live.has(t.slug) ? 'New – not published yet' : live.get(t.slug) !== JSON.stringify(t) ? 'Changed – not published yet' : '';
@@ -940,45 +1187,52 @@ async function reviewsScreen() {
         <div class="review__head"><strong class="review__title">${esc(t.title)}</strong><span class="review__meta">${t.client ? esc(t.client) + ' · ' : ''}${t.role ? esc(t.role) + ' · ' : ''}${esc(fmtDay(t.date))}</span></div>
         ${state ? `<p class="chip chip--draft">${state}</p>` : ''}
         <p class="review__text">${esc((t.text || []).join(' ').slice(0, 220))}${(t.text || []).join(' ').length > 220 ? '…' : ''}</p>
-        <p class="review__btns"><a class="btn btn--small" href="#/reviews/edit/${encodeURIComponent(t.slug)}">Edit</a><button type="button" class="btn btn--small btn--danger" data-remove="${esc(t.slug)}">Remove</button></p>
+        <p class="review__btns"><a class="btn btn--small" href="#/reviews/edit/${encodeURIComponent(t.slug)}" data-edit-review="${esc(t.slug)}">Edit</a><button type="button" class="btn btn--small btn--danger" data-remove="${esc(t.slug)}">Remove</button></p>
       </li>`;
     }).join('')}</ul>
-    ${R.hasUnpublishedChanges ? '<p><button type="button" class="btn btn--small" data-discard>Undo my unpublished changes</button></p>' : ''}
-    ${reviewsPublishBar(R)}`;
+    ${R.hasUnpublishedChanges && !embedded ? '<p><button type="button" class="btn btn--small" data-discard>Undo my unpublished changes</button></p>' : ''}
+    ${embedded ? '' : reviewsPublishBar(R)}`;
     bind();
     const job = store.get('dmh-publishing');
-    if (job?.id === 'reviews') watchPublish(document.getElementById('pub'), job);
+    if (!embedded && job?.id === 'reviews') watchPublish(root.querySelector('#pub'), job);
   }
-  const showError = (err) => { const m = document.getElementById('msg'); m.innerHTML = errorNote(err); m.scrollIntoView({ block: 'center' }); };
+  const showError = (err) => { const m = root.querySelector('#msg'); m.innerHTML = errorNote(err); m.scrollIntoView({ block: 'center' }); };
   function bind() {
-    app.querySelectorAll('[data-remove]').forEach((b) => b.addEventListener('click', async () => {
+    if (embedded) {
+      root.querySelector('[data-add]').addEventListener('click', (e) => { e.preventDefault(); opts.edit(null); });
+      root.querySelectorAll('[data-edit-review]').forEach((a) => a.addEventListener('click', (e) => { e.preventDefault(); opts.edit(a.dataset.editReview); }));
+    }
+    root.querySelectorAll('[data-remove]').forEach((b) => b.addEventListener('click', async () => {
       const t = R.draft.items.find((x) => x.slug === b.dataset.remove);
       if (!(await confirmBox({ title: 'Remove this review?', body: `"${esc(t?.title || '')}" comes off the website when you publish. You can undo before publishing.`, yes: 'Remove review', danger: true }))) return;
-      try { R = await api('DELETE', `/reviews/item/${encodeURIComponent(b.dataset.remove)}?baseRevision=${R.revision}`); banner = ''; render(); toast('Review removed. Click Publish when you\'re ready.'); } catch (err) { showError(err); }
+      try { changed(await api('DELETE', `/reviews/item/${encodeURIComponent(b.dataset.remove)}?baseRevision=${R.revision}`)); banner = ''; render(); toast(embedded ? 'Review removed from your page. Click Publish when you\'re happy.' : 'Review removed. Click Publish when you\'re ready.'); } catch (err) { showError(err); }
     }));
-    app.querySelector('[data-discard]')?.addEventListener('click', async () => {
+    root.querySelector('[data-discard]')?.addEventListener('click', async () => {
       if (!(await confirmBox({ title: 'Undo unpublished changes?', body: 'The reviews go back to exactly what is on the website now.', yes: 'Undo changes', danger: true }))) return;
-      try { R = await api('POST', '/reviews/discard', { baseRevision: R.revision }); banner = '<div class="note note--ok"><p>Changes undone.</p></div>'; render(); } catch (err) { showError(err); }
+      try { changed(await api('POST', '/reviews/discard', { baseRevision: R.revision })); banner = '<div class="note note--ok"><p>Changes undone.</p></div>'; render(); } catch (err) { showError(err); }
     });
-    document.getElementById('msg').addEventListener('click', async (e) => { if (e.target.matches('[data-reload]')) { R = await api('GET', '/reviews'); banner = ''; render(); } });
-    bindReviewsPublish(() => R, (x) => { R = x; }, () => { banner = ''; render(); }, showError);
+    root.querySelector('#msg').addEventListener('click', async (e) => { if (e.target.matches('[data-reload]')) { changed(await api('GET', '/reviews')); banner = ''; render(); } });
+    if (!embedded) bindReviewsPublish(() => R, (x) => { R = x; }, () => { banner = ''; render(); }, showError);
   }
   render();
 }
 
-async function reviewEditScreen(slug) {
-  setScreen('<p class="loading">Loading…</p>');
-  let R = await api('GET', '/reviews');
+// One review's form. Full screen, or in the on-page editor's side panel (embedded: opts.back() returns to the
+// list, opts.onChange(R) after saving).
+async function reviewEditScreen(slug, root = app, opts = {}) {
+  const embedded = !!opts.embedded;
+  if (embedded) root.innerHTML = '<p class="loading">Loading…</p>'; else setScreen('<p class="loading">Loading…</p>');
+  let R = opts.R || await api('GET', '/reviews');
   const t = slug ? R.draft.items.find((x) => x.slug === slug) : null;
-  if (slug && !t) { setScreen('<a class="back" href="#/reviews">← Back to reviews</a><div class="note note--bad"><p>That review is no longer there.</p></div>'); return; }
+  if (slug && !t) { const m = '<div class="note note--bad"><p>That review is no longer there.</p></div>'; if (embedded) root.innerHTML = m; else setScreen('<a class="back" href="#/reviews">← Back to reviews</a>' + m); return; }
   const today = new Date().toISOString().slice(0, 10);
   const v = { title: t?.title || '', client: t?.client || '', role: t?.role || '', date: t?.date || today, text: (t?.text || []).join('\n\n') };
   let dirty = false;
   unsavedGuard = () => dirty;
-  app.innerHTML = `
-    <a class="back" href="#/reviews">← Back to reviews</a>
-    <h1>${t ? 'Edit review' : 'Add a review'}</h1>
-    ${how([t ? 'Change what you need below.' : 'Fill in the boxes below. Only the review, a short title and the date are needed.', 'Click <strong>Save</strong>. Then click <strong>Publish</strong> on the reviews page to put it on your website.'])}
+  root.innerHTML = `
+    ${embedded ? '<p><a class="back" href="#" data-back>← All reviews</a></p>' : `<a class="back" href="#/reviews">← Back to reviews</a>
+    <h1>${t ? 'Edit review' : 'Add a review'}</h1>`}
+    ${embedded ? '' : how([t ? 'Change what you need below.' : 'Fill in the boxes below. Only the review, a short title and the date are needed.', 'Click <strong>Save</strong>. Then click <strong>Publish</strong> on the reviews page to put it on your website.'])}
     <div id="msg"></div>
     <form id="rform" class="rform" novalidate>
       <div class="field"><label for="r-text">The review</label><textarea id="r-text" rows="9" maxlength="6000">${esc(v.text)}</textarea><p class="hint">Paste the client's words. Leave an empty line between paragraphs.</p></div>
@@ -986,21 +1240,28 @@ async function reviewEditScreen(slug) {
       <div class="field"><label for="r-client">Client's name <span class="opt">(optional)</span></label><input id="r-client" maxlength="80" value="${esc(v.client)}" placeholder="For example: Sarah M."><p class="hint">Only include a name if the client is OK with it.</p></div>
       <div class="field"><label for="r-role">Buyer or seller? <span class="opt">(optional)</span></label><select id="r-role">${ROLES.map((r) => `<option value="${esc(r)}"${r === v.role ? ' selected' : ''}>${r || '— Don\'t show —'}</option>`).join('')}</select></div>
       <div class="field"><label for="r-date">Date of the review</label><input id="r-date" type="date" max="${today}" value="${esc(v.date)}"></div>
-      <p><button type="submit" class="btn btn--primary">Save</button> <a class="btn" href="#/reviews">Cancel</a></p>
+      <p><button type="submit" class="btn btn--primary">${embedded ? 'Save – show it on my page' : 'Save'}</button> <a class="btn" href="#/reviews" data-cancel>Cancel</a></p>
     </form>`;
-  app.querySelectorAll('#rform input, #rform textarea, #rform select').forEach((el) => el.addEventListener('input', () => { dirty = true; }));
-  document.getElementById('rform').addEventListener('submit', async (e) => {
+  root.querySelectorAll('#rform input, #rform textarea, #rform select').forEach((el) => el.addEventListener('input', () => { dirty = true; }));
+  const leave = async () => { if (dirty && !(await confirmBox({ title: 'Leave without saving?', body: 'Your typing in this review will be lost.', yes: 'Leave', danger: true }))) return; dirty = false; unsavedGuard = null; opts.back(); };
+  if (embedded) {
+    root.querySelector('[data-back]').addEventListener('click', (e) => { e.preventDefault(); leave(); });
+    root.querySelector('[data-cancel]').addEventListener('click', (e) => { e.preventDefault(); leave(); });
+    root.querySelector('#r-text').focus();
+  }
+  root.querySelector('#rform').addEventListener('submit', async (e) => {
     e.preventDefault();
-    const fields = { text: app.querySelector('#r-text').value, title: app.querySelector('#r-title').value, client: app.querySelector('#r-client').value, role: app.querySelector('#r-role').value, date: app.querySelector('#r-date').value };
+    const fields = { text: root.querySelector('#r-text').value, title: root.querySelector('#r-title').value, client: root.querySelector('#r-client').value, role: root.querySelector('#r-role').value, date: root.querySelector('#r-date').value };
     const btn = e.target.querySelector('button[type=submit]'); btn.disabled = true; btn.textContent = 'Saving…';
     try {
       R = t ? await api('PUT', `/reviews/item/${encodeURIComponent(t.slug)}`, { fields, baseRevision: R.revision }) : await api('POST', '/reviews', { fields, baseRevision: R.revision });
       dirty = false; unsavedGuard = null;
+      if (embedded) { opts.onChange?.(R); opts.back(); toast('Saved – your page shows it now. Click Publish when you\'re happy.'); return; }
       location.hash = '#/reviews';
       setTimeout(() => toast('Saved. Click Publish at the bottom when you\'re ready.'), 300);
     } catch (err) {
       btn.disabled = false; btn.textContent = 'Save';
-      const m = document.getElementById('msg'); m.innerHTML = errorNote(err); m.scrollIntoView({ block: 'center' });
+      const m = root.querySelector('#msg'); m.innerHTML = errorNote(err); m.scrollIntoView({ block: 'center' });
       if (err.status === 409) { try { R = await api('GET', '/reviews'); } catch { /* ignore */ } }
     }
   });

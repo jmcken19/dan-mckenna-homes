@@ -5,7 +5,7 @@ import { github } from './github.mjs';
 import { validateVariant, validateOriginal } from './images.mjs';
 import { validateHomepage, HERO_SIZES, MAX_HERO_SLIDES, randomId } from '../../src/lib/listing.mjs';
 import { layout } from '../../src/templates/layout.mjs';
-import { homePage, aboutPage, contactPage, newConstructionPage, luxuryPage } from '../../src/templates/pages.mjs';
+import { homePage, aboutPage, contactPage, newConstructionPage, luxuryPage, testimonialsPage } from '../../src/templates/pages.mjs';
 import { PHOTO_SPOTS, sitePhoto, validatePhotos } from '../../src/lib/photos.mjs';
 import { luxLayout, luxHome } from '../../src/templates/luxury.mjs';
 import siteContent from '../../content/site.json';
@@ -14,6 +14,19 @@ import testimonialsContent from '../../content/testimonials.json';
 const KEY = 'homepage';
 const ID_RE = /^s-[a-z0-9]{3,32}$/;
 const HERO_DIR = 'public/assets/img/hero';
+
+// Pages the editor can show (preview ?page=<key> or ?path=<path>), in menu order. Titles are for the page picker.
+const PAGES = {
+  home: { path: '/', title: 'Home', classic: homePage, lux: luxHome },
+  headshot: { path: '/about-us/', title: 'About us', classic: aboutPage },
+  construction: { path: '/new-construction/', title: 'New Construction', classic: newConstructionPage },
+  luxury: { path: '/luxury-home-marketing/', title: 'Luxury Home Marketing', classic: luxuryPage },
+  testimonials: { path: '/testimonials/', title: 'Testimonials', classic: testimonialsPage },
+  contact: { path: '/contact/', title: 'Contact', classic: contactPage },
+};
+
+/** The page list for the editor's page picker (/api/me → pages). */
+export const EDITOR_PAGES = Object.values(PAGES).map((p) => ({ path: p.path, title: p.title }));
 
 export function homepageRoutes(H) {
   const { HttpError, json, now, readJsonBody, needRevision, rateLimit, logEvent, idempotent, publicBase } = H;
@@ -256,21 +269,21 @@ export function homepageRoutes(H) {
 
     async preview(A) {
       const row = await load(A);
-      const design = A.url.searchParams.get('design') === 'option2' ? 'option2' : 'classic';
+      // ?edit=1 adds the editable marks used by the "edit on the page" editor (classic design only).
+      const editMode = A.url.searchParams.get('edit') === '1';
+      const design = !editMode && A.url.searchParams.get('design') === 'option2' ? 'option2' : 'classic';
       const base = publicBase(A.env) + (design === 'option2' ? (A.env.PUBLIC_SITE_V2_PATH ?? '/v2') : '');
       const srcToId = new Map(row.draft.slides.map((s) => [s.src, s.id]));
       const draftSpotIds = new Set(Object.values(row.draft.photos).map((p) => p.id).filter(Boolean));
       const site = { ...siteContent, heroSlides: row.draft.slides, heroSlideSeconds: row.draft.seconds, heroFade: row.draft.fade, heroAutoplay: row.draft.autoplay !== false, photos: row.draft.photos };
-      const PAGES = {
-        home: { path: '/', title: 'Preview', classic: homePage, lux: luxHome },
-        headshot: { path: '/about-us/', title: 'About us', classic: aboutPage },
-        contact: { path: '/contact/', title: 'Contact', classic: contactPage },
-        construction: { path: '/new-construction/', title: 'New Construction', classic: newConstructionPage },
-        luxury: { path: '/luxury-home-marketing/', title: 'Luxury Home Marketing', classic: luxuryPage },
-      };
-      const pg = PAGES[A.url.searchParams.get('page')] || PAGES.home;
+      // ?page=<photo spot key> previews the page that spot is on; ?path=/about-us/ previews that page;
+      // otherwise (or for an unknown page) the homepage.
+      const pg = PAGES[A.url.searchParams.get('page')] || Object.values(PAGES).find((p) => p.path === A.url.searchParams.get('path')) || PAGES.home;
+      // Reviews: show Dan's unpublished review changes too, so the page is exactly what Publish will make.
+      const rrow = await A.db.prepare('SELECT draft FROM settings WHERE key = ?').bind('reviews').first();
+      const testimonials = rrow ? (JSON.parse(rrow.draft).items || []) : testimonialsContent.items;
       const ctx = {
-        site, preview: true, siteUrl: '', buildId: 'preview-' + Date.now(), listings: [], removed: [], testimonials: testimonialsContent.items,
+        site, preview: true, editMode, siteUrl: '', buildId: 'preview-' + Date.now(), listings: [], removed: [], testimonials,
         // Templates build photo addresses as url(src) + "-800.jpg", so a slide's src maps to a
         // private photo address that the "-<width>.jpg" suffix completes (draft photos aren't public yet).
         url: (p) => {

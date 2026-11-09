@@ -6,3 +6,4 @@ dist/
 .DS_Store
 owner/.dev.vars
 dist-prod/
+.demo-data/

@@ -176,3 +176,32 @@ main { max-width: 900px; }
 .rform input, .rform textarea, .rform select { width: 100%; max-width: 760px; font: inherit; padding: .7rem .8rem; border: 2px solid var(--line); border-radius: 8px; box-sizing: border-box; }
 .rform .opt { font-weight: 400; color: var(--muted, #555); }
 .actions__in .btn { font-size: 1.2rem; }
+
+/* ---------- edit on the page ---------- */
+body.is-visual main { max-width: none; padding: 1rem 1.25rem 7.5rem; }
+.vis__top { display: flex; flex-wrap: wrap; gap: .75rem 2rem; align-items: center; margin-bottom: .5rem; }
+.vis__group { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
+.vis__label { font-weight: 700; margin-right: .25rem; }
+.vis__group .seg { min-height: 50px; padding: .45rem 1.1rem; font-size: 1.05rem; }
+.vis__help { font-size: 1.15rem; margin: .5rem 0 .75rem; }
+.vis__body { display: flex; gap: 1rem; align-items: flex-start; }
+.vis__stage { flex: 1 1 auto; min-width: 0; border: 2px solid var(--line); border-radius: 12px; overflow: hidden; background: var(--wash); }
+.vis__stage iframe { display: block; width: 100%; height: calc(100vh - 300px); min-height: 460px; border: 0; background: #fff; }
+.vis__stage--phone { flex: 0 0 auto; width: 414px; margin: 0 auto; border: 12px solid #222; border-radius: 34px; }
+.vis__stage--phone iframe { width: 390px; }
+.vis__foot { margin-top: .75rem; }
+.drawer { flex: 0 0 440px; max-width: 46vw; border: 2px solid var(--red); border-radius: 12px; background: #fff; max-height: calc(100vh - 300px); min-height: 460px; display: flex; flex-direction: column; }
+.drawer__head { display: flex; justify-content: space-between; align-items: center; gap: 1rem; padding: .75rem 1rem; border-bottom: 2px solid var(--line); }
+.drawer__head h2 { margin: 0; font-size: 1.35rem; }
+.drawer__body { overflow-y: auto; padding: 1rem; }
+.drawer__body .how { margin-top: 0; }
+.drawer__body h2 { font-size: 1.2rem; margin: 1.5rem 0 .6rem; }
+.drawer__body .photos--rows .photo__img img { max-height: 160px; }
+.panel-photo { border: 2px dashed var(--line); border-radius: 10px; padding: .5rem; margin-bottom: 1rem; text-align: center; }
+.panel-photo img { max-width: 100%; max-height: 260px; border-radius: 6px; }
+.panel-photo.is-over { border-color: var(--red); background: #fdf3f3; }
+.drawer[hidden] { display: none; }
+.btn[hidden] { display: none; }
+.actions__in--2:has(> [hidden]) { grid-template-columns: 1fr; }
+/* Messages sit just above the Publish bar here, so they never cover the page buttons, and clicks go through them. */
+body.is-visual .toast { top: auto; bottom: 8.5rem; pointer-events: none; }

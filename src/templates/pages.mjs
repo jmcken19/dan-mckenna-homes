@@ -2,17 +2,21 @@
 import { escapeHtml as e, STATUS_LABEL } from '../lib/listing.mjs';
 import { pageWithSidebar, askBox, contactForm } from './layout.mjs';
 import { listingCard } from './listing.mjs';
-import { sitePhoto } from '../lib/photos.mjs';
+import { sitePhoto, PHOTO_SPOTS } from '../lib/photos.mjs';
+import { editMark } from '../lib/editables.mjs';
+
+/** Edit mark for a photo spot (only in the editor's edit-on-the-page preview). */
+const photoMark = (ctx, key) => editMark(ctx, 'photo', key, PHOTO_SPOTS[key]?.label || '');
 
 function fmtDate(iso) {
   const [y, m, d] = iso.split('-').map(Number);
   return `${String(m).padStart(2, '0')}/${String(d).padStart(2, '0')}/${y}`;
 }
 
-function testimonialCard(ctx, t, { full = false } = {}) {
+function testimonialCard(ctx, t, { full = false, mark = false } = {}) {
   const first = t.text[0];
   const short = !full && first.length > 170 ? first.slice(0, first.lastIndexOf(' ', 165)) + '…' : first;
-  return `<article class="tcard">
+  return `<article class="tcard"${mark ? editMark(ctx, 'review', t.slug, t.title) : ''}>
   <p class="tcard__meta">${t.client ? `<span>${e(t.client)}</span>` : ''}<time datetime="${e(t.date)}">${fmtDate(t.date)}</time></p>
   <h3 class="tcard__title"><a href="${ctx.url(`/testimonial/${t.slug}/`)}">${e(t.title)}</a></h3>
   <blockquote><p>${e(short)}</p></blockquote>
@@ -49,7 +53,7 @@ export function homePage(ctx) {
 </section>` : '';
 
   const t = newestFirst(ctx.testimonials);
-  return `<section class="hero${site.heroFade ? ' hero--fade' : ' hero--slide'}" aria-label="Welcome"${multi ? ` data-interval="${heroSeconds(site)}"` : ''}>
+  return `<section class="hero${site.heroFade ? ' hero--fade' : ' hero--slide'}" aria-label="Welcome"${multi ? ` data-interval="${heroSeconds(site)}"` : ''}${editMark(ctx, 'slideshow', 'hero', 'Homepage photos')}>
   <div class="hero__slides">${slides}</div>
   <div class="hero__text">
     <h1>${e(site.name)}</h1>
@@ -60,7 +64,7 @@ export function homePage(ctx) {
   </div>
   ${multi ? '<button class="hero__pause sr-focus" type="button" aria-pressed="false">Pause slideshow</button>' : ''}
 </section>
-<section class="home-testimonials" aria-labelledby="ht-h" data-reveal>
+<section class="home-testimonials" aria-labelledby="ht-h" data-reveal${editMark(ctx, 'reviews', 'row', 'Client reviews')}>
   <div class="wrap">
     <h2 id="ht-h" class="section-title">What Clients Say About Working With Us</h2>
     <div class="carousel" data-carousel data-marquee>
@@ -110,7 +114,7 @@ export function aboutPage(ctx) {
   return pageWithSidebar(ctx, {
     heading: '',
     intro: `<div class="about-intro">
-  <img class="headshot" src="${url(sitePhoto(ctx.site, 'headshot').small)}" width="360" height="402" alt="${e(sitePhoto(ctx.site, 'headshot').alt)}">
+  <img class="headshot" src="${url(sitePhoto(ctx.site, 'headshot').small)}" width="360" height="402" alt="${e(sitePhoto(ctx.site, 'headshot').alt)}"${photoMark(ctx, 'headshot')}>
   <div>
     <h1 class="page__title">Dan McKenna, NC/SC Broker/REALTOR®</h1>
     <p class="kicker">Experience Counts.</p>
@@ -155,7 +159,7 @@ export function newConstructionPage(ctx) {
   return pageWithSidebar(ctx, {
     heading: 'New Construction Home Buying',
     intro: `<p class="kicker">Building Your Dream Home? Experience Counts.</p>`,
-    content: `<img class="page__img" src="${ctx.url(sitePhoto(ctx.site, 'construction').large)}" width="640" height="427" alt="${e(sitePhoto(ctx.site, 'construction').alt)}">
+    content: `<img class="page__img" src="${ctx.url(sitePhoto(ctx.site, 'construction').large)}" width="640" height="427" alt="${e(sitePhoto(ctx.site, 'construction').alt)}"${photoMark(ctx, 'construction')}>
 <p>The Charlotte metropolitan area continues to offer exciting opportunities for new construction, from established neighborhoods and growing communities to exceptional custom homes.</p>
 <p>Building or purchasing a newly constructed home can be an exciting and rewarding experience, but the process can also be complex. Having an experienced real estate professional representing your interests can make all the difference.</p>
 <h2>5 Reasons to Work with an Experienced Buyer's Agent When Purchasing New Construction</h2>
@@ -198,7 +202,7 @@ export function luxuryPage(ctx) {
 <p>My approach includes strategic pricing, professional photography, compelling property descriptions, thoughtful digital marketing, agent networking, and experienced negotiations.</p>
 <p>Whether representing an established luxury estate or an extraordinary new construction residence, I focus on highlighting the features, craftsmanship, location, and lifestyle that distinguish each home.</p>
 <figure class="feature">
-  <img src="${ctx.url(sitePhoto(ctx.site, 'luxury').large)}" srcset="${ctx.url(sitePhoto(ctx.site, 'luxury').small)} 800w, ${ctx.url(sitePhoto(ctx.site, 'luxury').large)} 1400w" sizes="(min-width: 1000px) 700px, 100vw" width="1400" height="1050" alt="${e(sitePhoto(ctx.site, 'luxury').alt)}" loading="lazy">
+  <img src="${ctx.url(sitePhoto(ctx.site, 'luxury').large)}" srcset="${ctx.url(sitePhoto(ctx.site, 'luxury').small)} 800w, ${ctx.url(sitePhoto(ctx.site, 'luxury').large)} 1400w" sizes="(min-width: 1000px) 700px, 100vw" width="1400" height="1050" alt="${e(sitePhoto(ctx.site, 'luxury').alt)}" loading="lazy"${photoMark(ctx, 'luxury')}>
   ${sitePhoto(ctx.site, 'luxury').id ? '' : '<figcaption><strong>Featured Dan McKenna Homes Listing</strong><br>2515 Forest Lawn Drive, Weddington NC<br>Built by Tiara Homes</figcaption>'}
 </figure>
 <h2>Luxury Homes &amp; Custom Construction</h2>
@@ -214,9 +218,9 @@ export function luxuryPage(ctx) {
 
 export function testimonialsPage(ctx) {
   return `<div class="wrap page">
-  <div class="page__main">
+  <div class="page__main"${editMark(ctx, 'reviews', 'list', 'Client reviews')}>
     <h1 class="page__title">Testimonials</h1>
-    <div class="tgrid">${ctx.testimonials.map((t) => testimonialCard(ctx, t)).join('')}</div>
+    <div class="tgrid">${ctx.testimonials.map((t) => testimonialCard(ctx, t, { mark: true })).join('')}</div>
   </div>
   ${askBox(ctx)}
 </div>`;
@@ -238,7 +242,7 @@ export function contactPage(ctx) {
   <div class="page__main">
     <h1 class="page__title">Contact</h1>
     <div class="contact-card">
-      <img class="headshot headshot--sm" src="${url(sitePhoto(site, 'headshot').small)}" width="360" height="402" alt="${e(sitePhoto(site, 'headshot').alt)}">
+      <img class="headshot headshot--sm" src="${url(sitePhoto(site, 'headshot').small)}" width="360" height="402" alt="${e(sitePhoto(site, 'headshot').alt)}"${photoMark(ctx, 'headshot')}>
       <div>
         <h2>${e(site.agent)}</h2>
         <p class="kicker">${e(site.tagline)}</p>

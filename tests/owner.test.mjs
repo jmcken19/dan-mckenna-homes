@@ -444,3 +444,48 @@ test('laptop only: phone browsers are refused, laptops are allowed', async () =>
   // signed-out phone still gets "sign in", not a hint that the editor exists
   assert.equal((await E.call('GET', '/api/listings', { as: null, headers: { 'User-Agent': iphone } })).status, 401);
 });
+
+test('edit-on-the-page: edit marks only in edit mode, page picker, preview may be framed by the editor only', async () => {
+  const me = await E.call('GET', '/api/me');
+  assert.ok(Array.isArray(me.data.pages) && me.data.pages.some((p) => p.path === '/'), 'page list for the page picker');
+  for (const p of ['/about-us/', '/testimonials/', '/contact/', '/new-construction/', '/luxury-home-marketing/']) assert.ok(me.data.pages.some((x) => x.path === p), 'picker has ' + p);
+  assert.ok(!me.data.pages.some((p) => /^\/(testimonial|listings)\//.test(p.path)), 'no per-review or listings pages in the picker');
+
+  const edit = await E.call('GET', '/api/homepage/preview?edit=1');
+  assert.match(edit.data, /data-edit="slideshow" data-edit-key="hero"/, 'slideshow is marked editable');
+  assert.match(edit.data, /data-edit="reviews" data-edit-key="row"/, 'homepage reviews row is marked');
+  assert.doesNotMatch(edit.data, /data-edit="review"/, 'the carousel copies of reviews are not marked one by one');
+  assert.equal(edit.headers.get('X-Frame-Options'), 'SAMEORIGIN', 'the editor may show its own preview in a frame');
+  assert.match(edit.headers.get('Content-Security-Policy'), /frame-ancestors 'self'/);
+
+  const about = await E.call('GET', '/api/homepage/preview?edit=1&path=%2Fabout-us%2F');
+  assert.match(about.data, /data-edit="photo" data-edit-key="headshot" data-edit-label="Your photo"/, 'headshot on the About page is marked');
+  const contact = await E.call('GET', '/api/homepage/preview?edit=1&path=%2Fcontact%2F');
+  assert.match(contact.data, /data-edit="photo" data-edit-key="headshot"/, 'headshot on the Contact page is marked');
+  for (const [path, key] of [['/new-construction/', 'construction'], ['/luxury-home-marketing/', 'luxury']]) {
+    const r = await E.call('GET', '/api/homepage/preview?edit=1&path=' + encodeURIComponent(path));
+    assert.match(r.data, new RegExp(`data-edit="photo" data-edit-key="${key}"`), key + ' photo is marked');
+  }
+  const unknown = await E.call('GET', '/api/homepage/preview?edit=1&path=%2Fnot-a-page%2F');
+  assert.match(unknown.data, /data-edit="slideshow"/, 'unknown page falls back to the homepage');
+  const lux = await E.call('GET', '/api/homepage/preview?edit=1&design=option2');
+  assert.match(lux.data, /data-edit="slideshow"/, 'edit mode always shows the classic design');
+
+  // Testimonials page: each review is editable, and unpublished review changes already show.
+  let R = (await E.call('GET', '/api/reviews')).data;
+  const slug = R.draft.items[0].slug;
+  R = (await E.call('POST', '/api/reviews', { body: { fields: { text: 'Test review text for the preview.', title: 'Preview-only test review', date: '2026-01-02' }, baseRevision: R.revision } })).data;
+  const tp = await E.call('GET', '/api/homepage/preview?edit=1&path=%2Ftestimonials%2F');
+  assert.match(tp.data, /data-edit="reviews" data-edit-key="list"/, 'testimonials page wrapper is marked');
+  assert.match(tp.data, new RegExp(`data-edit="review" data-edit-key="${slug}"`), 'each review card is marked');
+  assert.match(tp.data, /Preview-only test review/, 'draft reviews show in the preview');
+  R = (await E.call('POST', '/api/reviews/discard', { body: { baseRevision: R.revision } })).data;
+  assert.equal(R.hasUnpublishedChanges, false);
+
+  const plain = await E.call('GET', '/api/homepage/preview');
+  assert.doesNotMatch(plain.data, /data-edit=/, 'no edit marks outside edit mode');
+  const plainT = await E.call('GET', '/api/homepage/preview?path=%2Ftestimonials%2F');
+  assert.doesNotMatch(plainT.data, /data-edit=/, 'no edit marks on the testimonials page outside edit mode');
+  const api = await E.call('GET', '/api/homepage');
+  assert.equal(api.headers.get('X-Frame-Options'), 'DENY', 'everything else still refuses to be framed');
+});

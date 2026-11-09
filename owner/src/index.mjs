@@ -9,7 +9,7 @@ import { normaliseFields, listingSlug, oneLineAddress, randomId, validatePublicL
 import { layout } from '../../src/templates/layout.mjs';
 import { listingDetail } from '../../src/templates/listing.mjs';
 import siteContent from '../../content/site.json';
-import { homepageRoutes } from './homepage.mjs';
+import { homepageRoutes, EDITOR_PAGES } from './homepage.mjs';
 import { reviewsRoutes } from './reviews.mjs';
 
 const JSON_HEADERS = { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' };
@@ -23,7 +23,8 @@ const json = (data, status = 200) => new Response(JSON.stringify(data), { status
 function securityHeaders(res, { html = false } = {}) {
   const h = new Headers(res.headers);
   h.set('X-Content-Type-Options', 'nosniff');
-  h.set('X-Frame-Options', 'DENY');
+  // The editor shows its own page preview in a frame; everything else may never be framed.
+  h.set('X-Frame-Options', /frame-ancestors 'self'/.test(h.get('Content-Security-Policy') || '') ? 'SAMEORIGIN' : 'DENY');
   h.set('Referrer-Policy', 'same-origin');
   h.set('Strict-Transport-Security', 'max-age=31536000');
   h.set('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
@@ -81,7 +82,7 @@ async function handleApi(request, env, url, ctx) {
 
   if (parts[0] === 'me' && method === 'GET') {
     const open = user.role === 'maintainer' ? (await db.prepare("SELECT COUNT(*) AS n FROM requests WHERE status != 'done'").first())?.n || 0 : 0;
-    return json({ email: user.email, role: user.role, support: supportInfo(env), site: { url: publicBase(env) }, emailNotifications: emailConfigured(env), openRequests: open });
+    return json({ email: user.email, role: user.role, support: supportInfo(env), site: { url: publicBase(env) }, emailNotifications: emailConfigured(env), openRequests: open, pages: EDITOR_PAGES });
   }
   if (parts[0] === 'listings') {
     if (parts.length === 1 && method === 'GET') return json(await listListings(A));

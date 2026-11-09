@@ -46,7 +46,7 @@ try {
   for (const [i, c] of ['#7a5', '#a75', '#57a'].entries()) { const f = `${out}/hero-${i + 1}.jpg`; writeFileSync(f, await testJpeg({ width: 3000, height: 2000, color: c, label: `SLIDE ${i + 1}` })); imgs.push(f); }
   const tall = `${out}/tall.jpg`; writeFileSync(tall, await testJpeg({ width: 1500, height: 2600, color: '#555', label: 'TALL' }));
 
-  await page.goto(E.url + '/', { waitUntil: 'networkidle0' });
+  await page.goto(E.url + '/#/list', { waitUntil: 'networkidle0' });
   await shot('01-start');
   assert.match(await page.$eval('main', (m) => m.innerText), /Your website/);
   assert.doesNotMatch(await page.$eval('main', (m) => m.innerText), /Manage listings|Request a website change/, 'photos only');
@@ -97,7 +97,7 @@ try {
   console.log('homepage ok:', site.heroSlides.map((s) => s.id).join(','), site.heroSlideSeconds, site.heroFade);
 
   // Website photos: replace the headshot by clicking, the luxury photo by dropping a file on its card.
-  await page.goto(E.url + '/#/', { waitUntil: 'networkidle0' });
+  await page.goto(E.url + '/#/list', { waitUntil: 'networkidle0' });
   await page.waitForSelector('[data-spot="headshot"]');
   const portrait = `${out}/portrait.jpg`; writeFileSync(portrait, await testJpeg({ width: 1200, height: 1500, color: '#a55', label: 'DAN' }));
   await (await page.$('[data-spot-file="headshot"]')).uploadFile(portrait);
@@ -116,7 +116,7 @@ try {
   await shot('05-photos-changed');
   const pv = await (await page.goto(E.url + '/api/homepage/preview?page=headshot')).text();
   assert.match(pv, /\/api\/homepage\/photo\/s-[a-z0-9]+\/w-800\.jpg/, 'preview shows the new headshot');
-  await page.goto(E.url + '/#/', { waitUntil: 'networkidle0' });
+  await page.goto(E.url + '/#/list', { waitUntil: 'networkidle0' });
   await click('[data-publish]');
   assert.match(await page.$eval('dialog[open]', (d) => d.innerText), /your photo, luxury home photo/);
   await page.click('dialog[open] button[value=yes]');
@@ -127,7 +127,7 @@ try {
   console.log('website photos ok');
 
   // Reviews: add one, edit it, remove another, publish.
-  await page.goto(E.url + '/#/', { waitUntil: 'networkidle0' });
+  await page.goto(E.url + '/#/list', { waitUntil: 'networkidle0' });
   await click('a[href="#/reviews"]');
   await page.waitForSelector('.reviews');
   const n0 = await page.$$eval('.review', (a) => a.length);

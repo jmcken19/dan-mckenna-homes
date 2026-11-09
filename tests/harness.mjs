@@ -141,7 +141,7 @@ export async function startEditor({ resend = true, port, mirror = null, siteUrl 
       if (mirror && u.host === 'api.github.com' && u.pathname.includes('/compare/')) return mirror.compare(u.pathname);
       if (mirror && req.url.startsWith(siteUrl) && u.pathname.endsWith('/version.json')) return mirror.version();
       if (u.host === 'api.github.com') return gh.handle(req);
-      if (u.origin === SITE && u.pathname === '/version.json') {
+      if (u.origin === new URL(siteUrl).origin && u.pathname === '/version.json') {
         // The fake site "deploys" the head commit after a couple of status checks, unless the run failed.
         site.calls++;
         if (site.deploy && gh.runs.get(gh.head) === 'success' && site.calls % (site.deployDelayCalls + 1) === 0) site.deployed = gh.head;
