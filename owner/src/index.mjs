@@ -78,7 +78,10 @@ async function handleApi(request, env, url, ctx) {
   const db = env.DB;
   const A = { env, db, user, url, request, ctx };
 
-  if (parts[0] === 'me' && method === 'GET') return json({ email: user.email, role: user.role, support: supportInfo(env), site: { url: publicBase(env) } });
+  if (parts[0] === 'me' && method === 'GET') {
+    const open = user.role === 'maintainer' ? (await db.prepare("SELECT COUNT(*) AS n FROM requests WHERE status != 'done'").first())?.n || 0 : 0;
+    return json({ email: user.email, role: user.role, support: supportInfo(env), site: { url: publicBase(env) }, emailNotifications: emailConfigured(env), openRequests: open });
+  }
   if (parts[0] === 'listings') {
     if (parts.length === 1 && method === 'GET') return json(await listListings(A));
     if (parts.length === 1 && method === 'POST') return idempotent(A, () => createListing(A));
@@ -116,6 +119,8 @@ let _homepage;
 function homepageHandler() {
   return (_homepage ||= homepageRoutes({ HttpError, json, now, readJsonBody, needRevision, rateLimit, logEvent, idempotent, publicBase }));
 }
+
+function emailConfigured(env) { return !!(env.RESEND_API_KEY && String(env.NOTIFY_TO || '').trim()); }
 
 function supportInfo(env) {
   return { name: env.SUPPORT_NAME || 'James McKenna', email: env.SUPPORT_EMAIL || '', phone: env.SUPPORT_PHONE || '' };
@@ -601,12 +606,17 @@ async function createRequest(A) {
   const notified = await notifyMaintainer(A, { id, kind, page, message, photos });
   if (notified) await A.db.prepare('UPDATE requests SET notified = 1 WHERE id = ?').bind(id).run();
   const support = supportInfo(A.env);
-  return {
-    id, notified,
-    message: notified
-      ? `Sent. ${support.name} got your ${kind === 'question' ? 'question' : 'request'} by email and will reply to ${A.user.email}. Nothing on the website changes until you approve it.`
-      : `Saved, but the email to ${support.name} did not go through. Please ${support.phone ? `call or text ${support.phone}` : `email ${support.email}`} and mention request ${id}.`,
-  };
+  const first = (support.name || 'James').split(' ')[0];
+  let reply;
+  if (!emailConfigured(A.env)) {
+    // No email set up on purpose: the request is saved where James sees it when he signs in.
+    reply = `Saved. ${first} will see this in his editor. Send him a quick text so he knows to look.${support.phone ? ` (${support.phone})` : ''} Nothing on the website changes until you approve it.`;
+  } else if (notified) {
+    reply = `Sent. ${first} got your ${kind === 'question' ? 'question' : 'request'} by email and will reply to ${A.user.email}. Nothing on the website changes until you approve it.`;
+  } else {
+    reply = `Saved, but the email to ${first} did not go through. Please ${support.phone ? `call or text ${support.phone}` : `email ${support.email}`} and mention request ${id}.`;
+  }
+  return { id, notified, saved: true, emailConfigured: emailConfigured(A.env), message: reply };
 }
 
 async function notifyMaintainer(A, req) {

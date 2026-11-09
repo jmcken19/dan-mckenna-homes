@@ -220,14 +220,20 @@ test('change requests: stored privately, emailed with photo, truthful when email
   assert.equal((await E.call('PUT', `/api/requests/${r.data.id}`, { as: MAINT, body: { status: 'done', reply: 'Updated!' } })).status, 200);
 });
 
-test('change request when email is not configured says so instead of claiming success', async () => {
+test('change request without email set up: saved, tells Dan to text James, no false "sent"', async () => {
   const E2 = await startEditor({ resend: false });
   try {
     const fd = new FormData(); fd.append('message', 'Please fix a typo on the Contact page.');
     const r = await E2.call('POST', '/api/requests', { form: fd });
     assert.equal(r.status, 200);
     assert.equal(r.data.notified, false);
-    assert.match(r.data.message, /did not go through/);
+    assert.equal(r.data.saved, true);
+    assert.doesNotMatch(r.data.message, /^Sent/);
+    assert.match(r.data.message, /will see this in his editor/);
+    assert.match(r.data.message, /text/);
+    const me = await E2.call('GET', '/api/me', { as: MAINT });
+    assert.equal(me.data.emailNotifications, false);
+    assert.equal(me.data.openRequests, 1, 'James sees the waiting request count');
   } finally { await E2.close(); }
 });
 

@@ -63,8 +63,8 @@ sees "This home is no longer on Dan's website". It stays in your list, marked
 ### Ask for any other change
 Click **Request a website change**, say what you want in your own words (for example *"On the About
 page, replace my headshot with this one"*), attach a photo if needed, and click **Send to James**.
-Pick **"Just a question – show me first"** if you only want to see an idea. You'll see **Sent**,
-James gets an email right away and replies to you, and the request's progress shows on that page.
+Pick **"Just a question – show me first"** if you only want to see an idea. You'll see **Saved**,
+It's saved for James – **send him a quick text** so he knows to look. The request's progress shows on that page.
 
 ![Request sent](img/15-request-sent.jpg)
 

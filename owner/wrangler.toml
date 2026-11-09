@@ -32,9 +32,9 @@ SUPPORT_NAME = "James McKenna"
 
 # Private settings – set with `npx wrangler secret put NAME` (kept out of this public repo):
 #   GITHUB_TOKEN       fine-grained token, this repo only (Contents RW, Actions RW)
-#   RESEND_API_KEY     for emailing change requests
+#   RESEND_API_KEY     OPTIONAL – only if change requests should also be emailed (with NOTIFY_TO)
 #   OWNER_EMAILS       Dan's sign-in email(s), comma-separated
 #   MAINTAINER_EMAILS  James's sign-in email
-#   NOTIFY_TO          where change requests are emailed (James)
+#   NOTIFY_TO          OPTIONAL – where change requests are emailed
 #   SUPPORT_EMAIL      shown to Dan as his help contact
 #   SUPPORT_PHONE      shown to Dan as his help contact (optional)

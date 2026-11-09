@@ -302,7 +302,7 @@ function startScreen() {
   <div class="big-choices">
     <a class="big-choice" href="#/listings"><strong>Manage listings</strong>Add a home, change price or photos, mark it Pending or Sold, or take it off the website.</a>
     <a class="big-choice" href="#/homepage"><strong>Homepage photos</strong>Choose the photos that rotate at the top of your homepage, their order, and how fast they change.</a>
-    <a class="big-choice" href="#/request"><strong>Request a website change</strong>Ask James to change anything else — text, your photo, a page — or ask a question.</a>
+    <a class="big-choice" href="#/request"><strong>Request a website change${me.role === 'maintainer' && me.openRequests ? ` <span class="chip chip--draft">${me.openRequests} waiting</span>` : ''}</strong>Ask James to change anything else — text, your photo, a page — or ask a question.</a>
   </div>
   <p class="hint">See the website: <a href="${esc(me.site.url)}/" target="_blank" rel="noopener">${esc(me.site.url.replace(/^https?:\/\//, ''))}</a></p>
   <p class="hint">Need help or something isn't working? ${supportLine()}.</p>`);
@@ -789,7 +789,7 @@ async function requestScreen() {
       <div class="req__meta">${esc(kindLabel[r.kind])} · ${new Date(r.created_at).toLocaleString()}${r.page ? ' · ' + esc(r.page) : ''}${maint ? ' · ' + esc(r.created_by) : ''}</div>
       <div class="req__msg">${esc(r.message)}</div>
       ${r.photos ? Array.from({ length: r.photos }, (_, i) => `<img src="/api/requests/${esc(r.id)}/photo/${i}" alt="Attached photo ${i + 1}">`).join('') : ''}
-      <div><span class="chip ${r.status === 'done' ? 'chip--live' : 'chip--draft'}">${esc(statusLabel[r.status])}</span> ${r.notified ? '' : '<span class="chip chip--sold">Email to James failed</span>'}</div>
+      <div><span class="chip ${r.status === 'done' ? 'chip--live' : 'chip--draft'}">${esc(statusLabel[r.status])}</span> ${r.notified || !me.emailNotifications ? '' : '<span class="chip chip--sold">Email to James failed</span>'}</div>
       ${r.reply ? `<p class="note"><strong>James:</strong> ${esc(r.reply)}</p>` : ''}
       ${maint ? `<p><select data-req="${esc(r.id)}">${Object.keys(statusLabel).map((s) => `<option value="${s}" ${s === r.status ? 'selected' : ''}>${s}</option>`).join('')}</select></p>` : ''}
     </div>`).join('') : '<p class="hint">No requests yet.</p>'}</div>`);
@@ -816,8 +816,9 @@ async function requestScreen() {
       }
       const r = await api('POST', '/requests', fd, { idem });
       unsavedGuard = null;
-      msg.innerHTML = `<div class="note ${r.notified ? 'note--ok' : 'note--warn'}" role="status"><p>${esc(r.message)}</p></div>`;
-      if (r.notified) { form.reset(); setTimeout(() => requestScreen().then(() => { document.getElementById('rmsg').innerHTML = `<div class="note note--ok"><p>${esc(r.message)}</p></div>`; }), 50); }
+      const good = r.notified || !r.emailConfigured;
+      msg.innerHTML = `<div class="note ${good ? 'note--ok' : 'note--warn'}" role="status"><p>${esc(r.message)}</p></div>`;
+      if (good) { form.reset(); setTimeout(() => requestScreen().then(() => { document.getElementById('rmsg').innerHTML = `<div class="note note--ok"><p>${esc(r.message)}</p></div>`; }), 50); }
     } catch (err) {
       msg.innerHTML = errorNote(err) + `<p class="hint">Your message is still in the box. If sending keeps failing, contact ${supportLine()}.</p>`;
     } finally { btn.disabled = false; btn.textContent = 'Send to James'; }

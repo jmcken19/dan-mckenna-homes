@@ -9,7 +9,7 @@ Technical setup, deployment and recovery. Dan's guide is `OWNER-GUIDE.md`; AI/ma
 | Public site, testing preview | **Live** on GitHub Pages: https://jmcken19.github.io/dan-mckenna-homes/ (noindex, banner, no lead form) |
 | Owner editor code | Done; 12 automated tests + phone-size end-to-end run against the real repo/Pages (see "Verification") |
 | Owner editor hosting | **Not yet deployed** – needs a Cloudflare account (steps below, ~20 min, free) |
-| Change-request email | Code done and tested with a stand-in; **real delivery needs a Resend API key** (free) |
+| Change-request email | **Off by choice** – requests are saved in the editor; James sees a "waiting" count when he signs in and Dan texts him. Add `RESEND_API_KEY` + `NOTIFY_TO` secrets to turn emails on |
 | Production hosting / domain | **Owner decision** – plan below; current site and DNS untouched |
 
 ## Accounts, ownership, cost
@@ -49,15 +49,13 @@ Fine-grained tokens → Generate new token. Name `dmh-editor`, expiration 1 year
 Repository access: *Only select repositories* → `dan-mckenna-homes`. Permissions: **Contents: Read and write**,
 **Actions: Read and write**. Generate → copy.
 
-**4. Resend key** – resend.com → API Keys → Create → permission *Sending access* → copy.
+**4. (Optional) Resend key** – only if you want requests emailed. Skipped for now: Dan texts James.
 
 **5. Private settings** (each command asks you to paste the value)
 ```powershell
 npx wrangler secret put GITHUB_TOKEN
-npx wrangler secret put RESEND_API_KEY
 npx wrangler secret put OWNER_EMAILS        # danmckenna@kw.com  (add Wendy with a comma if wanted)
 npx wrangler secret put MAINTAINER_EMAILS   # your email
-npx wrangler secret put NOTIFY_TO           # your email (must be your Resend sign-up email)
 npx wrangler secret put SUPPORT_EMAIL       # your email
 npx wrangler secret put SUPPORT_PHONE       # your cell, e.g. 704-555-1234
 ```
@@ -77,7 +75,7 @@ Commit the two IDs + Access values (`git commit -am "Connect editor" && git push
 * Sign in with an email that is **not** on the list → refused.
 * PowerShell: `curl.exe -i https://dmh-owner.<sub>.workers.dev/api/listings` → **401** (or a redirect to sign-in).
 * Sign in as yourself → start screen shows *Signed in as …* and three buttons.
-* **Request a website change** → "test" → page says **Sent** and the email arrives.
+* **Request a website change** → "test" → page says **Saved… send him a quick text**; sign in as yourself → start screen shows **1 waiting**.
 * **Homepage photos** → shows the current photo → Preview opens.
 * Add a listing with **TEST** in the street, 1 photo → Publish → **✓ Done** → link opens. Then
   **Take off website**, and delete its line from `content/removed.json` on GitHub.
