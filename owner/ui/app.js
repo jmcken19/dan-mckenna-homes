@@ -72,6 +72,11 @@ function confirmBox({ title, body, yes, no = 'Cancel', danger = false }) {
   });
 }
 
+/** Short numbered directions shown at the top of each screen. */
+function how(steps) {
+  return `<div class="how"><p class="how__title">How this works</p><ol>${steps.map((x) => `<li>${x}</li>`).join('')}</ol></div>`;
+}
+
 function setScreen(html) {
   app.innerHTML = html;
   app.focus({ preventScroll: true });
@@ -298,6 +303,7 @@ async function route() {
 function startScreen() {
   setScreen(`
   <h1>What would you like to do?</h1>
+  <p>Click one of the three big boxes below.</p>
   <div class="big-choices">
     <a class="big-choice" href="#/listings"><strong>Manage listings</strong>Add a home, change price or photos, mark it Pending or Sold, or take it off the website.</a>
     <a class="big-choice" href="#/homepage"><strong>Homepage photos</strong>Choose the photos that rotate at the top of your homepage, their order, and how fast they change.</a>
@@ -320,6 +326,7 @@ async function listingsScreen() {
   };
   setScreen(`<a class="back" href="#/">← Back</a>
   <h1>Manage listings</h1>
+  ${how(['To <strong>add a home</strong>, click the red <strong>+ Add a new home</strong> button.', 'To <strong>change a home</strong> (price, photos, Sold…), click it in the list below.', 'Can\'t find it? Type part of the street address in the search box.'])}
   <a class="btn btn--primary btn--block" href="#/new">+ Add a new home</a>
   ${data.syncNote ? `<div class="note note--warn"><p>${esc(data.syncNote)}</p></div>` : ''}
   <div class="search field"><label for="q">Find a home by street address</label><input id="q" type="search" placeholder="For example: 2515 Forest Lawn" autocomplete="off"></div>
@@ -405,6 +412,11 @@ async function editScreen(id) {
     <a class="back" href="#/listings">← All listings</a>
     <h1>${L ? esc(L.draft.address.street) : 'Add a new home'}</h1>
     <div class="chips" style="margin-bottom:1rem">${L ? chipsFor({ ...L, status: L.draft.status }) : ''}</div>
+    ${how(!L || vis === 'draft'
+      ? ['Fill in the boxes (only the address and status are required).', 'Add photos in step 4. The first photo is the cover.', 'Click <strong>Save draft</strong> at the bottom to keep your work. Nobody else can see it yet.', 'Click <strong>Preview</strong> to see it like a buyer, then <strong>Publish</strong> to put it on your website.']
+      : vis === 'archived'
+      ? ['This home is not on your website right now.', 'To show it again, scroll down and click <strong>Put back on website</strong>.']
+      : ['Change anything below – price, photos, description.', 'Click <strong>Publish changes</strong> at the bottom. Buyers see nothing new until you do.', 'To mark it <strong>Pending</strong> or <strong>Sold</strong>, scroll down to "Change status on the website".'])}
     <div id="msg">${banner}</div>
     ${pending && L && pending.id === L.id ? '<div id="pub"></div>' : '<div id="pub"></div>'}
     <form id="lform" novalidate>
@@ -633,7 +645,7 @@ async function homepageScreen() {
     app.innerHTML = `
     <a class="back" href="#/">← Back</a>
     <h1>Homepage photos</h1>
-    <p>These photos take turns at the top of your homepage. <strong>Photo 1 shows first.</strong></p>
+    ${how(['These photos show at the very top of your homepage. <strong>Photo 1 shows first.</strong>', 'Add photos with the <strong>+ Add photos</strong> box. Change the order by dragging <strong>⠿ Drag</strong>, or click <strong>Show first</strong>.', 'Choose <strong>Moving</strong> or <strong>Still</strong>, and the speed.', 'Click <strong>Preview</strong> to look, then <strong>Publish</strong> to put it on your website.'])}
     <div id="msg">${banner}</div>
     <div id="pub"></div>
 
@@ -778,7 +790,7 @@ async function requestScreen() {
   const statusLabel = { received: 'Received – James has it', working: 'James is working on it', done: 'Done' };
   setScreen(`<a class="back" href="#/">← Back</a>
   <h1>Request a website change</h1>
-  <p>Tell James what you'd like in your own words. For example: <em>"On the About page, replace my headshot with this one."</em></p>
+  ${how(['Type what you want changed, in your own words. Example: <em>"On the About page, replace my headshot with this one."</em>', 'Attach a photo if it helps (optional).', 'Click <strong>Send to James</strong>. Then send James a quick text so he knows.'])}
   <div id="rmsg"></div>
   <form id="rform" novalidate>
     <fieldset><legend>Is this a change or a question?</legend><div class="radios">

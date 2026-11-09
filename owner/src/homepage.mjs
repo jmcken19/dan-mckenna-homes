@@ -182,9 +182,11 @@ export function homepageRoutes(H) {
       return json(view(updated));
     },
 
-    async photo(A, id) {
+    async photo(A, id, suffix) {
       if (!ID_RE.test(id || '')) throw new HttpError(404, 'Not found.');
-      const w = HERO_SIZES.includes(Number(A.url.searchParams.get('w'))) ? Number(A.url.searchParams.get('w')) : 800;
+      const fromSuffix = String(suffix || '').match(/^w-(800|1400|2000)\.jpg$/);
+      const q = Number(fromSuffix ? fromSuffix[1] : A.url.searchParams.get('w'));
+      const w = HERO_SIZES.includes(q) ? q : 800;
       let bytes = await A.env.PHOTOS.get(`hero:${id}:${w}`, 'arrayBuffer');
       if (!bytes) {
         // Photos that were already on the website before the editor existed: copy from the repo once.
@@ -207,11 +209,9 @@ export function homepageRoutes(H) {
       const site = { ...siteContent, heroSlides: row.draft.slides, heroSlideSeconds: row.draft.seconds, heroFade: row.draft.fade, heroAutoplay: row.draft.autoplay !== false };
       const ctx = {
         site, preview: true, siteUrl: '', buildId: 'preview', listings: [], removed: [], testimonials: testimonialsContent.items,
-        url: (p) => {
-          const m = p.match(/^(\/assets\/img\/(?:hero-\d{1,2}|hero\/s-[a-z0-9]+))-(800|1400|2000)\.jpg$/);
-          if (m && srcToId.has(m[1])) return `/api/homepage/photo/${srcToId.get(m[1])}?w=${m[2]}`;
-          return base + p;
-        },
+        // Templates build photo addresses as url(src) + "-800.jpg", so a slide's src maps to a
+        // private photo address that the "-<width>.jpg" suffix completes (draft photos aren't public yet).
+        url: (p) => (srcToId.has(p) ? `/api/homepage/photo/${srcToId.get(p)}/w` : base + p),
       };
       const html = design === 'option2'
         ? luxLayout(ctx, { path: '/', title: 'Preview', body: luxHome(ctx) })
@@ -221,7 +221,7 @@ export function homepageRoutes(H) {
       return new Response(html.replace('</body>', note + '</body>'), {
         headers: {
           'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store', 'X-Robots-Tag': 'noindex',
-          'Content-Security-Policy': `default-src 'none'; img-src 'self' ${origin}; style-src ${origin} 'unsafe-inline'; font-src ${origin}; script-src ${origin}; frame-ancestors 'self'; base-uri 'none'; form-action 'none'`,
+          'Content-Security-Policy': `default-src 'none'; img-src 'self' ${origin}; style-src ${origin} 'unsafe-inline'; font-src ${origin}; script-src ${origin}; manifest-src ${origin}; frame-ancestors 'self'; base-uri 'none'; form-action 'none'`,
         },
       });
     },
@@ -281,7 +281,7 @@ export function homepageRoutes(H) {
     if (parts[1] === 'photos' && parts.length === 2 && method === 'PUT') return routes.arrange(A);
     if (parts[1] === 'photos' && parts.length === 3 && method === 'DELETE') return routes.remove(A, parts[2]);
     if (parts[1] === 'photos' && parts[3] === 'replace' && method === 'POST') return idempotent(A, () => routes.replace(A, parts[2]));
-    if (parts[1] === 'photo' && method === 'GET') return routes.photo(A, parts[2]);
+    if (parts[1] === 'photo' && method === 'GET') return routes.photo(A, parts[2], parts[3]);
     if (parts[1] === 'preview' && method === 'GET') return routes.preview(A);
     if (parts[1] === 'publish' && method === 'POST') return idempotent(A, () => routes.publish(A));
     if (parts[1] === 'discard' && method === 'POST') return routes.discard(A);

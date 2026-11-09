@@ -300,6 +300,13 @@ test('homepage slideshow: starts from the website, add/reorder/focus/speed/fade,
   assert.equal(JSON.parse(E.gh.read('content/site.json')).heroSlides.length, 1);
   const pv = await E.call('GET', '/api/homepage/preview');
   assert.equal(pv.status, 200);
+  const heroImgs = [...pv.data.matchAll(/hero__slide[^>]*>\s*<picture>\s*<img src="([^"]+)"/g)];
+  assert.equal(heroImgs.length, 3, 'all three slides found in preview');
+  for (const m of heroImgs) {
+    assert.match(m[1], /^\/api\/homepage\/photo\/s-[a-z0-9]+\/w-1400\.jpg$/, 'preview photos come from the editor (draft photos are not public yet)');
+    const img = await E.mf.dispatchFetch(E.url + m[1], { headers: { 'Cf-Access-Jwt-Assertion': accessToken(OWNER) } });
+    assert.equal(img.status, 200); assert.equal(img.headers.get('content-type'), 'image/jpeg'); await img.arrayBuffer();
+  }
   assert.match(pv.data, /hero--fade/); assert.match(pv.data, /data-interval="4"/); assert.match(pv.data, /Preview only/);
   assert.equal((await E.call('GET', '/api/homepage/preview', { as: null })).status, 401);
   const pv2 = await E.call('GET', '/api/homepage/preview?design=option2');
