@@ -31,7 +31,9 @@ document.documentElement.classList.remove('no-js');
     // for every visitor (no Play button to press). Keyboard users can still pause it.
     var i = 0, timer = null, paused = false;
     var show = function (n) {
-      slides[i].classList.remove('is-active'); slides[i].setAttribute('aria-hidden', 'true');
+      var old = slides[i];
+      old.classList.remove('is-active'); old.setAttribute('aria-hidden', 'true');
+      if (hero.classList.contains('hero--slide')) { old.classList.add('is-leaving'); setTimeout(function () { old.classList.remove('is-leaving'); }, 1100); }
       i = (n + slides.length) % slides.length;
       var img = slides[i].querySelector('img'); if (img) img.loading = 'eager';
       slides[i].classList.add('is-active'); slides[i].removeAttribute('aria-hidden');
@@ -75,7 +77,9 @@ document.documentElement.classList.remove('no-js');
     track.scrollLeft = pos;
     var hold = function (ms) { holdUntil = Date.now() + ms; };
     ['pointerenter', 'focusin', 'touchstart'].forEach(function (ev) { track.addEventListener(ev, function () { inside = true; }, { passive: true }); });
-    ['pointerleave', 'focusout', 'touchend'].forEach(function (ev) { track.addEventListener(ev, function () { inside = false; hold(2500); pos = track.scrollLeft; }, { passive: true }); });
+    // Mouse leaves → carry on right away. After a finger swipe, wait a moment so the swipe can glide to a stop.
+    ['pointerleave', 'focusout'].forEach(function (ev) { track.addEventListener(ev, function (e) { if (e.pointerType === 'touch') return; inside = false; pos = track.scrollLeft; }, { passive: true }); });
+    track.addEventListener('touchend', function () { inside = false; hold(1200); pos = track.scrollLeft; }, { passive: true });
     // Keep the loop endless when someone drags or swipes past either end.
     var wrap = function () {
       var w = loopWidth();
@@ -100,7 +104,7 @@ document.documentElement.classList.remove('no-js');
     });
     window.addEventListener('pointerup', function () {
       if (!dragging) return;
-      dragging = false; c.classList.remove('is-dragging'); hold(2500); pos = track.scrollLeft;
+      dragging = false; c.classList.remove('is-dragging'); pos = track.scrollLeft;
     });
     // A drag shouldn't also count as clicking "Read more".
     track.addEventListener('click', function (e) { if (moved > 5) { e.preventDefault(); e.stopPropagation(); moved = 0; } }, true);

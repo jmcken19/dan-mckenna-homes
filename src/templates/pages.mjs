@@ -49,7 +49,7 @@ export function homePage(ctx) {
 </section>` : '';
 
   const t = newestFirst(ctx.testimonials);
-  return `<section class="hero${site.heroFade ? ' hero--fade' : ''}" aria-label="Welcome"${multi ? ` data-interval="${heroSeconds(site)}"` : ''}>
+  return `<section class="hero${site.heroFade ? ' hero--fade' : ' hero--slide'}" aria-label="Welcome"${multi ? ` data-interval="${heroSeconds(site)}"` : ''}>
   <div class="hero__slides">${slides}</div>
   <div class="hero__text">
     <h1>${e(site.name)}</h1>

@@ -113,7 +113,7 @@ export function luxHome(ctx) {
 
   const quotes = newestFirst(testimonials);
 
-  return `<section class="hero lx-hero${site.heroFade ? ' hero--fade' : ''}" aria-label="Welcome"${multi ? ` data-interval="${heroSeconds(site)}"` : ''}>
+  return `<section class="hero lx-hero${site.heroFade ? ' hero--fade' : ' hero--slide'}" aria-label="Welcome"${multi ? ` data-interval="${heroSeconds(site)}"` : ''}>
   <div class="hero__slides">${slideHtml}</div>
   <div class="lx-hero__text">
     <p class="lx-eyebrow">Charlotte · Waxhaw · Weddington · Marvin</p>

@@ -29,7 +29,8 @@ Click **Change slideshow photos**.
   Or click **Show first** on any photo.
 * **On phones, keep in view: Top / Middle / Bottom** – phones show a narrower slice of the photo;
   choose the part that matters (a roofline → Top, a patio → Bottom).
-* **Speed** – Slow, **Normal** (recommended) or Fast.  **Fade** – Off (recommended) or On.
+* **At the top: Slideshow or One still photo.** Slideshow = the photos take turns; One still photo = only Photo 1 shows.
+* **Speed** – Slow, **Normal** (recommended) or Fast.  **How the photos change** – **Slide** (recommended) or Fade.
 * **Replace** or **Remove** a photo (there must always be at least one).
 * Click **Preview** to watch it, then **Publish**. Wide photos look best.
 

@@ -329,10 +329,10 @@ async function startScreen() {
         <a class="spot__img" href="#/homepage"><img src="/api/homepage/photo/${esc(first.id)}?w=800" alt="" style="object-position:${esc(first.focus)}"></a>
         <div class="spot__body">
           <h2>Homepage slideshow</h2>
-          <p class="spot__where">The big photos at the top of your homepage · ${d.slides.length} photo${d.slides.length === 1 ? '' : 's'}</p>
+          <p class="spot__where">The big photos at the top of your homepage · ${d.autoplay === false ? 'One still photo' : `Slideshow of ${d.slides.length} photo${d.slides.length === 1 ? '' : 's'}`}</p>
           ${slidesChanged() ? '<p class="chip chip--draft">Changed – not published yet</p>' : ''}
           <p><a class="btn btn--primary" href="#/homepage">Change slideshow photos</a></p>
-          <p class="hint">Add, remove, reorder, and choose the speed.</p>
+          <p class="hint">Choose slideshow or one still photo, add or remove photos, change the order and speed.</p>
         </div>
       </li>
       ${Object.entries(SPOT_INFO).map(([k, info]) => `
@@ -740,11 +740,19 @@ async function homepageScreen() {
     app.innerHTML = `
     <a class="back" href="#/">← Back to all photos</a>
     <h1>Homepage slideshow</h1>
-    ${how(['These photos show at the very top of your homepage. <strong>Photo 1 shows first.</strong>', 'Add photos with the <strong>+ Add photos</strong> box. Change the order by dragging <strong>⠿ Drag</strong>, or click <strong>Show first</strong>.', 'Choose <strong>Moving</strong> or <strong>Still</strong>, and the speed.', 'Click <strong>Preview</strong> to look, then <strong>Publish</strong> to put it on your website.'])}
+    ${how(['First choose <strong>Slideshow</strong> or <strong>One still photo</strong> in the box below.', 'Add photos with the <strong>+ Add photos</strong> box. <strong>Photo 1 shows first.</strong> Change the order by dragging <strong>⠿ Drag</strong>, or click <strong>Show first</strong>.', 'Click <strong>Preview</strong> to look, then <strong>Publish</strong> to put it on your website.'])}
     <div id="msg">${banner}</div>
     <div id="pub"></div>
 
-    <h2>1. Your photos</h2>
+    <section class="choice-box">
+    <h2>Slideshow or one still photo?</h2>
+    <fieldset><legend class="sr">Should the photos change by themselves?</legend><div class="radios">
+      <label class="radio"><input type="radio" name="autoplay" value="on" ${d.autoplay !== false ? 'checked' : ''}> <span><strong>Slideshow</strong> (recommended)<br><span class="hint">Your photos take turns, one after another</span></span></label>
+      <label class="radio"><input type="radio" name="autoplay" value="off" ${d.autoplay === false ? 'checked' : ''}> <span><strong>One still photo</strong><br><span class="hint">Only Photo 1 shows — it never changes</span></span></label>
+    </div></fieldset>
+    </section>
+
+    <h2>Your photos</h2>
     ${d.slides.length > 1 ? '<p class="hint">To change the order, drag a photo by its <strong>⠿ Drag</strong> handle.</p>' : ''}
     <ul class="photos photos--rows" id="hphotos">${d.slides.map((sl, i) => `<li class="photo${i === 0 ? ' photo--cover' : ''}" data-id="${esc(sl.id)}">
       <div class="photo__img"><img src="/api/homepage/photo/${esc(sl.id)}?w=800" alt="Homepage photo ${i + 1}" loading="lazy" style="object-position:${esc(sl.focus)}"></div>
@@ -765,22 +773,16 @@ async function homepageScreen() {
     <ul class="upload-list" id="uploads" aria-live="polite"></ul>
     <p class="hint">Wide (landscape) photos look best. Tall photos get trimmed at the top and bottom.</p>
 
-    <h2>2. Slideshow</h2>
-    <fieldset><legend class="sr">Should the photos change by themselves?</legend><div class="radios">
-      <label class="radio"><input type="radio" name="autoplay" value="on" ${d.autoplay !== false ? 'checked' : ''}> <span><strong>Moving</strong> (recommended)<br><span class="hint">The photos change by themselves</span></span></label>
-      <label class="radio"><input type="radio" name="autoplay" value="off" ${d.autoplay === false ? 'checked' : ''}> <span><strong>Still</strong><br><span class="hint">Only Photo 1 shows</span></span></label>
-    </div></fieldset>
-
     <div ${d.autoplay === false ? 'hidden' : ''}>
-    <h2>3. Speed</h2>
+    <h2>Slideshow speed</h2>
     <fieldset><legend class="sr">How fast should the photos change?</legend><div class="radios">
       ${SPEEDS.map((sp) => `<label class="radio"><input type="radio" name="speed" value="${sp.v}" ${speed === sp.v ? 'checked' : ''}> <span><strong>${sp.label}</strong>${sp.v === 7 ? ' (recommended)' : ''}<br><span class="hint">${sp.sub}</span></span></label>`).join('')}
     </div></fieldset>
 
-    <h2>4. Fade</h2>
-    <fieldset><legend class="sr">Fade between photos?</legend><div class="radios">
-      <label class="radio"><input type="radio" name="fade" value="off" ${d.fade ? '' : 'checked'}> <span><strong>Off</strong> (recommended)<br><span class="hint">Photos switch cleanly</span></span></label>
-      <label class="radio"><input type="radio" name="fade" value="on" ${d.fade ? 'checked' : ''}> <span><strong>On</strong><br><span class="hint">Each photo slowly fades into the next</span></span></label>
+    <h2>How the photos change</h2>
+    <fieldset><legend class="sr">How should one photo change to the next?</legend><div class="radios">
+      <label class="radio"><input type="radio" name="fade" value="off" ${d.fade ? '' : 'checked'}> <span><strong>Slide</strong> (recommended)<br><span class="hint">The next photo slides in from the side</span></span></label>
+      <label class="radio"><input type="radio" name="fade" value="on" ${d.fade ? 'checked' : ''}> <span><strong>Fade</strong><br><span class="hint">Each photo slowly fades into the next</span></span></label>
     </div></fieldset>
     ${d.slides.length < 2 ? '<p class="hint">Add a second photo to see the slideshow move.</p>' : ''}
     </div>
@@ -863,7 +865,7 @@ async function homepageScreen() {
     });
     document.getElementById('msg').addEventListener('click', async (e) => { if (e.target.matches('[data-reload]')) { H = await api('GET', '/homepage'); ok(''); } });
     app.querySelector('[data-publish]').addEventListener('click', async () => {
-      if (!(await confirmBox({ title: 'Put these photos on your homepage?', body: H.draft.autoplay === false ? `${H.draft.slides.length} photo${H.draft.slides.length === 1 ? '' : 's'}, still (only Photo 1 shows).` : `${H.draft.slides.length} photo${H.draft.slides.length === 1 ? '' : 's'}, moving, ${SPEEDS.find((x) => x.v === nearestSpeed(H.draft.seconds)).label.toLowerCase()} speed, fade ${H.draft.fade ? 'on' : 'off'}.`, yes: 'Yes, publish' }))) return;
+      if (!(await confirmBox({ title: 'Put these photos on your homepage?', body: H.draft.autoplay === false ? `One still photo (Photo 1).` : `${H.draft.slides.length} photo${H.draft.slides.length === 1 ? '' : 's'}, slideshow, ${SPEEDS.find((x) => x.v === nearestSpeed(H.draft.seconds)).label.toLowerCase()} speed, ${H.draft.fade ? 'fading' : 'sliding'} between photos.`, yes: 'Yes, publish' }))) return;
       app.querySelectorAll('button').forEach((b) => { b.disabled = true; });
       try {
         const r = await api('POST', '/homepage/publish', { baseRevision: H.revision }, { idem: uuid() });

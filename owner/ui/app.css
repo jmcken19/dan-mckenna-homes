@@ -157,3 +157,5 @@ main { max-width: 900px; }
 @media (max-width: 760px) { .spot { grid-template-columns: 1fr; } }
 .actions__in--1 { grid-template-columns: minmax(260px, 420px); justify-content: center; }
 .btn--publish { font-size: 1.35rem; }
+.choice-box { border: 2px solid var(--ink); border-radius: 12px; padding: 1rem 1.25rem 1.25rem; margin: 1.25rem 0 2rem; background: var(--wash); }
+.choice-box h2 { margin-top: 0; }

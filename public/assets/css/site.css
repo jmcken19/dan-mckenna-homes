@@ -93,6 +93,10 @@ p { margin: 0 0 1rem; }
 .hero__slide { opacity: 0; }
 .hero--fade .hero__slide { transition: opacity 1.2s ease; }
 .hero__slide.is-active { opacity: 1; }
+/* Slide: the next photo slides in from the right while the current one slides out to the left. */
+.hero--slide .hero__slide { opacity: 1; transform: translateX(100%); }
+.hero--slide .hero__slide.is-active { transform: translateX(0); transition: transform 1s ease-in-out; }
+.hero--slide .hero__slide.is-leaving { transform: translateX(-100%); transition: transform 1s ease-in-out; }
 .hero__slide img { width: 100%; height: 100%; object-fit: cover; }
 .hero__slides::after { content: ""; position: absolute; inset: 0; background: rgba(0,0,0,.28); }
 .hero__text { position: relative; z-index: 1; text-align: center; padding: 2rem 1.25rem; text-shadow: 0 1px 12px rgba(0,0,0,.45); }

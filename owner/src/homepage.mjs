@@ -306,7 +306,7 @@ export function homepageRoutes(H) {
       try {
         const d = row.draft;
         const gh = github(A.env);
-        const result = await gh.commit(`Update website photos: slideshow (${d.slides.length} photo${d.slides.length === 1 ? '' : 's'}, ${d.autoplay === false ? 'still' : `moving, ${d.seconds}s, fade ${d.fade ? 'on' : 'off'}`})\n\nBy ${A.user.email} via the owner editor.`, async () => {
+        const result = await gh.commit(`Update website photos: slideshow (${d.slides.length} photo${d.slides.length === 1 ? '' : 's'}, ${d.autoplay === false ? 'still' : `slideshow, ${d.seconds}s, ${d.fade ? 'fade' : 'slide'}`})\n\nBy ${A.user.email} via the owner editor.`, async () => {
           const site = JSON.parse(await gh.getText('content/site.json'));
           site.heroSlides = d.slides.map(({ id, src, alt, focus }) => ({ id, src, alt, focus }));
           site.heroSlideSeconds = d.seconds;
