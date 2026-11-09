@@ -164,3 +164,9 @@
 .lux .headshot { border-radius: 0; }
 .lux .preview-bar { position: relative; z-index: 20; }
 @media (min-width: 1240px) { .lx-brand { flex: 0 0 auto; } .lx-brand__sub { white-space: nowrap; } }
+
+/* Option 2 reviews: a slow row of large quotes */
+.lux .carousel.is-marquee .lx-quotes__track { grid-auto-columns: min(86%, 560px) !important; gap: 3.5rem; }
+.lux .carousel.is-marquee .lx-quote { text-align: left; padding: 0; }
+.lux .carousel.is-marquee .lx-quote p { font-size: clamp(1.25rem, 3.4vw, 1.6rem); }
+.lux .marquee-pause { border-radius: 0; font-family: var(--head); font-weight: 500; letter-spacing: .18em; font-size: .7rem; }

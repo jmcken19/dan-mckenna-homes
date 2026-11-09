@@ -39,6 +39,60 @@ document.documentElement.classList.remove('no-js');
     sync();
   }
 
+  // Reviews drifting slowly sideways in an endless loop, starting at a random review.
+  // Pauses while someone touches/hovers/focuses it, has a Pause button, and stays still
+  // (normal swipe row) for visitors who ask for reduced motion.
+  var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  document.querySelectorAll('[data-marquee]').forEach(function (c) {
+    if (reduceMotion) { c.removeAttribute('data-marquee'); return; }
+    var track = c.querySelector('.carousel__track');
+    var originals = Array.prototype.slice.call(track.children);
+    if (originals.length < 2) { c.removeAttribute('data-marquee'); return; }
+    c.removeAttribute('data-carousel');
+    c.classList.add('is-marquee');
+    // Copy the cards once so the row can loop without a jump. Copies are hidden from screen readers and keyboard.
+    originals.forEach(function (el) {
+      var copy = el.cloneNode(true);
+      copy.setAttribute('aria-hidden', 'true');
+      copy.setAttribute('inert', '');
+      copy.querySelectorAll('a, button').forEach(function (a) { a.setAttribute('tabindex', '-1'); });
+      track.appendChild(copy);
+    });
+    var pauseBtn = c.querySelector('.marquee-pause');
+    var speed = 0.35; // pixels per frame ≈ 21 px/second: slow enough to read
+    var userPaused = false, holdUntil = 0, inside = false, pos = 0, last = 0;
+    var loopWidth = function () { return track.children[originals.length].offsetLeft - track.children[0].offsetLeft; };
+    var start = originals[Math.floor(Math.random() * originals.length)];
+    pos = start.offsetLeft - track.children[0].offsetLeft;
+    track.scrollLeft = pos;
+    var hold = function (ms) { holdUntil = Date.now() + ms; };
+    ['pointerenter', 'focusin', 'touchstart'].forEach(function (ev) { track.addEventListener(ev, function () { inside = true; }, { passive: true }); });
+    ['pointerleave', 'focusout', 'touchend'].forEach(function (ev) { track.addEventListener(ev, function () { inside = false; hold(2500); pos = track.scrollLeft; }, { passive: true }); });
+    track.addEventListener('scroll', function () { if (inside) pos = track.scrollLeft; }, { passive: true });
+    if (pauseBtn) {
+      pauseBtn.hidden = false;
+      pauseBtn.addEventListener('click', function () {
+        userPaused = !userPaused;
+        pauseBtn.setAttribute('aria-pressed', String(userPaused));
+        pauseBtn.textContent = userPaused ? 'Play reviews' : 'Pause reviews';
+        pos = track.scrollLeft;
+      });
+    }
+    var step = function (now) {
+      var dt = last ? Math.min(now - last, 50) : 16; last = now;
+      if (!userPaused && !inside && !document.hidden && Date.now() > holdUntil) {
+        pos += speed * dt / 16;
+        var w = loopWidth();
+        if (pos >= w) pos -= w;
+        track.scrollLeft = pos;
+      } else if (track.scrollLeft >= loopWidth()) {
+        track.scrollLeft -= loopWidth(); pos = track.scrollLeft;
+      }
+      window.requestAnimationFrame(step);
+    };
+    window.requestAnimationFrame(step);
+  });
+
   // Testimonial carousel dots (native scroll-snap does the swiping).
   document.querySelectorAll('[data-carousel]').forEach(function (c) {
     var track = c.querySelector('.carousel__track');

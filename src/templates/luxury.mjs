@@ -3,7 +3,7 @@
 // Same content and pages as the classic design; only the frame and homepage differ.
 import { escapeHtml as e, formatPrice, factsList, STATUS_LABEL } from '../lib/listing.mjs';
 import { NAV } from './layout.mjs';
-import { heroSeconds } from './pages.mjs';
+import { heroSeconds, newestFirst } from './pages.mjs';
 
 export function luxLayout(ctx, { path, title, description, body, bodyClass = '', ogImage }) {
   const { site, url, preview } = ctx;
@@ -103,7 +103,7 @@ export function luxHome(ctx) {
   }).join('');
   const multi = slides.length > 1;
 
-  const quotes = testimonials.filter((t) => !t.excerptOnly && t.text[0].length < 420).slice(0, 5);
+  const quotes = newestFirst(testimonials.filter((t) => t.text[0].length < 480));
 
   return `<section class="hero lx-hero${site.heroFade ? ' hero--fade' : ''}" aria-label="Welcome"${multi ? ` data-interval="${heroSeconds(site)}"` : ''}>
   <div class="hero__slides">${slideHtml}</div>
@@ -163,9 +163,10 @@ export function luxHome(ctx) {
 <section class="lx-quotes" aria-labelledby="q-h">
   <div class="lx-wrap">
     <h2 id="q-h" class="lx-eyebrow lx-eyebrow--dark">What clients say</h2>
-    <div class="carousel" data-carousel>
-      <div class="carousel__track lx-quotes__track">${quotes.map((t) => `<figure class="lx-quote"><blockquote><p>${e(t.text[0])}</p></blockquote><figcaption>${t.client ? e(t.client) + ' · ' : ''}${e(t.title)}</figcaption></figure>`).join('')}</div>
+    <div class="carousel" data-carousel data-marquee>
+      <div class="carousel__track lx-quotes__track" tabindex="0" aria-label="Client reviews – scroll sideways to read more">${quotes.map((t) => `<figure class="lx-quote"><blockquote><p>${e(t.text[0])}</p></blockquote><figcaption>${t.client ? e(t.client) + ' · ' : ''}${e(t.title)}</figcaption></figure>`).join('')}</div>
       <div class="carousel__dots" role="group" aria-label="Choose testimonial"></div>
+      <button class="marquee-pause" type="button" aria-pressed="false" hidden>Pause reviews</button>
     </div>
     <p class="center"><a class="lx-link" href="${url('/testimonials/')}">Read all testimonials</a></p>
   </div>

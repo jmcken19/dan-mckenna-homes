@@ -19,6 +19,11 @@ function testimonialCard(ctx, t, { full = false } = {}) {
 </article>`;
 }
 
+/** Newest reviews first (ties keep their order), so the oldest one is never the opener. */
+export function newestFirst(list) {
+  return list.map((t, i) => [t, i]).sort((a, b) => b[0].date.localeCompare(a[0].date) || a[1] - b[1]).map(([t]) => t);
+}
+
 export function heroSeconds(site) {
   const n = Number(site.heroSlideSeconds);
   return Number.isFinite(n) && n >= 2 && n <= 30 ? n : 7;
@@ -42,7 +47,7 @@ export function homePage(ctx) {
   </div>
 </section>` : '';
 
-  const t = ctx.testimonials.slice(0, 6);
+  const t = newestFirst(ctx.testimonials);
   return `<section class="hero${site.heroFade ? ' hero--fade' : ''}" aria-label="Welcome"${multi ? ` data-interval="${heroSeconds(site)}"` : ''}>
   <div class="hero__slides">${slides}</div>
   <div class="hero__text">
@@ -59,9 +64,10 @@ ${listingsSection}
 <section class="home-testimonials" aria-labelledby="ht-h">
   <div class="wrap">
     <h2 id="ht-h" class="section-title">What Clients Say About Working With Us</h2>
-    <div class="carousel" data-carousel>
-      <div class="carousel__track">${t.map((x) => testimonialCard(ctx, x)).join('')}</div>
+    <div class="carousel" data-carousel data-marquee>
+      <div class="carousel__track" tabindex="0" aria-label="Client reviews – scroll sideways to read more">${t.map((x) => testimonialCard(ctx, x)).join('')}</div>
       <div class="carousel__dots" role="group" aria-label="Choose testimonial"></div>
+      <button class="marquee-pause" type="button" aria-pressed="false" hidden>Pause reviews</button>
     </div>
     <p class="center"><a class="btn btn--dark btn--wide" href="${url('/testimonials/')}">View all</a></p>
   </div>
