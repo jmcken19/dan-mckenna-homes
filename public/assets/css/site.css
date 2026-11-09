@@ -143,13 +143,14 @@ p { margin: 0 0 1rem; }
 .lede { font-size: 1.2rem; color: var(--ink-soft); }
 .prose { max-width: 70ch; }
 .prose ul { padding-left: 1.25rem; } .prose li { margin-bottom: .5rem; }
-.page__img { margin: 0 0 1.5rem; border-radius: 2px; }
+.page__img { margin: 0 0 1.5rem; border-radius: 2px; width: 100%; max-width: 640px; aspect-ratio: 3 / 2; object-fit: cover; }
 .signoff { border-top: 1px solid var(--line); padding-top: 1rem; margin-top: 2rem; }
 .about-intro { display: grid; gap: 1.25rem; align-items: end; margin-bottom: 1.5rem; }
 @media (min-width: 600px) { .about-intro { grid-template-columns: 220px 1fr; } }
-.headshot { width: 220px; border-radius: 2px; }
+.headshot { width: 220px; border-radius: 2px; aspect-ratio: 360 / 402; object-fit: cover; object-position: 50% 20%; }
 .headshot--sm { width: 160px; }
 .feature { margin: 2rem 0; }
+.feature img { width: 100%; height: auto; aspect-ratio: 4 / 3; object-fit: cover; }
 .feature figcaption { padding: .75rem 0; font-size: 1rem; }
 .ask { align-self: start; background: var(--wash); padding: 1.5rem; border-top: 4px solid var(--red); display: grid; gap: .75rem; }
 @media (min-width: 1000px) { .ask { position: sticky; top: 1.5rem; } }

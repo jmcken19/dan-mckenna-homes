@@ -11,6 +11,7 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { execSync } from 'node:child_process';
 import { validatePublicListing, validateHomepage, HERO_SIZES } from '../src/lib/listing.mjs';
+import { PHOTO_SPOTS, sitePhoto, validatePhotos } from '../src/lib/photos.mjs';
 import { layout } from '../src/templates/layout.mjs';
 import { listingDetail } from '../src/templates/listing.mjs';
 import * as P from '../src/templates/pages.mjs';
@@ -40,6 +41,11 @@ export async function loadContent() {
   const heroProblems = validateHomepage(site);
   for (const sl of site.heroSlides || []) for (const w of HERO_SIZES) {
     if (sl.src && !existsSync(join(root, 'public', `${sl.src}-${w}.jpg`))) heroProblems.push(`missing image file public${sl.src}-${w}.jpg`);
+  }
+  for (const pr of validatePhotos(site)) heroProblems.push(pr);
+  for (const k of Object.keys(PHOTO_SPOTS)) for (const f of ['small', 'large']) {
+    const src = sitePhoto(site, k)[f];
+    if (!existsSync(join(root, 'public', src))) heroProblems.push(`missing image file public${src} (photos.${k})`);
   }
   if (heroProblems.length) problems.push(`content/site.json (homepage slideshow):\n  - ${heroProblems.join('\n  - ')}`);
   for (const f of files) {

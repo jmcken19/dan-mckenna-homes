@@ -3,6 +3,7 @@
 // Same content and pages as the classic design; only the frame and homepage differ.
 import { escapeHtml as e, formatPrice, factsList, STATUS_LABEL } from '../lib/listing.mjs';
 import { NAV } from './layout.mjs';
+import { sitePhoto } from '../lib/photos.mjs';
 import { heroSeconds, newestFirst } from './pages.mjs';
 
 export function luxLayout(ctx, { path, title, description, body, bodyClass = '', ogImage }) {
@@ -125,7 +126,7 @@ export function luxHome(ctx) {
 
 <section class="lx-intro" aria-labelledby="intro-h">
   <div class="lx-wrap lx-intro__grid">
-    <img class="lx-intro__photo" src="${url('/assets/img/dan-mckenna-headshot.jpg')}" width="360" height="402" alt="Dan McKenna" loading="lazy">
+    <img class="lx-intro__photo" src="${url(sitePhoto(site, 'headshot').small)}" width="360" height="402" alt="${e(sitePhoto(site, 'headshot').alt)}" loading="lazy">
     <div>
       <p class="lx-eyebrow lx-eyebrow--dark">${e(site.agentTitle)}</p>
       <h2 id="intro-h" class="lx-display">Dan McKenna</h2>
@@ -159,7 +160,7 @@ export function luxHome(ctx) {
 </section>
 
 <section class="lx-feature" aria-labelledby="lux-h">
-  <img src="${url('/assets/img/2515-forest-lawn-dr-1400.jpg')}" srcset="${url('/assets/img/2515-forest-lawn-dr-800.jpg')} 800w, ${url('/assets/img/2515-forest-lawn-dr-1400.jpg')} 1400w" sizes="100vw" alt="2515 Forest Lawn Drive, Weddington NC" loading="lazy">
+  <img src="${url(sitePhoto(site, 'luxury').large)}" srcset="${url(sitePhoto(site, 'luxury').small)} 800w, ${url(sitePhoto(site, 'luxury').large)} 1400w" sizes="100vw" alt="${e(sitePhoto(site, 'luxury').alt)}" loading="lazy">
   <div class="lx-feature__text">
     <p class="lx-eyebrow">Keller Williams Luxury · CLHMS · GUILD™</p>
     <h2 id="lux-h" class="lx-display">Exceptional homes deserve exceptional representation.</h2>

@@ -2,6 +2,7 @@
 import { escapeHtml as e, STATUS_LABEL } from '../lib/listing.mjs';
 import { pageWithSidebar, askBox } from './layout.mjs';
 import { listingCard } from './listing.mjs';
+import { sitePhoto } from '../lib/photos.mjs';
 
 function fmtDate(iso) {
   const [y, m, d] = iso.split('-').map(Number);
@@ -111,7 +112,7 @@ export function aboutPage(ctx) {
   return pageWithSidebar(ctx, {
     heading: '',
     intro: `<div class="about-intro">
-  <img class="headshot" src="${url('/assets/img/dan-mckenna-headshot.jpg')}" width="360" height="402" alt="Dan McKenna">
+  <img class="headshot" src="${url(sitePhoto(ctx.site, 'headshot').small)}" width="360" height="402" alt="${e(sitePhoto(ctx.site, 'headshot').alt)}">
   <div>
     <h1 class="page__title">Dan McKenna, NC/SC Broker/REALTOR®</h1>
     <p class="kicker">Experience Counts.</p>
@@ -156,7 +157,7 @@ export function newConstructionPage(ctx) {
   return pageWithSidebar(ctx, {
     heading: 'New Construction Home Buying',
     intro: `<p class="kicker">Building Your Dream Home? Experience Counts.</p>`,
-    content: `<img class="page__img" src="${ctx.url('/assets/img/construction.jpg')}" width="640" height="427" alt="New home under construction with wood framing">
+    content: `<img class="page__img" src="${ctx.url(sitePhoto(ctx.site, 'construction').large)}" width="640" height="427" alt="${e(sitePhoto(ctx.site, 'construction').alt)}">
 <p>The Charlotte metropolitan area continues to offer exciting opportunities for new construction, from established neighborhoods and growing communities to exceptional custom homes.</p>
 <p>Building or purchasing a newly constructed home can be an exciting and rewarding experience, but the process can also be complex. Having an experienced real estate professional representing your interests can make all the difference.</p>
 <h2>5 Reasons to Work with an Experienced Buyer's Agent When Purchasing New Construction</h2>
@@ -199,8 +200,8 @@ export function luxuryPage(ctx) {
 <p>My approach includes strategic pricing, professional photography, compelling property descriptions, thoughtful digital marketing, agent networking, and experienced negotiations.</p>
 <p>Whether representing an established luxury estate or an extraordinary new construction residence, I focus on highlighting the features, craftsmanship, location, and lifestyle that distinguish each home.</p>
 <figure class="feature">
-  <img src="${ctx.url('/assets/img/2515-forest-lawn-dr-1400.jpg')}" srcset="${ctx.url('/assets/img/2515-forest-lawn-dr-800.jpg')} 800w, ${ctx.url('/assets/img/2515-forest-lawn-dr-1400.jpg')} 1400w" sizes="(min-width: 1000px) 700px, 100vw" width="1400" height="1050" alt="2515 Forest Lawn Drive, Weddington NC" loading="lazy">
-  <figcaption><strong>Featured Dan McKenna Homes Listing</strong><br>2515 Forest Lawn Drive, Weddington NC<br>Built by Tiara Homes</figcaption>
+  <img src="${ctx.url(sitePhoto(ctx.site, 'luxury').large)}" srcset="${ctx.url(sitePhoto(ctx.site, 'luxury').small)} 800w, ${ctx.url(sitePhoto(ctx.site, 'luxury').large)} 1400w" sizes="(min-width: 1000px) 700px, 100vw" width="1400" height="1050" alt="${e(sitePhoto(ctx.site, 'luxury').alt)}" loading="lazy">
+  ${sitePhoto(ctx.site, 'luxury').id ? '' : '<figcaption><strong>Featured Dan McKenna Homes Listing</strong><br>2515 Forest Lawn Drive, Weddington NC<br>Built by Tiara Homes</figcaption>'}
 </figure>
 <h2>Luxury Homes &amp; Custom Construction</h2>
 <p>The Charlotte metropolitan area offers a remarkable variety of luxury living opportunities, including established estates, distinctive neighborhoods, and custom-built residences.</p>
@@ -239,7 +240,7 @@ export function contactPage(ctx) {
   <div class="page__main">
     <h1 class="page__title">Contact</h1>
     <div class="contact-card">
-      <img class="headshot headshot--sm" src="${url('/assets/img/dan-mckenna-headshot.jpg')}" width="360" height="402" alt="Dan McKenna">
+      <img class="headshot headshot--sm" src="${url(sitePhoto(site, 'headshot').small)}" width="360" height="402" alt="${e(sitePhoto(site, 'headshot').alt)}">
       <div>
         <h2>${e(site.agent)}</h2>
         <p class="kicker">${e(site.tagline)}</p>

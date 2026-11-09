@@ -287,9 +287,11 @@ async function route() {
       document.getElementById('who').textContent = `Signed in as ${me.email}`;
     }
     if (h === '' ) return startScreen();
-    if (h === 'listings') return listingsScreen();
-    if (h === 'new') return editScreen(null);
-    if (h.startsWith('listing/')) return editScreen(h.split('/')[1]);
+    // Listings editing is switched off: Dan doesn't add listings himself.
+    // To bring it back, restore these routes and the start-screen box.
+    // if (h === 'listings') return listingsScreen();
+    // if (h === 'new') return editScreen(null);
+    // if (h.startsWith('listing/')) return editScreen(h.split('/')[1]);
     if (h === 'homepage') return homepageScreen();
     if (h === 'request' || h === 'requests') return requestScreen();
     return startScreen();
@@ -300,17 +302,110 @@ async function route() {
 
 /* ---------------- start ---------------- */
 
-function startScreen() {
-  setScreen(`
-  <h1>What would you like to do?</h1>
-  <p>Click one of the three big boxes below.</p>
-  <div class="big-choices">
-    <a class="big-choice" href="#/listings"><strong>Manage listings</strong>Add a home, change price or photos, mark it Pending or Sold, or take it off the website.</a>
-    <a class="big-choice" href="#/homepage"><strong>Homepage photos</strong>Choose the photos that rotate at the top of your homepage, their order, and how fast they change.</a>
-    <a class="big-choice" href="#/request"><strong>Request a website change${me.role === 'maintainer' && me.openRequests ? ` <span class="chip chip--draft">${me.openRequests} waiting</span>` : ''}</strong>Ask James to change anything else — text, your photo, a page — or ask a question.</a>
-  </div>
-  <p class="hint">See the website: <a href="${esc(me.site.url)}/" target="_blank" rel="noopener">${esc(me.site.url.replace(/^https?:\/\//, ''))}</a></p>
-  <p class="hint">Need help or something isn't working? ${supportLine()}.</p>`);
+const SPOT_INFO = {
+  headshot: { label: 'Your photo', where: 'About us page and Contact page (and the top of design option 2)', tip: 'A portrait photo (taller than wide) of you looks best.', min: 500, page: 'headshot' },
+  construction: { label: 'New Construction page photo', where: 'New Construction page', tip: 'A wide (landscape) photo looks best.', min: 800, page: 'construction' },
+  luxury: { label: 'Luxury home photo', where: 'Luxury Home Marketing page (and the homepage of design option 2)', tip: 'A wide (landscape) photo of a beautiful home looks best.', min: 1200, page: 'luxury' },
+};
+
+async function startScreen() {
+  setScreen('<p class="loading">Loading your website photos…</p>');
+  let H = await api('GET', '/homepage');
+  let banner = '';
+  const changed = (k) => JSON.stringify(H.draft.photos[k]) !== JSON.stringify(H.live.photos[k]);
+  const slidesChanged = () => JSON.stringify({ ...H.draft, photos: 0 }) !== JSON.stringify({ ...H.live, photos: 0 });
+
+  function render() {
+    const d = H.draft;
+    const first = d.slides[0];
+    app.innerHTML = `
+    <h1>Your website photos</h1>
+    ${how(['Find the photo you want to change below.', 'Click <strong>Replace photo</strong> and pick a new one — or drag a photo from a folder onto it.', 'Click <strong>Preview</strong> to see how the page will look.', 'When you like it, click the <strong>Publish</strong> button at the bottom of the screen.'])}
+    <div id="msg">${banner}</div>
+    <div id="pub"></div>
+
+    <ul class="spots">
+      <li class="spot${slidesChanged() ? ' spot--changed' : ''}">
+        <a class="spot__img" href="#/homepage"><img src="/api/homepage/photo/${esc(first.id)}?w=800" alt="" style="object-position:${esc(first.focus)}"></a>
+        <div class="spot__body">
+          <h2>Homepage slideshow</h2>
+          <p class="spot__where">The big photos at the top of your homepage · ${d.slides.length} photo${d.slides.length === 1 ? '' : 's'}</p>
+          ${slidesChanged() ? '<p class="chip chip--draft">Changed – not published yet</p>' : ''}
+          <p><a class="btn btn--primary" href="#/homepage">Change slideshow photos</a></p>
+          <p class="hint">Add, remove, reorder, and choose the speed.</p>
+        </div>
+      </li>
+      ${Object.entries(SPOT_INFO).map(([k, info]) => `
+      <li class="spot${changed(k) ? ' spot--changed' : ''}" data-spot="${k}">
+        <div class="spot__img spot__img--${k}"><img src="/api/homepage/spot/${k}/img?r=${H.revision}" alt=""></div>
+        <div class="spot__body">
+          <h2>${esc(info.label)}</h2>
+          <p class="spot__where">Shows on: ${esc(info.where)}</p>
+          ${changed(k) ? '<p class="chip chip--draft">Changed – not published yet</p>' : ''}
+          <p class="spot__btns">
+            <label class="btn btn--primary file-btn">Replace photo<input type="file" accept="image/*,.heic,.heif" data-spot-file="${k}" aria-label="Replace ${esc(info.label)}"></label>
+            <a class="btn" href="/api/homepage/preview?page=${info.page}" target="_blank" rel="noopener">Preview</a>
+            ${changed(k) ? `<button type="button" class="btn btn--small" data-spot-undo="${k}">Undo</button>` : ''}
+          </p>
+          <p class="hint">${esc(info.tip)} You can also drag a photo onto this box.</p>
+          <p class="spot__status" aria-live="polite"></p>
+        </div>
+      </li>`).join('')}
+    </ul>
+
+    <p class="hint">See your website: <a href="${esc(me.site.url)}/" target="_blank" rel="noopener">${esc(me.site.url.replace(/^https?:\/\//, ''))}</a></p>
+    <p class="hint">Need something else changed on the website? Just text James.${me.role === 'maintainer' ? ` · <a href="#/request">Change requests${me.openRequests ? ` (${me.openRequests} waiting)` : ''}</a>` : ''}</p>
+
+    <div class="actions"><p class="actions__state">${H.hasUnpublishedChanges ? 'You have photo changes that are not on the website yet' : 'The website is up to date'}</p><div class="actions__in actions__in--1">
+      <button type="button" class="btn btn--primary btn--publish" data-publish ${H.hasUnpublishedChanges ? '' : 'disabled'}>Publish</button>
+    </div></div>`;
+    bind();
+    const job = store.get('dmh-publishing');
+    if (job?.id === 'homepage') watchPublish(document.getElementById('pub'), job);
+  }
+
+  const showError = (err) => { const m = document.getElementById('msg'); m.innerHTML = errorNote(err); m.scrollIntoView({ block: 'center' }); };
+
+  async function replaceSpot(k, file) {
+    const li = app.querySelector(`[data-spot="${k}"]`);
+    const status = li.querySelector('.spot__status');
+    try {
+      status.textContent = 'Preparing your photo…';
+      const p = await prepareHero(file, SPOT_INFO[k].min);
+      status.textContent = 'Uploading…';
+      const fd = new FormData();
+      for (const w of [2000, 1400, 800]) fd.append(`w${w}`, p[w].blob, `w${w}.jpg`);
+      if (file.size <= 24 * 1024 * 1024) fd.append('original', file, 'original');
+      fd.append('baseRevision', String(H.revision));
+      H = await api('POST', `/homepage/spot/${k}`, fd, { idem: uuid() });
+      banner = `<div class="note note--ok"><p>✓ New photo added to <strong>${esc(SPOT_INFO[k].label)}</strong>. Click <strong>Preview</strong> to see it, then <strong>Publish</strong> at the bottom.</p></div>`;
+      render();
+    } catch (err) {
+      if (err.status === 409) { try { H = await api('GET', '/homepage'); } catch { /* ignore */ } }
+      status.innerHTML = `<strong>That photo was not added:</strong> ${esc(err.message)}`;
+    }
+  }
+
+  function bind() {
+    app.querySelectorAll('[data-spot-file]').forEach((inp) => inp.addEventListener('change', (e) => { const f = e.target.files[0]; e.target.value = ''; if (f) replaceSpot(inp.dataset.spotFile, f); }));
+    app.querySelectorAll('[data-spot]').forEach((li) => makeDropZone(li, (files) => replaceSpot(li.dataset.spot, files[0])));
+    app.querySelectorAll('[data-spot-undo]').forEach((b) => b.addEventListener('click', async () => {
+      try { H = await api('POST', `/homepage/spot/${b.dataset.spotUndo}/undo`, { baseRevision: H.revision }); banner = ''; render(); toast('Back to the photo that is on the website now.'); } catch (err) { showError(err); }
+    }));
+    document.getElementById('msg').addEventListener('click', async (e) => { if (e.target.matches('[data-reload]')) { H = await api('GET', '/homepage'); banner = ''; render(); } });
+    app.querySelector('[data-publish]').addEventListener('click', async () => {
+      const list = [slidesChanged() ? 'the homepage slideshow' : null, ...Object.keys(SPOT_INFO).filter(changed).map((k) => SPOT_INFO[k].label.toLowerCase())].filter(Boolean);
+      if (!(await confirmBox({ title: 'Put your new photos on the website?', body: `This updates: ${esc(list.join(', '))}.`, yes: 'Yes, publish' }))) return;
+      app.querySelectorAll('button').forEach((x) => { x.disabled = true; });
+      try {
+        const r = await api('POST', '/homepage/publish', { baseRevision: H.revision }, { idem: uuid() });
+        H = r.homepage;
+        store.set('dmh-publishing', { id: 'homepage', commit: r.commit, url: me.site.url + '/', verb: 'your photos are on the website', linkLabel: 'View your website', at: Date.now() });
+        banner = ''; render();
+      } catch (err) { render(); showError(err); }
+    });
+  }
+  render();
 }
 
 /* ---------------- listings list ---------------- */
@@ -620,13 +715,13 @@ const FOCUS = [{ label: 'Top', v: '50% 15%' }, { label: 'Middle', v: '50% 50%' }
 const nearestFocus = (f) => { const y = Number(String(f || '').split(' ')[1]?.replace('%', '')) || 50; return FOCUS.reduce((a, b) => (Math.abs(parseInt(b.v.split(' ')[1], 10) - y) < Math.abs(parseInt(a.v.split(' ')[1], 10) - y) ? b : a)).v; };
 const nearestSpeed = (n) => SPEEDS.reduce((a, b) => (Math.abs(b.v - n) < Math.abs(a.v - n) ? b : a)).v;
 
-async function prepareHero(file) {
+async function prepareHero(file, minEdge = 1200) {
   if (file.size > 40 * 1024 * 1024) throw new Error('This photo is over 40 MB. Please pick a smaller one.');
   let bmp;
   try { bmp = await decode(file); } catch {
-    throw new Error(looksHeic(file) ? 'This iPhone photo (HEIC) could not be opened on this device. On your iPhone: Settings → Camera → Formats → "Most Compatible", or send it to James with "Request a website change".' : 'This file could not be opened as a photo. Please choose a JPG or iPhone photo.');
+    throw new Error(looksHeic(file) ? 'This iPhone photo (HEIC) could not be opened on this device. On your iPhone: Settings → Camera → Formats → "Most Compatible", or text the photo to James.' : 'This file could not be opened as a photo. Please choose a JPG or iPhone photo.');
   }
-  if (Math.max(bmp.width, bmp.height) < 1200) throw new Error('This photo is too small for the top of the homepage — it would look blurry. Please use a larger photo.');
+  if (Math.max(bmp.width, bmp.height) < minEdge) throw new Error('This photo is too small — it would look blurry on the website. Please use a larger photo.');
   const out = { tall: bmp.height > bmp.width };
   for (const w of [2000, 1400, 800]) out[w] = await drawTo(bmp, w, w === 800 ? 0.8 : 0.82);
   bmp.close?.();
@@ -643,8 +738,8 @@ async function homepageScreen() {
     const d = H.draft;
     const speed = nearestSpeed(d.seconds);
     app.innerHTML = `
-    <a class="back" href="#/">← Back</a>
-    <h1>Homepage photos</h1>
+    <a class="back" href="#/">← Back to all photos</a>
+    <h1>Homepage slideshow</h1>
     ${how(['These photos show at the very top of your homepage. <strong>Photo 1 shows first.</strong>', 'Add photos with the <strong>+ Add photos</strong> box. Change the order by dragging <strong>⠿ Drag</strong>, or click <strong>Show first</strong>.', 'Choose <strong>Moving</strong> or <strong>Still</strong>, and the speed.', 'Click <strong>Preview</strong> to look, then <strong>Publish</strong> to put it on your website.'])}
     <div id="msg">${banner}</div>
     <div id="pub"></div>

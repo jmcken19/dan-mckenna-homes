@@ -55,3 +55,20 @@ test('favicon set is present and linked', async () => {
     assert.match(s, /favicon\.ico/); assert.match(s, /apple-touch-icon/); assert.match(s, /site\.webmanifest/);
   }
 });
+
+test('website photos: a replaced photo shows on its pages; the house caption only stays with the original photo', async () => {
+  const { sitePhoto, validatePhotos } = await import('../src/lib/photos.mjs');
+  const P = await import('../src/templates/pages.mjs');
+  const site = JSON.parse(await (await import('node:fs/promises')).readFile(new URL('../content/site.json', import.meta.url), 'utf8'));
+  const ctx = (s) => ({ site: s, url: (p) => p, listings: [], removed: [], testimonials: [] });
+  assert.match(P.luxuryPage(ctx(site)), /Tiara Homes/);
+  const changed = { ...site, photos: { luxury: { id: 's-abc123', small: '/assets/img/hero/s-abc123-800.jpg', large: '/assets/img/hero/s-abc123-1400.jpg', alt: 'Luxury home in the Charlotte area' }, headshot: { id: 's-def456', small: '/assets/img/hero/s-def456-800.jpg', large: '/assets/img/hero/s-def456-1400.jpg', alt: 'Dan McKenna' } } };
+  assert.deepEqual(validatePhotos(changed), []);
+  const lux = P.luxuryPage(ctx(changed));
+  assert.match(lux, /s-abc123-1400\.jpg/); assert.doesNotMatch(lux, /Tiara Homes/);
+  assert.match(P.aboutPage(ctx(changed)), /s-def456-800\.jpg/);
+  assert.match(P.contactPage(ctx(changed)), /s-def456-800\.jpg/);
+  assert.equal(sitePhoto(site, 'construction').small, '/assets/img/construction.jpg');
+  assert.ok(validatePhotos({ photos: { luxury: { small: 'https://evil.example/x.jpg', large: '/assets/img/a.jpg' } } }).length);
+  assert.ok(validatePhotos({ photos: { banner: {} } }).length);
+});

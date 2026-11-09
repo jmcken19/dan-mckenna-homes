@@ -9,7 +9,9 @@ maintaining this repository. `CLAUDE.md` only points here.
   A plain static site: `scripts/build.mjs` turns the files in `content/` and `src/templates/`
   into HTML in `dist/`. No framework, no database.
 * **Owner editor** (`owner/`): a small Cloudflare Worker that Dan uses on his phone to add
-  listings and send change requests. Sign-in is Cloudflare Access (email code). It publishes by
+  listings and send change requests. (Nov 2026: the **listings part is switched off in the editor UI**
+  at Dan's request – he sends listings as change requests and the maintainer adds them per the schema below.
+  The API routes still exist; re-enable by restoring the routes/box marked in `owner/ui/app.js`.) Sign-in is Cloudflare Access (email code). It publishes by
   committing to this repo. Drafts, original photos and change requests stay in private
   Cloudflare storage (D1 + KV), never in this repo.
 * **Hosting:** GitHub Pages is the *testing preview* (`.github/workflows/pages.yml`, with a

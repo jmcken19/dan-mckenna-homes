@@ -5,7 +5,8 @@ import { github } from './github.mjs';
 import { validateVariant, validateOriginal } from './images.mjs';
 import { validateHomepage, HERO_SIZES, MAX_HERO_SLIDES, randomId } from '../../src/lib/listing.mjs';
 import { layout } from '../../src/templates/layout.mjs';
-import { homePage } from '../../src/templates/pages.mjs';
+import { homePage, aboutPage, contactPage, newConstructionPage, luxuryPage } from '../../src/templates/pages.mjs';
+import { PHOTO_SPOTS, sitePhoto, validatePhotos } from '../../src/lib/photos.mjs';
 import { luxLayout, luxHome } from '../../src/templates/luxury.mjs';
 import siteContent from '../../content/site.json';
 import testimonialsContent from '../../content/testimonials.json';
@@ -22,7 +23,15 @@ export function homepageRoutes(H) {
     seconds: typeof site.heroSlideSeconds === 'number' ? site.heroSlideSeconds : 7,
     fade: site.heroFade === true,
     autoplay: site.heroAutoplay !== false,
+    photos: spotsFrom(site),
   });
+  function spotsFrom(site) {
+    const out = {};
+    for (const k of Object.keys(PHOTO_SPOTS)) { const p = sitePhoto(site, k); out[k] = { ...(p.id ? { id: p.id } : {}), small: p.small, large: p.large, alt: p.alt }; }
+    return out;
+  }
+  // Rows saved before photo spots existed: fill them in from the website's settings.
+  const withSpots = (st) => (st && !st.photos ? { ...st, photos: spotsFrom(siteContent) } : st);
   const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 
   function view(row) {
@@ -31,7 +40,7 @@ export function homepageRoutes(H) {
 
   async function readRow(A) {
     const r = await A.db.prepare('SELECT * FROM settings WHERE key = ?').bind(KEY).first();
-    return r ? { ...r, draft: JSON.parse(r.draft), live: r.live ? JSON.parse(r.live) : null } : null;
+    return r ? { ...r, draft: withSpots(JSON.parse(r.draft)), live: r.live ? withSpots(JSON.parse(r.live)) : null } : null;
   }
 
   /** Load the slideshow, creating it from the website's current settings the first time and
@@ -141,6 +150,49 @@ export function homepageRoutes(H) {
       return view(updated);
     },
 
+    async spot(A, key) {
+      if (!PHOTO_SPOTS[key]) throw new HttpError(404, 'Not found.');
+      await rateLimit(A, 'upload');
+      const p = await readForm(A);
+      const row = await load(A);
+      const id = randomId('s-', 10);
+      await store(A, id, p);
+      const prev = row.draft.photos[key];
+      const photos = { ...row.draft.photos, [key]: { id, small: `/assets/img/hero/${id}-800.jpg`, large: `/assets/img/hero/${id}-1400.jpg`, alt: p.alt || PHOTO_SPOTS[key].newAlt || prev.alt } };
+      const updated = await write(A, row, { draft: { ...row.draft, photos } }, p.baseRevision);
+      await logEvent(A, 'upload-site-photo', null, { spot: key, id });
+      return view(updated);
+    },
+
+    async spotUndo(A, key) {
+      if (!PHOTO_SPOTS[key]) throw new HttpError(404, 'Not found.');
+      const body = await readJsonBody(A.request);
+      const rev = needRevision(body);
+      const row = await load(A);
+      const photos = { ...row.draft.photos, [key]: row.live.photos[key] };
+      const updated = await write(A, row, { draft: { ...row.draft, photos } }, rev);
+      await logEvent(A, 'save-site-photo-undo', null, { spot: key });
+      return json(view(updated));
+    },
+
+    /** Thumbnail for a photo spot, draft or live (the editor only loads images from itself). */
+    async spotImage(A, key) {
+      if (!PHOTO_SPOTS[key]) throw new HttpError(404, 'Not found.');
+      const which = A.url.searchParams.get('v') === 'live' ? 'live' : 'draft';
+      const row = await load(A);
+      const p = (row[which] || row.draft).photos[key];
+      if (p.id) return routes.photo(A, p.id, 'w-800.jpg');
+      const cacheKey = `spotdef:${p.small}`;
+      let bytes = await A.env.PHOTOS.get(cacheKey, 'arrayBuffer');
+      if (!bytes) {
+        const f = A.env.GITHUB_TOKEN ? await github(A.env).getFile(`public${p.small}`) : null;
+        if (!f) throw new HttpError(404, 'Photo not found.');
+        bytes = f.bytes;
+        await A.env.PHOTOS.put(cacheKey, bytes);
+      }
+      return new Response(bytes, { headers: { 'Content-Type': /\.png$/i.test(p.small) ? 'image/png' : 'image/jpeg', 'Cache-Control': 'private, max-age=300' } });
+    },
+
     async arrange(A) {
       const body = await readJsonBody(A.request);
       const rev = needRevision(body);
@@ -192,8 +244,9 @@ export function homepageRoutes(H) {
         // Photos that were already on the website before the editor existed: copy from the repo once.
         const row = await readRow(A);
         const slide = [...(row?.draft.slides || []), ...(row?.live?.slides || [])].find((s) => s.id === id);
-        if (!slide) throw new HttpError(404, 'Photo not found.');
-        const f = await github(A.env).getFile(`public${slide.src}-${w}.jpg`);
+        const spotted = !slide && [...Object.values(row?.draft.photos || {}), ...Object.values(row?.live?.photos || {})].some((p) => p.id === id);
+        if (!slide && !spotted) throw new HttpError(404, 'Photo not found.');
+        const f = await github(A.env).getFile(slide ? `public${slide.src}-${w}.jpg` : `${HERO_DIR}/${id}-${w}.jpg`);
         if (!f) throw new HttpError(404, 'Photo not found.');
         bytes = f.bytes;
         await A.env.PHOTOS.put(`hero:${id}:${w}`, bytes);
@@ -206,17 +259,31 @@ export function homepageRoutes(H) {
       const design = A.url.searchParams.get('design') === 'option2' ? 'option2' : 'classic';
       const base = publicBase(A.env) + (design === 'option2' ? (A.env.PUBLIC_SITE_V2_PATH ?? '/v2') : '');
       const srcToId = new Map(row.draft.slides.map((s) => [s.src, s.id]));
-      const site = { ...siteContent, heroSlides: row.draft.slides, heroSlideSeconds: row.draft.seconds, heroFade: row.draft.fade, heroAutoplay: row.draft.autoplay !== false };
+      const draftSpotIds = new Set(Object.values(row.draft.photos).map((p) => p.id).filter(Boolean));
+      const site = { ...siteContent, heroSlides: row.draft.slides, heroSlideSeconds: row.draft.seconds, heroFade: row.draft.fade, heroAutoplay: row.draft.autoplay !== false, photos: row.draft.photos };
+      const PAGES = {
+        home: { path: '/', title: 'Preview', classic: homePage, lux: luxHome },
+        headshot: { path: '/about-us/', title: 'About us', classic: aboutPage },
+        contact: { path: '/contact/', title: 'Contact', classic: contactPage },
+        construction: { path: '/new-construction/', title: 'New Construction', classic: newConstructionPage },
+        luxury: { path: '/luxury-home-marketing/', title: 'Luxury Home Marketing', classic: luxuryPage },
+      };
+      const pg = PAGES[A.url.searchParams.get('page')] || PAGES.home;
       const ctx = {
         site, preview: true, siteUrl: '', buildId: 'preview', listings: [], removed: [], testimonials: testimonialsContent.items,
         // Templates build photo addresses as url(src) + "-800.jpg", so a slide's src maps to a
         // private photo address that the "-<width>.jpg" suffix completes (draft photos aren't public yet).
-        url: (p) => (srcToId.has(p) ? `/api/homepage/photo/${srcToId.get(p)}/w` : base + p),
+        url: (p) => {
+          if (srcToId.has(p)) return `/api/homepage/photo/${srcToId.get(p)}/w`;
+          const m = /^\/assets\/img\/hero\/(s-[a-z0-9]+)-(800|1400|2000)\.jpg$/.exec(p);
+          if (m && draftSpotIds.has(m[1])) return `/api/homepage/photo/${m[1]}/w-${m[2]}.jpg`;
+          return base + p;
+        },
       };
       const html = design === 'option2'
-        ? luxLayout(ctx, { path: '/', title: 'Preview', body: luxHome(ctx) })
-        : layout(ctx, { path: '/', title: 'Preview', body: homePage(ctx) });
-      const note = `<div style="position:fixed;left:0;right:0;bottom:0;z-index:99;background:#fff4c2;color:#3d3200;font:600 16px system-ui;padding:12px;text-align:center;border-top:1px solid #e6d27a">Preview only – visitors still see the current homepage until you publish.</div>`;
+        ? luxLayout(ctx, { path: pg.path, title: pg.title, body: (pg.lux || pg.classic)(ctx) })
+        : layout(ctx, { path: pg.path, title: pg.title, body: pg.classic(ctx) });
+      const note = `<div style="position:fixed;left:0;right:0;bottom:0;z-index:99;background:#fff4c2;color:#3d3200;font:600 18px system-ui;padding:14px;text-align:center;border-top:1px solid #e6d27a">Preview only – visitors still see the current website until you click Publish. You can close this tab when you're done looking.</div>`;
       const origin = publicBase(A.env) ? new URL(publicBase(A.env)).origin : "'self'";
       return new Response(html.replace('</body>', note + '</body>'), {
         headers: {
@@ -239,13 +306,20 @@ export function homepageRoutes(H) {
       try {
         const d = row.draft;
         const gh = github(A.env);
-        const result = await gh.commit(`Update homepage slideshow (${d.slides.length} photo${d.slides.length === 1 ? '' : 's'}, ${d.autoplay === false ? 'still' : `moving, ${d.seconds}s, fade ${d.fade ? 'on' : 'off'}`})\n\nBy ${A.user.email} via the owner editor.`, async () => {
+        const result = await gh.commit(`Update website photos: slideshow (${d.slides.length} photo${d.slides.length === 1 ? '' : 's'}, ${d.autoplay === false ? 'still' : `moving, ${d.seconds}s, fade ${d.fade ? 'on' : 'off'}`})\n\nBy ${A.user.email} via the owner editor.`, async () => {
           const site = JSON.parse(await gh.getText('content/site.json'));
           site.heroSlides = d.slides.map(({ id, src, alt, focus }) => ({ id, src, alt, focus }));
           site.heroSlideSeconds = d.seconds;
           site.heroFade = d.fade;
           site.heroAutoplay = d.autoplay !== false;
-          const problems = validateHomepage(site);
+          // Only store spots that differ from the original photo, so site.json stays tidy.
+          const photos = {};
+          for (const [k, p] of Object.entries(d.photos || {})) {
+            const def = PHOTO_SPOTS[k]?.defaults;
+            if (def && (p.id || p.small !== def.small || p.large !== def.large)) photos[k] = p;
+          }
+          if (Object.keys(photos).length) site.photos = photos; else delete site.photos;
+          const problems = [...validateHomepage(site), ...validatePhotos(site)];
           if (problems.length) throw new HttpError(422, 'Something about the slideshow is not ready: ' + problems[0]);
           const changes = [{ path: 'content/site.json', content: JSON.stringify(site, null, 2) + '\n' }];
           const existing = new Set((await gh.listDir(HERO_DIR)).map((f) => f.name));
@@ -258,6 +332,17 @@ export function homepageRoutes(H) {
               if (existing.has(name)) continue;
               const bytes = await A.env.PHOTOS.get(`hero:${s.id}:${w}`, 'arrayBuffer');
               if (!bytes) throw new HttpError(500, 'A photo is missing from storage. Please remove it and add it again.');
+              changes.push({ path: `${HERO_DIR}/${name}`, content: new Uint8Array(bytes) });
+            }
+          }
+          for (const p of Object.values(d.photos || {})) {
+            if (!p.id) continue;
+            for (const w of HERO_SIZES) {
+              const name = `${p.id}-${w}.jpg`;
+              wanted.add(name);
+              if (existing.has(name)) continue;
+              const bytes = await A.env.PHOTOS.get(`hero:${p.id}:${w}`, 'arrayBuffer');
+              if (!bytes) throw new HttpError(500, 'A photo is missing from storage. Please replace it again.');
               changes.push({ path: `${HERO_DIR}/${name}`, content: new Uint8Array(bytes) });
             }
           }
@@ -281,6 +366,9 @@ export function homepageRoutes(H) {
     if (parts[1] === 'photos' && parts.length === 2 && method === 'PUT') return routes.arrange(A);
     if (parts[1] === 'photos' && parts.length === 3 && method === 'DELETE') return routes.remove(A, parts[2]);
     if (parts[1] === 'photos' && parts[3] === 'replace' && method === 'POST') return idempotent(A, () => routes.replace(A, parts[2]));
+    if (parts[1] === 'spot' && parts.length === 3 && method === 'POST') return idempotent(A, () => routes.spot(A, parts[2]));
+    if (parts[1] === 'spot' && parts[3] === 'img' && method === 'GET') return routes.spotImage(A, parts[2]);
+    if (parts[1] === 'spot' && parts[3] === 'undo' && method === 'POST') return routes.spotUndo(A, parts[2]);
     if (parts[1] === 'photo' && method === 'GET') return routes.photo(A, parts[2], parts[3]);
     if (parts[1] === 'preview' && method === 'GET') return routes.preview(A);
     if (parts[1] === 'publish' && method === 'POST') return idempotent(A, () => routes.publish(A));

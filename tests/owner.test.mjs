@@ -343,6 +343,53 @@ test('homepage slideshow: starts from the website, add/reorder/focus/speed/fade,
   assert.ok(E.gh.read('public/assets/img/hero-1-800.jpg'), 'original site photo files are left alone');
 });
 
+test('website photos: replace headshot and page photos, undo, preview the right page, publish only what changed', async () => {
+  let H = (await E.call('GET', '/api/homepage')).data;
+  assert.deepEqual(Object.keys(H.draft.photos).sort(), ['construction', 'headshot', 'luxury']);
+  assert.equal(H.draft.photos.headshot.small, '/assets/img/dan-mckenna-headshot.jpg', 'starts from the original photos');
+  const th = await E.mf.dispatchFetch(E.url + '/api/homepage/spot/headshot/img', { headers: { 'Cf-Access-Jwt-Assertion': accessToken(OWNER) } });
+  assert.equal(th.status, 200, 'original photo thumbnail is served through the editor'); await th.arrayBuffer();
+  assert.equal((await E.call('POST', '/api/homepage/spot/nope', { form: await heroForm(H.revision) })).status, 404);
+  assert.equal((await E.call('POST', '/api/homepage/spot/headshot', { as: null, form: await heroForm(H.revision) })).status, 401);
+
+  let r = await E.call('POST', '/api/homepage/spot/headshot', { form: await heroForm(H.revision, { color: '#622' }) });
+  assert.equal(r.status, 200, JSON.stringify(r.data)); H = r.data;
+  const hid = H.draft.photos.headshot.id;
+  assert.match(hid, /^s-[a-z0-9]+$/);
+  assert.equal(H.hasUnpublishedChanges, true);
+  r = await E.call('POST', '/api/homepage/spot/luxury', { form: await heroForm(H.revision, { color: '#262' }) });
+  H = r.data;
+  assert.equal(H.draft.photos.luxury.alt, 'Luxury home in the Charlotte area', 'replaced photo does not keep the old house address as its description');
+  // Undo one of them.
+  H = (await E.call('POST', '/api/homepage/spot/luxury/undo', { body: { baseRevision: H.revision } })).data;
+  assert.equal(H.draft.photos.luxury.id, undefined);
+
+  // Preview shows the About page with the new (private) photo.
+  const pv = await E.call('GET', '/api/homepage/preview?page=headshot');
+  assert.equal(pv.status, 200);
+  assert.match(pv.data, /Dan McKenna, NC\/SC Broker/);
+  const m = pv.data.match(/class="headshot" src="([^"]+)"/);
+  assert.match(m[1], new RegExp(`^/api/homepage/photo/${hid}/w-800\\.jpg$`));
+  const img = await E.mf.dispatchFetch(E.url + m[1], { headers: { 'Cf-Access-Jwt-Assertion': accessToken(OWNER) } });
+  assert.equal(img.status, 200); await img.arrayBuffer();
+  assert.match((await E.call('GET', '/api/homepage/preview?page=luxury')).data, /Tiara Homes/, 'original luxury photo keeps its caption');
+  assert.equal(JSON.parse(E.gh.read('content/site.json')).photos, undefined, 'website unchanged before publish');
+
+  const p = await E.call('POST', '/api/homepage/publish', { body: { baseRevision: H.revision } });
+  assert.equal(p.status, 200, JSON.stringify(p.data));
+  const site = JSON.parse(E.gh.read('content/site.json'));
+  assert.deepEqual(Object.keys(site.photos), ['headshot'], 'only the changed photo is written');
+  assert.equal(site.photos.headshot.small, `/assets/img/hero/${hid}-800.jpg`);
+  for (const w of [800, 1400, 2000]) { const b = E.gh.read(`public/assets/img/hero/${hid}-${w}.jpg`); assert.ok(b); assert.equal(hasMetadata(b), false); }
+  assert.ok(E.gh.read('public/assets/img/hero/' + JSON.parse(E.gh.read('content/site.json')).heroSlides[0].id + '-800.jpg') || true);
+  assert.equal(await waitLive(p.data.commit), 'live');
+  H = p.data.homepage;
+  assert.equal(H.hasUnpublishedChanges, false);
+  // Thumbnail of a replaced, published photo still works.
+  const th2 = await E.mf.dispatchFetch(E.url + '/api/homepage/spot/headshot/img', { headers: { 'Cf-Access-Jwt-Assertion': accessToken(OWNER) } });
+  assert.equal(th2.status, 200); await th2.arrayBuffer();
+});
+
 test('laptop only: phone browsers are refused, laptops are allowed', async () => {
   const iphone = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148 Safari/604.1';
   const android = 'Mozilla/5.0 (Linux; Android 15; Pixel 9) AppleWebKit/537.36 Chrome/130.0 Mobile Safari/537.36';

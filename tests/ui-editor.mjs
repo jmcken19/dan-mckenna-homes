@@ -48,7 +48,9 @@ try {
 
   await page.goto(E.url + '/', { waitUntil: 'networkidle0' });
   await shot('01-start');
-  assert.match(await page.$eval('main', (m) => m.innerText), /Homepage photos/);
+  assert.match(await page.$eval('main', (m) => m.innerText), /Your website photos/);
+  assert.doesNotMatch(await page.$eval('main', (m) => m.innerText), /Manage listings|Request a website change/, 'photos only');
+  assert.equal(await page.$$eval('.spot', (a) => a.length), 4, 'slideshow + 3 photo spots');
   await page.click('a[href="#/homepage"]');
   await page.waitForSelector('#hphotos');
   assert.equal((await ids('#hphotos')).length, 1);
@@ -94,25 +96,41 @@ try {
   assert.equal(site.heroSlides.length, 4); assert.equal(site.heroSlideSeconds, 4); assert.equal(site.heroFade, true); assert.equal(site.heroSlides[0].id, last);
   console.log('homepage ok:', site.heroSlides.map((s) => s.id).join(','), site.heroSlideSeconds, site.heroFade);
 
-  // Listing photos: finger drag.
-  await page.goto(E.url + '/#/new', { waitUntil: 'networkidle0' });
-  await page.type('#f-street', '7 TEST Drag Ct'); await page.type('#f-city', 'Waxhaw');
-  await (await page.$('#addphotos')).uploadFile(...imgs);
-  await page.waitForFunction(() => /3 photos added/.test(document.body.innerText), { timeout: 120000 });
-  order = await ids('#lphotos');
-  await page.$eval(`#lphotos > li[data-id="${order[2]}"] [data-handle]`, (h) => h.scrollIntoView({ block: 'center' }));
-  await mouseDrag(`#lphotos > li[data-id="${order[2]}"] [data-handle]`, `#lphotos > li[data-id="${order[1]}"]`);
-  after = await ids('#lphotos');
-  assert.deepEqual(after, [order[0], order[2], order[1]], 'listing mouse drag reorders and saves');
-  const id = await page.evaluate(() => location.hash.split('/')[2]);
-  assert.deepEqual((await E.call('GET', `/api/listings/${id}`)).data.draft.photos.map((p) => p.id), after);
-  await shot('05-listing-dragged');
+  // Website photos: replace the headshot by clicking, the luxury photo by dropping a file on its card.
+  await page.goto(E.url + '/#/', { waitUntil: 'networkidle0' });
+  await page.waitForSelector('[data-spot="headshot"]');
+  const portrait = `${out}/portrait.jpg`; writeFileSync(portrait, await testJpeg({ width: 1200, height: 1500, color: '#a55', label: 'DAN' }));
+  await (await page.$('[data-spot-file="headshot"]')).uploadFile(portrait);
+  await page.waitForFunction(() => /New photo added to Your photo/.test(document.body.innerText), { timeout: 60000 });
+  assert.ok(await page.$('[data-spot="headshot"].spot--changed'), 'card shows it changed');
+  await page.evaluate(async () => {
+    const blob = await (await fetch('/api/homepage/spot/headshot/img')).blob();
+    const big = await createImageBitmap(blob); const c = document.createElement('canvas'); c.width = 2000; c.height = 1400; c.getContext('2d').drawImage(big, 0, 0, 2000, 1400);
+    const file = new File([await new Promise((r) => c.toBlob(r, 'image/jpeg'))], 'house.jpg', { type: 'image/jpeg' });
+    const dt = new DataTransfer(); dt.items.add(file);
+    const z = document.querySelector('[data-spot="luxury"]');
+    z.dispatchEvent(new DragEvent('dragover', { dataTransfer: dt, bubbles: true, cancelable: true }));
+    z.dispatchEvent(new DragEvent('drop', { dataTransfer: dt, bubbles: true, cancelable: true }));
+  });
+  await page.waitForFunction(() => /New photo added to Luxury home photo/.test(document.body.innerText), { timeout: 60000 });
+  await shot('05-photos-changed');
+  const pv = await (await page.goto(E.url + '/api/homepage/preview?page=headshot')).text();
+  assert.match(pv, /\/api\/homepage\/photo\/s-[a-z0-9]+\/w-800\.jpg/, 'preview shows the new headshot');
+  await page.goto(E.url + '/#/', { waitUntil: 'networkidle0' });
+  await click('[data-publish]');
+  assert.match(await page.$eval('dialog[open]', (d) => d.innerText), /your photo, luxury home photo/);
+  await page.click('dialog[open] button[value=yes]');
+  await page.waitForFunction(() => /✓ Done/.test(document.body.innerText), { timeout: 60000 });
+  await shot('06-photos-published');
+  const site2 = JSON.parse(E.gh.read('content/site.json'));
+  assert.deepEqual(Object.keys(site2.photos).sort(), ['headshot', 'luxury']);
+  console.log('website photos ok');
 
   // A phone gets the friendly laptop-only screen.
   const phone = await browser.newPage();
   await phone.emulate({ viewport: { width: 390, height: 844, deviceScaleFactor: 2, isMobile: true, hasTouch: true }, userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148 Safari/604.1' });
   await phone.setExtraHTTPHeaders({ 'Cf-Access-Jwt-Assertion': accessToken(OWNER) });
-  await phone.goto(E.url + '/#/listings', { waitUntil: 'networkidle0' });
+  await phone.goto(E.url + '/#/', { waitUntil: 'networkidle0' });
   assert.match(await phone.$eval('main', (m) => m.innerText), /Please use your laptop/);
   await phone.screenshot({ path: `${out}/07-phone-refused.png` });
   await phone.close();
@@ -131,7 +149,7 @@ try {
   });
   await page.waitForFunction(() => /Photo added/.test(document.body.innerText), { timeout: 60000 });
   assert.equal((await ids('#hphotos')).length, 5, 'dropped file was uploaded');
-  await shot('06-desktop-drop');
+  await shot('07-desktop-drop');
   assert.deepEqual(errors, [], 'no page errors');
   console.log('ALL UI CHECKS PASSED', dropped);
 } finally { await browser.close(); await E.close(); }

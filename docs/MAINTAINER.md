@@ -77,7 +77,7 @@ Commit the two IDs + Access values (`git commit -am "Connect editor" && git push
 * Sign in as yourself → start screen shows *Signed in as …* and three buttons.
 * **Request a website change** → "test" → page says **Saved… send him a quick text**; sign in as yourself → start screen shows **1 waiting**.
 * **Homepage photos** → shows the current photo → Preview opens.
-* Add a listing with **TEST** in the street, 1 photo → Publish → **✓ Done** → link opens. Then
+* (Listings UI is switched off for Dan – see AGENTS.md. If re-enabled:) Add a listing with **TEST** in the street, 1 photo → Publish → **✓ Done** → link opens. Then
   **Take off website**, and delete its line from `content/removed.json` on GitHub.
 
 **9. Hand over** – put the editor address + your phone/email into `OWNER-GUIDE.md`, export to PDF, and set up

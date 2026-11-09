@@ -163,6 +163,7 @@ export async function startEditor({ resend = true, port, mirror = null, siteUrl 
     site.heroSlideSeconds = 7; site.heroFade = false; site.heroAutoplay = true;
     gh.seed('content/site.json', JSON.stringify(site, null, 2));
     for (const w of [800, 1400, 2000]) gh.seed(`public/assets/img/hero-1-${w}.jpg`, await readFile(join(root, `public/assets/img/hero-1-${w}.jpg`)));
+    for (const f of ['dan-mckenna-headshot.jpg', 'construction.jpg', '2515-forest-lawn-dr-800.jpg', '2515-forest-lawn-dr-1400.jpg']) gh.seed(`public/assets/img/${f}`, await readFile(join(root, `public/assets/img/${f}`)));
   }
   const url = port ? `http://127.0.0.1:${port}` : 'http://editor.test';
   const call = async (method, path, { as = OWNER, body, form, idem, headers = {}, token } = {}) => {
@@ -210,7 +211,7 @@ export function realMirror(dir, { repo = 'jmcken19/dan-mckenna-homes', branch = 
       gh = fake;
       git('pull', '-q', '--rebase', 'origin', branch);
       const walk = (rel) => { const abs = join(dir, rel); if (!existsSync(abs)) return []; return readdirSync(abs).flatMap((n) => { const r = rel + '/' + n; return statSync(join(dir, r)).isDirectory() ? walk(r) : [r]; }); };
-      for (const f of ['content/removed.json', 'content/site.json', ...walk('content/listings'), ...walk('public/listings'), ...walk('public/assets/img/hero'), 'public/assets/img/hero-1-800.jpg', 'public/assets/img/hero-1-1400.jpg', 'public/assets/img/hero-1-2000.jpg']) gh.seed(f, readFileSync(join(dir, f)));
+      for (const f of ['content/removed.json', 'content/site.json', ...walk('content/listings'), ...walk('public/listings'), ...walk('public/assets/img/hero'), 'public/assets/img/hero-1-800.jpg', 'public/assets/img/hero-1-1400.jpg', 'public/assets/img/hero-1-2000.jpg', 'public/assets/img/dan-mckenna-headshot.jpg', 'public/assets/img/construction.jpg', 'public/assets/img/2515-forest-lawn-dr-800.jpg', 'public/assets/img/2515-forest-lawn-dr-1400.jpg']) gh.seed(f, readFileSync(join(dir, f)));
       fake.onCommit = async (sha, before, after, message) => {
         for (const [path, blob] of after) if (before.get(path) !== blob) { mkdirSync(dirname(join(dir, path)), { recursive: true }); writeFileSync(join(dir, path), gh.blobs.get(blob)); }
         for (const path of before.keys()) if (!after.has(path) && !path.startsWith('README-race')) rmSync(join(dir, path), { force: true });
