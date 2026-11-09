@@ -158,3 +158,15 @@ npm ci && npm test
 npm run build:preview          # dist/ for the Pages preview
 node tests/acceptance-ui.mjs   # end-to-end against the real repo – pushes commits; read the file first
 ```
+
+## Live website (Cloudflare) – set up Nov 8, 2026
+* **www.danmckennahomes.com** is the `dmh-site` Cloudflare Worker (`site/`), serving the classic design built
+  into `dist-prod/`. `danmckennahomes.com` forwards to www (in `site/worker.mjs`).
+* Every push to `main` runs **Publish live website (Cloudflare)** (`.github/workflows/live.yml`): test → build →
+  `wrangler deploy`. It needs the repo secret `CLOUDFLARE_API_TOKEN` ("Edit Cloudflare Workers" template,
+  Dan's account, zone danmckennahomes.com). Without the secret the deploy step is skipped, not failed.
+* The GitHub Pages copy stays as the **testing** link (noindex, banner, both designs).
+* DNS lives in Cloudflare (nameservers darwin/frida.ns.cloudflare.com, set at GoDaddy, where the domain is still
+  registered). Google Workspace mail records (5 MX, SPF + `dc-aa8e722993._spfm` helper, 2 site-verification TXT)
+  were copied from GoDaddy – **never delete them**.
+* Placester: keep until the new site has run cleanly for about a week, then cancel in Dan's Placester account.
