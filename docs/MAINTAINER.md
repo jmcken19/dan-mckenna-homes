@@ -80,7 +80,11 @@ Commit the two IDs + Access values (`git commit -am "Connect editor" && git push
 * Add a listing with **TEST** in the street, 1 photo → Publish → **✓ Done** → link opens. Then
   **Take off website**, and delete its line from `content/removed.json` on GitHub.
 
-**9. Hand over** – put the editor address + your phone/email into `OWNER-GUIDE.md`, export to PDF, and set up
+**9. Desktop shortcuts (Windows only)** – copy `tools/windows-shortcuts/` to Dan's laptop and double-click
+`Install (double-click me).bat`. It makes a **Dan McKenna Homes** desktop folder with **Website** and **Website Editor**.
+At launch, change `$WebsiteUrl` in `Install-Shortcuts.ps1` and run it again.
+
+**10. Hand over** – put the editor address + your phone/email into `OWNER-GUIDE.md`, export to PDF, and set up
 Dan's phone with him (sign in once, *Add to Home Screen*).
 
 Note: Cloudflare describes `*.workers.dev` addresses as meant for non-critical projects; it's fine for a private

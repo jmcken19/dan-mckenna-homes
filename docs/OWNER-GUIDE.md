@@ -1,12 +1,12 @@
 # Your website – one-page guide
 
-## Bookmark this page
+## Start here: the folder on your desktop
 
 **Your editor:** `EDITOR LINK – James fills this in when the editor is switched on`
 Use your **laptop** – the editor is set up for the laptop only (on a phone it will ask you to use your laptop).
-Open the link and press **Ctrl + D** (Windows) or **⌘ + D** (Mac) to bookmark it, or use the
-**Dan McKenna Homes** folder James puts on your desktop.
-**Photos from your phone:** send them to your laptop first (email, AirDrop or Google Photos), then add them.
+On your laptop's desktop, open the **Dan McKenna Homes** folder → double-click **Website Editor**.
+(**Website** in the same folder opens your website.)
+**Photos from your phone:** send them to your laptop first (email or Google Photos), then add them.
 
 **Signing in:** type your email (danmckenna@kw.com). You'll get a 6-digit code by email — type it
 in. That's it. No password to remember.

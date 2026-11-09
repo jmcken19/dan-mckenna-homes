@@ -264,7 +264,7 @@ function isPhoneDevice() {
 function laptopOnlyScreen() {
   setScreen(`<h1>Please use your laptop</h1>
   <div class="note"><p>The website editor is set up for your <strong>laptop</strong>. Open the <strong>Website Editor</strong> bookmark on your laptop to add homes, change photos, or request a change.</p></div>
-  <p class="hint">Took photos on your phone? Send them to your laptop first (for example by email, AirDrop, or Google Photos), then add them in the editor.</p>`);
+  <p class="hint">Took photos on your phone? Send them to your laptop first (for example by email or Google Photos), then add them in the editor.</p>`);
 }
 
 async function route() {
@@ -298,7 +298,7 @@ async function route() {
 function startScreen() {
   setScreen(`
   <h1>What would you like to do?</h1>
-  <div class="note"><p><strong>Bookmark this page</strong> in your browser (press <strong>Ctrl + D</strong> on Windows, <strong>⌘ + D</strong> on a Mac) so you can come back to it any time.</p></div>
+  <div class="note"><p>Open this any time from the <strong>Dan McKenna Homes</strong> folder on your desktop → <strong>Website Editor</strong>.</p></div>
   <div class="big-choices">
     <a class="big-choice" href="#/listings"><strong>Manage listings</strong>Add a home, change price or photos, mark it Pending or Sold, or take it off the website.</a>
     <a class="big-choice" href="#/homepage"><strong>Homepage photos</strong>Choose the photos that rotate at the top of your homepage, their order, and how fast they change.</a>
