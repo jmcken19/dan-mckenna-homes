@@ -419,7 +419,7 @@ async function previewHtml(A, id) {
   const pub = toPublic(r, r.draft, r.revision);
   const siteBase = publicBase(A.env);
   const ctx = {
-    site: siteContent, preview: true, siteUrl: '', buildId: 'preview', listings: [], testimonials: [], removed: [],
+    site: siteContent, preview: true, siteUrl: '', buildId: 'preview-' + Date.now(), listings: [], testimonials: [], removed: [],
     url: (p) => {
       const m = p.match(/^\/listings\/(lst-[a-z0-9]+)\/(p-[a-z0-9]+)-(1800|900)\.jpg$/);
       if (m) return `/api/photo/${m[1]}/${m[2]}/${m[3] === '1800' ? 'large' : 'small'}`;

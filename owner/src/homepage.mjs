@@ -270,7 +270,7 @@ export function homepageRoutes(H) {
       };
       const pg = PAGES[A.url.searchParams.get('page')] || PAGES.home;
       const ctx = {
-        site, preview: true, siteUrl: '', buildId: 'preview', listings: [], removed: [], testimonials: testimonialsContent.items,
+        site, preview: true, siteUrl: '', buildId: 'preview-' + Date.now(), listings: [], removed: [], testimonials: testimonialsContent.items,
         // Templates build photo addresses as url(src) + "-800.jpg", so a slide's src maps to a
         // private photo address that the "-<width>.jpg" suffix completes (draft photos aren't public yet).
         url: (p) => {
