@@ -132,6 +132,13 @@ HTTPS, same account as the editor):
   4 s, fade-on slideshow to the preview (both designs rotated on schedule), then restored to the original single photo
   through the editor (test photo files removed, status reported ✓ live).
 
+### Sign-in as set up (Nov 8)
+Access app "Dan McKenna Homes – Website Editor" (id dfd09d8c…, attached to the `dmh-owner` worker via
+`destinations: worker`), team `gentle-rice-8ea1.cloudflareaccess.com`, policy "Dan and James only"
+(danmckenna@kw.com, jmck2134@gmail.com), session 30 days, login = Cloudflare account, auto-redirect straight
+to the Cloudflare login. To switch to 6-digit email codes later: Zero Trust → Settings → Authentication →
+Login methods → add **One-time PIN**, then allow it on the app.
+
 ### Laptop only (owner decision, Nov 8)
 The editor refuses phone browsers (friendly "Please use your laptop" screen + server returns 403 `laptopOnly`).
 It's a house rule, not a security boundary (a browser can pretend to be a laptop) – sign-in is the security.

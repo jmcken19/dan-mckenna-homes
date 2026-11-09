@@ -8,8 +8,9 @@ On your laptop's desktop, open the **Dan McKenna Homes** folder → double-click
 (**Website** in the same folder opens your website.)
 **Photos from your phone:** send them to your laptop first (email or Google Photos), then add them.
 
-**Signing in:** type your email (danmckenna@kw.com). You'll get a 6-digit code by email — type it
-in. That's it. No password to remember.
+**Signing in:** double-click **Website Editor**. The Cloudflare login page opens – type the email and
+password of your **Cloudflare account** (danmckenna@kw.com) and click **Log in**. You stay signed in for 30 days
+on that laptop. Forgot the password? Click **Forgot your password?** on that page, or ask James.
 
 **Your website (testing version for now):** https://jmcken19.github.io/dan-mckenna-homes/
 
