@@ -13,12 +13,12 @@ run_worker_first = true
 [[d1_databases]]
 binding = "DB"
 database_name = "dmh-owner"
-database_id = "REPLACE_WITH_D1_ID"
+database_id = "753b5404-437c-48ff-9164-d0502fc5b580"
 migrations_dir = "migrations"
 
 [[kv_namespaces]]
 binding = "PHOTOS"
-id = "REPLACE_WITH_KV_ID"
+id = "7a9cdca73f534cafb2cd1a9e40ee4968"
 
 [vars]
 GITHUB_REPO = "jmcken19/dan-mckenna-homes"
