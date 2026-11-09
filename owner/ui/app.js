@@ -130,6 +130,125 @@ async function preparePhoto(file) {
   return { large, small };
 }
 
+
+/* ---------------- publishing status (shared) ---------------- */
+
+function watchPublish(box, job) {
+  if (!box) return;
+  let stopped = false;
+  const paint = (state) => {
+    if (state === 'live') {
+      box.innerHTML = `<div class="publish-panel note--ok"><h2>✓ Done – ${esc(job.verb)}</h2><p>The website now shows your change.</p><p><a class="btn btn--primary" href="${esc(job.url)}" target="_blank" rel="noopener">${esc(job.linkLabel || (job.takedown ? 'Check the old web address' : 'View updated listing'))}</a></p><button type="button" class="btn btn--small" data-dismiss>OK</button></div>`;
+      store.del('dmh-publishing');
+    } else if (state === 'failed' || state === 'timeout') {
+      box.innerHTML = `<div class="publish-panel note--bad" role="alert"><h2>Publishing didn't finish</h2><p>Your changes are saved — nothing was lost. ${state === 'timeout' ? 'It is taking much longer than usual.' : 'The website update ran into a problem.'}</p><p><button type="button" class="btn btn--primary" data-retry>Try again</button></p><p class="hint">If it fails again, contact ${supportLine()}.</p></div>`;
+    } else {
+      box.innerHTML = `<div class="publish-panel" role="status"><h2><span class="spinner" aria-hidden="true"></span> Your changes are being published</h2><p>This usually takes 1–3 minutes. You can leave this page — it will still finish. We'll show a link here once the website has updated.</p></div>`;
+    }
+    box.querySelector('[data-dismiss]')?.addEventListener('click', () => { box.innerHTML = ''; });
+    box.querySelector('[data-retry]')?.addEventListener('click', async () => {
+      try { await api('POST', `/publish-retry/${job.commit}`); job.at = Date.now(); store.set('dmh-publishing', job); paint('publishing'); poll(); } catch (err) { box.innerHTML = errorNote(err); }
+    });
+  };
+  const poll = async () => {
+    if (stopped || !document.body.contains(box)) return;
+    if (Date.now() - job.at > 12 * 60 * 1000) return paint('timeout');
+    try {
+      const s = await api('GET', `/publish-status/${job.commit}`);
+      if (s.state === 'live' || s.state === 'failed') return paint(s.state);
+    } catch { /* keep waiting */ }
+    setTimeout(poll, 6000);
+  };
+  paint('publishing'); poll();
+  window.addEventListener('hashchange', () => { stopped = true; }, { once: true });
+}
+
+/* ---------------- drag to reorder (finger or mouse) ---------------- */
+// Drag an item by its handle. Works with touch (pointer events), keeps working while the
+// page scrolls, and the handle also responds to arrow keys. onDone(newOrderIds) is called
+// once when the item is dropped somewhere new.
+function makeSortable(list, onDone) {
+  if (!list) return;
+  const items = () => [...list.children].filter((li) => li.dataset.id);
+  list.querySelectorAll('[data-handle]').forEach((handle) => {
+    const li = handle.closest('li');
+    let startOrder = null, scrollTimer = null, lastX = 0, lastY = 0;
+    const check = () => {
+      const target = items().find((x) => { if (x === li) return false; const r = x.getBoundingClientRect(); return lastY >= r.top && lastY <= r.bottom; });
+      if (!target) return;
+      const r = target.getBoundingClientRect();
+      const after = lastY > r.top + r.height / 2;
+      if ((after ? target.nextElementSibling : target) === li) return;
+      list.insertBefore(li, after ? target.nextSibling : target);
+      if (navigator.vibrate) navigator.vibrate(8);
+    };
+    const autoscroll = () => {
+      const edge = 100, speed = 12;
+      if (lastY < edge) { window.scrollBy(0, -speed); check(); }
+      else if (lastY > window.innerHeight - edge) { window.scrollBy(0, speed); check(); }
+    };
+    handle.addEventListener('pointerdown', (e) => {
+      if (e.button > 0) return;
+      e.preventDefault();
+      handle.setPointerCapture(e.pointerId);
+      startOrder = items().map((x) => x.dataset.id).join();
+      li.classList.add('is-dragging');
+      list.classList.add('is-sorting');
+      lastX = e.clientX; lastY = e.clientY;
+      scrollTimer = setInterval(autoscroll, 16);
+    });
+    handle.addEventListener('pointermove', (e) => {
+      if (!startOrder) return;
+      lastX = e.clientX; lastY = e.clientY;
+      check();
+    });
+    const finish = () => {
+      if (!startOrder) return;
+      clearInterval(scrollTimer);
+      li.classList.remove('is-dragging');
+      list.classList.remove('is-sorting');
+      const order = items().map((x) => x.dataset.id);
+      const changed = order.join() !== startOrder;
+      startOrder = null;
+      if (changed) onDone(order);
+    };
+    handle.addEventListener('pointerup', finish);
+    handle.addEventListener('pointercancel', finish);
+    handle.addEventListener('keydown', (e) => {
+      if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
+      e.preventDefault();
+      const order = items().map((x) => x.dataset.id);
+      const i = order.indexOf(li.dataset.id); const j = i + (e.key === 'ArrowUp' ? -1 : 1);
+      if (j < 0 || j >= order.length) return;
+      [order[i], order[j]] = [order[j], order[i]];
+      onDone(order);
+    });
+  });
+}
+
+/* Drop photo files onto the upload box (computers). Tapping it still opens the photo picker. */
+function makeDropZone(zone, onFiles) {
+  if (!zone) return;
+  const on = (e) => { e.preventDefault(); zone.classList.add('is-over'); };
+  const off = () => zone.classList.remove('is-over');
+  zone.addEventListener('dragenter', on);
+  zone.addEventListener('dragover', on);
+  zone.addEventListener('dragleave', off);
+  zone.addEventListener('drop', (e) => {
+    e.preventDefault(); off();
+    const files = [...(e.dataTransfer?.files || [])].filter((f) => /^image\//.test(f.type) || /\.(heic|heif|jpe?g|png|webp)$/i.test(f.name));
+    if (files.length) onFiles(files); else toast('Only photos can be added here.');
+  });
+}
+
+function dropZoneHtml(id, label, sub) {
+  return `<label class="dropzone" for="${id}"><span class="dropzone__big">${esc(label)}</span><span class="dropzone__sub">${esc(sub)}</span><input id="${id}" type="file" accept="image/*,.heic,.heif" multiple></label>`;
+}
+
+function handleHtml(n) {
+  return `<button type="button" class="drag-handle" data-handle aria-label="Drag to move photo ${n}. Or use the up and down arrow keys."><span aria-hidden="true">⠿</span><span class="drag-handle__text">Drag</span></button>`;
+}
+
 /* ---------------- router ---------------- */
 
 window.addEventListener('hashchange', route);
@@ -152,6 +271,7 @@ async function route() {
     if (h === 'listings') return listingsScreen();
     if (h === 'new') return editScreen(null);
     if (h.startsWith('listing/')) return editScreen(h.split('/')[1]);
+    if (h === 'homepage') return homepageScreen();
     if (h === 'request' || h === 'requests') return requestScreen();
     return startScreen();
   } catch (err) {
@@ -163,10 +283,11 @@ async function route() {
 
 function startScreen() {
   setScreen(`
-  <h1>Hi${me.email ? '' : ''}! What would you like to do?</h1>
+  <h1>What would you like to do?</h1>
   <div class="note"><p><strong>Bookmark this page</strong> (or "Add to Home Screen") so you can come back to it any time.</p></div>
   <div class="big-choices">
     <a class="big-choice" href="#/listings"><strong>Manage listings</strong>Add a home, change price or photos, mark it Pending or Sold, or take it off the website.</a>
+    <a class="big-choice" href="#/homepage"><strong>Homepage photos</strong>Choose the photos that rotate at the top of your homepage, their order, and how fast they change.</a>
     <a class="big-choice" href="#/request"><strong>Request a website change</strong>Ask James to change anything else — text, your photo, a page — or ask a question.</a>
   </div>
   <p class="hint">See the website: <a href="${esc(me.site.url)}/" target="_blank" rel="noopener">${esc(me.site.url.replace(/^https?:\/\//, ''))}</a></p>
@@ -300,9 +421,11 @@ async function editScreen(id) {
 
     <h2>4. Photos</h2>
     ${photos.length ? '<p class="hint">The first photo is the <strong>cover photo</strong> buyers see first.</p>' : '<p class="hint">Add the cover photo first. You can choose several photos at once.</p>'}
-    <ul class="photos">${photos.map((p, i) => `<li class="photo${i === 0 ? ' photo--cover' : ''}">
+    ${photos.length > 1 ? '<p class="hint">To change the order, hold <strong>⠿ Drag</strong> and move the photo.</p>' : ''}
+    <ul class="photos photos--rows" id="lphotos">${photos.map((p, i) => `<li class="photo${i === 0 ? ' photo--cover' : ''}" data-id="${esc(p.id)}">
         <img src="/api/photo/${esc(L.id)}/${esc(p.id)}/small" alt="Photo ${i + 1}" loading="lazy">
         <div class="photo__bar">
+          ${photos.length > 1 ? handleHtml(i + 1) : ''}
           <span class="photo__label">${i === 0 ? '<span class="cover">★ Cover photo</span>' : `Photo ${i + 1}`}</span>
           ${i > 0 ? `<button type="button" class="btn btn--small" data-cover="${p.id}">Make cover</button>` : ''}
           ${i > 0 ? `<button type="button" class="btn btn--small" data-move="${p.id}" data-dir="-1" aria-label="Move photo ${i + 1} earlier">↑ Earlier</button>` : ''}
@@ -310,7 +433,7 @@ async function editScreen(id) {
           <span class="btn btn--small file-btn">Replace<input type="file" accept="image/*,.heic,.heif" data-replace="${p.id}" aria-label="Replace photo ${i + 1}"></span>
           <button type="button" class="btn btn--small btn--danger" data-remove="${p.id}" aria-label="Remove photo ${i + 1}">Remove</button>
         </div></li>`).join('')}</ul>
-    <span class="btn btn--dark btn--block file-btn">+ Add photos<input id="addphotos" type="file" accept="image/*,.heic,.heif" multiple aria-label="Add photos"></span>
+    ${dropZoneHtml('addphotos', '+ Add photos', 'Tap to choose from your phone — or drag photos here on a computer')}
     <ul class="upload-list" id="uploads" aria-live="polite"></ul>
 
     ${L && L.visibility === 'published' ? `<div class="danger-zone">
@@ -332,7 +455,7 @@ async function editScreen(id) {
       <button type="button" class="btn btn--primary" data-publish ${L && L.visibility !== 'archived' && (L.hasUnpublishedChanges || L.visibility === 'draft') ? '' : 'disabled'}>${L?.visibility === 'published' ? 'Publish changes' : 'Publish'}</button>
     </div></div>`;
     bind();
-    if (store.get('dmh-publishing')?.id === L?.id) watchPublish(store.get('dmh-publishing'));
+    if (L && store.get('dmh-publishing')?.id === L.id) watchPublish(document.getElementById('pub'), store.get('dmh-publishing'));
   }
 
   function showError(err) {
@@ -410,37 +533,6 @@ async function editScreen(id) {
     } catch (err) { btns.forEach((b) => { b.disabled = false; }); showError(err); }
   }
 
-  function watchPublish(job) {
-    const box = document.getElementById('pub');
-    if (!box) return;
-    let stopped = false;
-    const paint = (state) => {
-      if (state === 'live') {
-        box.innerHTML = `<div class="publish-panel note--ok"><h2>✓ Done – ${esc(job.verb)}</h2><p>The website now shows your change.</p><p><a class="btn btn--primary" href="${esc(job.url)}" target="_blank" rel="noopener">${job.takedown ? 'Check the old web address' : 'View updated listing'}</a></p><button type="button" class="btn btn--small" data-dismiss>OK</button></div>`;
-        store.del('dmh-publishing');
-      } else if (state === 'failed' || state === 'timeout') {
-        box.innerHTML = `<div class="publish-panel note--bad" role="alert"><h2>Publishing didn't finish</h2><p>Your changes are saved — nothing was lost. ${state === 'timeout' ? 'It is taking much longer than usual.' : 'The website update ran into a problem.'}</p><p><button type="button" class="btn btn--primary" data-retry>Try again</button></p><p class="hint">If it fails again, contact ${supportLine()}.</p></div>`;
-      } else {
-        box.innerHTML = `<div class="publish-panel" role="status"><h2><span class="spinner" aria-hidden="true"></span> Your changes are being published</h2><p>This usually takes 1–3 minutes. You can leave this page — it will still finish. We'll show a link here once the website has updated.</p></div>`;
-      }
-      box.querySelector('[data-dismiss]')?.addEventListener('click', () => { box.innerHTML = ''; });
-      box.querySelector('[data-retry]')?.addEventListener('click', async () => {
-        try { await api('POST', `/publish-retry/${job.commit}`); job.at = Date.now(); store.set('dmh-publishing', job); paint('publishing'); poll(); } catch (err) { box.innerHTML = errorNote(err); }
-      });
-    };
-    const poll = async () => {
-      if (stopped || !document.body.contains(box)) return;
-      if (Date.now() - job.at > 12 * 60 * 1000) return paint('timeout');
-      try {
-        const s = await api('GET', `/publish-status/${job.commit}`);
-        if (s.state === 'live' || s.state === 'failed') return paint(s.state);
-      } catch { /* keep waiting */ }
-      setTimeout(poll, 6000);
-    };
-    paint('publishing'); poll();
-    window.addEventListener('hashchange', () => { stopped = true; }, { once: true });
-  }
-
   function bind() {
     const f = document.getElementById('lform');
     document.getElementById('msg').addEventListener('click', (e) => {
@@ -477,6 +569,8 @@ async function editScreen(id) {
       try { L = await api('POST', `/listings/${L.id}/discard`, { baseRevision: L.revision }); saved = fieldsFrom(L.draft); values = { ...saved }; banner = '<div class="note note--ok"><p>Changes undone.</p></div>'; store.del(draftKey); render(); } catch (err) { showError(err); }
     });
     document.getElementById('addphotos').addEventListener('change', (e) => { const files = [...e.target.files]; e.target.value = ''; uploadFiles(files); });
+    makeDropZone(document.getElementById('addphotos').closest('.dropzone'), (files) => uploadFiles(files));
+    makeSortable(document.getElementById('lphotos'), (order) => arrange(order));
     app.querySelectorAll('[data-replace]').forEach((inp) => inp.addEventListener('change', (e) => { const files = [...e.target.files].slice(0, 1); e.target.value = ''; uploadFiles(files, inp.dataset.replace); }));
     const ids = () => L.draft.photos.map((p) => p.id);
     app.querySelectorAll('[data-cover]').forEach((b) => b.addEventListener('click', () => { const o = ids().filter((x) => x !== b.dataset.cover); arrange([b.dataset.cover, ...o]); }));
@@ -490,6 +584,166 @@ async function editScreen(id) {
     }));
   }
 
+  render();
+}
+
+
+/* ---------------- homepage photos ---------------- */
+
+const SPEEDS = [{ label: 'Slow', sub: 'about 10 seconds each', v: 10 }, { label: 'Normal', sub: 'about 7 seconds each', v: 7 }, { label: 'Fast', sub: 'about 4 seconds each', v: 4 }];
+const FOCUS = [{ label: 'Top', v: '50% 15%' }, { label: 'Middle', v: '50% 50%' }, { label: 'Bottom', v: '50% 85%' }];
+const nearestFocus = (f) => { const y = Number(String(f || '').split(' ')[1]?.replace('%', '')) || 50; return FOCUS.reduce((a, b) => (Math.abs(parseInt(b.v.split(' ')[1], 10) - y) < Math.abs(parseInt(a.v.split(' ')[1], 10) - y) ? b : a)).v; };
+const nearestSpeed = (n) => SPEEDS.reduce((a, b) => (Math.abs(b.v - n) < Math.abs(a.v - n) ? b : a)).v;
+
+async function prepareHero(file) {
+  if (file.size > 40 * 1024 * 1024) throw new Error('This photo is over 40 MB. Please pick a smaller one.');
+  let bmp;
+  try { bmp = await decode(file); } catch {
+    throw new Error(looksHeic(file) ? 'This iPhone photo (HEIC) could not be opened on this device. On your iPhone: Settings → Camera → Formats → "Most Compatible", or send it to James with "Request a website change".' : 'This file could not be opened as a photo. Please choose a JPG or iPhone photo.');
+  }
+  if (Math.max(bmp.width, bmp.height) < 1200) throw new Error('This photo is too small for the top of the homepage — it would look blurry. Please use a larger photo.');
+  const out = { tall: bmp.height > bmp.width };
+  for (const w of [2000, 1400, 800]) out[w] = await drawTo(bmp, w, w === 800 ? 0.8 : 0.82);
+  bmp.close?.();
+  return out;
+}
+
+async function homepageScreen() {
+  setScreen('<p class="loading">Loading your homepage photos…</p>');
+  let H = await api('GET', '/homepage');
+  let banner = '';
+  const pubBox = () => document.getElementById('pub');
+
+  function render() {
+    const d = H.draft;
+    const speed = nearestSpeed(d.seconds);
+    app.innerHTML = `
+    <a class="back" href="#/">← Back</a>
+    <h1>Homepage photos</h1>
+    <p>These photos take turns at the top of your homepage. <strong>Photo 1 shows first.</strong></p>
+    <div id="msg">${banner}</div>
+    <div id="pub"></div>
+
+    <h2>1. Your photos</h2>
+    ${d.slides.length > 1 ? '<p class="hint">To change the order, hold <strong>⠿ Drag</strong> and move the photo up or down.</p>' : ''}
+    <ul class="photos photos--rows" id="hphotos">${d.slides.map((sl, i) => `<li class="photo${i === 0 ? ' photo--cover' : ''}" data-id="${esc(sl.id)}">
+      <div class="photo__img"><img src="/api/homepage/photo/${esc(sl.id)}?w=800" alt="Homepage photo ${i + 1}" loading="lazy" style="object-position:${esc(sl.focus)}"></div>
+      <div class="photo__bar">
+        ${d.slides.length > 1 ? handleHtml(i + 1) : ''}
+        <span class="photo__label">${i === 0 ? '<span class="cover">★ Photo 1 – shows first</span>' : `Photo ${i + 1}`}</span>
+      </div>
+      <div class="photo__focus" role="group" aria-label="On phones, keep this part of photo ${i + 1} in view">
+        <span class="photo__focus-label">On phones, keep in view:</span>
+        ${FOCUS.map((f) => `<button type="button" class="seg${nearestFocus(sl.focus) === f.v ? ' is-on' : ''}" data-focus="${esc(sl.id)}" data-v="${f.v}" aria-pressed="${nearestFocus(sl.focus) === f.v}">${f.label}</button>`).join('')}
+      </div>
+      <div class="photo__bar">
+        ${i > 0 ? `<button type="button" class="btn btn--small" data-first="${esc(sl.id)}">Show first</button>` : ''}
+        <span class="btn btn--small file-btn">Replace<input type="file" accept="image/*,.heic,.heif" data-replace="${esc(sl.id)}" aria-label="Replace photo ${i + 1}"></span>
+        ${d.slides.length > 1 ? `<button type="button" class="btn btn--small btn--danger" data-remove="${esc(sl.id)}" aria-label="Remove photo ${i + 1}">Remove</button>` : ''}
+      </div></li>`).join('')}</ul>
+    ${dropZoneHtml('addhero', '+ Add photos', 'Tap to choose from your phone — or drag photos here on a computer')}
+    <ul class="upload-list" id="uploads" aria-live="polite"></ul>
+    <p class="hint">Wide (landscape) photos look best. Tall photos get trimmed at the top and bottom.</p>
+
+    <h2>2. Speed</h2>
+    <fieldset><legend class="sr">How fast should the photos change?</legend><div class="radios">
+      ${SPEEDS.map((sp) => `<label class="radio"><input type="radio" name="speed" value="${sp.v}" ${speed === sp.v ? 'checked' : ''}> <span><strong>${sp.label}</strong>${sp.v === 7 ? ' (recommended)' : ''}<br><span class="hint">${sp.sub}</span></span></label>`).join('')}
+    </div></fieldset>
+
+    <h2>3. Fade</h2>
+    <fieldset><legend class="sr">Fade between photos?</legend><div class="radios">
+      <label class="radio"><input type="radio" name="fade" value="off" ${d.fade ? '' : 'checked'}> <span><strong>Off</strong> (recommended)<br><span class="hint">Photos switch cleanly</span></span></label>
+      <label class="radio"><input type="radio" name="fade" value="on" ${d.fade ? 'checked' : ''}> <span><strong>On</strong><br><span class="hint">Each photo slowly fades into the next</span></span></label>
+    </div></fieldset>
+    <p class="hint">Visitors who have "reduce motion" turned on in their phone settings see Photo 1 only.</p>
+
+    ${H.hasUnpublishedChanges ? '<p style="margin-top:1.5rem"><button type="button" class="btn btn--small" data-discard>Undo my unpublished changes</button></p>' : ''}
+    <p class="hint" style="margin-top:1rem">Want to see it in design option 2? <a href="/api/homepage/preview?design=option2" target="_blank" rel="noopener">Preview option 2</a></p>
+
+    <div class="actions"><p class="actions__state">${H.hasUnpublishedChanges ? 'You have changes that are not on the website yet' : 'The website is up to date'}</p><div class="actions__in actions__in--2">
+      <a class="btn" href="/api/homepage/preview" target="_blank" rel="noopener">Preview</a>
+      <button type="button" class="btn btn--primary" data-publish ${H.hasUnpublishedChanges ? '' : 'disabled'}>Publish</button>
+    </div></div>`;
+    bind();
+    const job = store.get('dmh-publishing');
+    if (job?.id === 'homepage') watchPublish(pubBox(), job);
+  }
+
+  const showError = (err) => { const m = document.getElementById('msg'); m.innerHTML = errorNote(err); m.scrollIntoView({ block: 'center' }); };
+  const ok = (msg) => { banner = msg ? `<div class="note note--ok"><p>${msg}</p></div>` : ''; render(); };
+
+  async function save(method, path, body) {
+    try { H = await api(method, path, { ...body, baseRevision: H.revision }); return true; } catch (err) { showError(err); return false; }
+  }
+  const order = () => H.draft.slides.map((x) => x.id);
+  const arrange = async (ord, focus) => { if (await save('PUT', '/homepage/photos', { order: ord, focus })) { ok(''); toast('Saved. Tap Publish when you\'re ready.'); } };
+
+  async function upload(files, replaceId = null) {
+    if (!files.length) return;
+    const list = document.getElementById('uploads');
+    list.innerHTML = '';
+    const rows = files.map((f, i) => { const li = document.createElement('li'); li.textContent = `Photo ${i + 1} of ${files.length}: waiting…`; list.appendChild(li); return li; });
+    let failed = 0, tall = 0;
+    for (let i = 0; i < files.length; i++) {
+      const li = rows[i];
+      try {
+        li.textContent = `Photo ${i + 1} of ${files.length}: preparing…`;
+        const p = await prepareHero(files[i]);
+        if (p.tall) tall++;
+        li.textContent = `Photo ${i + 1} of ${files.length}: uploading…`;
+        const fd = new FormData();
+        for (const w of [2000, 1400, 800]) fd.append(`w${w}`, p[w].blob, `w${w}.jpg`);
+        if (files[i].size <= 24 * 1024 * 1024) fd.append('original', files[i], 'original');
+        fd.append('baseRevision', String(H.revision));
+        H = await api('POST', replaceId ? `/homepage/photos/${replaceId}/replace` : '/homepage/photos', fd, { idem: uuid() });
+        li.textContent = `Photo ${i + 1} of ${files.length}: ✓ added`;
+      } catch (err) {
+        failed++;
+        li.innerHTML = `<strong>Photo ${i + 1} (${esc(files[i].name || 'photo')}) was not added:</strong> ${esc(err.message)}`;
+        if (err.status === 409) { try { H = await api('GET', '/homepage'); } catch { /* ignore */ } }
+      }
+    }
+    const summary = list.innerHTML;
+    const added = files.length - failed;
+    banner = failed
+      ? `<div class="note note--warn"><p>${added} of ${files.length} photos added. The others are listed below with what to do.</p></div>`
+      : `<div class="note note--ok"><p>${added === 1 ? 'Photo added' : added + ' photos added'} to the end of the slideshow. Drag to change the order, then tap <strong>Publish</strong>.${tall ? ' Tip: tall photos get trimmed – use "Keep in view" to choose what shows.' : ''}</p></div>`;
+    render();
+    if (failed) document.getElementById('uploads').innerHTML = summary;
+  }
+
+  function bind() {
+    document.getElementById('addhero').addEventListener('change', (e) => { const f = [...e.target.files]; e.target.value = ''; upload(f); });
+    makeDropZone(document.getElementById('addhero').closest('.dropzone'), (f) => upload(f));
+    makeSortable(document.getElementById('hphotos'), (ord) => arrange(ord));
+    app.querySelectorAll('[data-replace]').forEach((inp) => inp.addEventListener('change', (e) => { const f = [...e.target.files].slice(0, 1); e.target.value = ''; upload(f, inp.dataset.replace); }));
+    app.querySelectorAll('[data-first]').forEach((b) => b.addEventListener('click', () => arrange([b.dataset.first, ...order().filter((x) => x !== b.dataset.first)])));
+    app.querySelectorAll('[data-focus]').forEach((b) => b.addEventListener('click', () => arrange(order(), { [b.dataset.focus]: b.dataset.v })));
+    app.querySelectorAll('[data-remove]').forEach((b) => b.addEventListener('click', async () => {
+      if (!(await confirmBox({ title: 'Remove this photo from the slideshow?', body: 'Visitors keep seeing it until you publish. You can undo before publishing.', yes: 'Remove photo', danger: true }))) return;
+      try { H = await api('DELETE', `/homepage/photos/${b.dataset.remove}?baseRevision=${H.revision}`); ok(''); toast('Photo removed. Tap Publish when you\'re ready.'); } catch (err) { showError(err); }
+    }));
+    app.querySelectorAll('input[name=speed], input[name=fade]').forEach((r) => r.addEventListener('change', async () => {
+      const seconds = Number(app.querySelector('input[name=speed]:checked').value);
+      const fade = app.querySelector('input[name=fade]:checked').value === 'on';
+      if (await save('PUT', '/homepage/settings', { seconds, fade })) { ok(''); toast('Saved. Tap Preview to watch it, or Publish to put it live.'); }
+    }));
+    app.querySelector('[data-discard]')?.addEventListener('click', async () => {
+      if (!(await confirmBox({ title: 'Undo unpublished changes?', body: 'The slideshow goes back to exactly what is on the website now.', yes: 'Undo changes', danger: true }))) return;
+      if (await save('POST', '/homepage/discard', {})) ok('Changes undone.');
+    });
+    document.getElementById('msg').addEventListener('click', async (e) => { if (e.target.matches('[data-reload]')) { H = await api('GET', '/homepage'); ok(''); } });
+    app.querySelector('[data-publish]').addEventListener('click', async () => {
+      if (!(await confirmBox({ title: 'Put these photos on your homepage?', body: `${H.draft.slides.length} photo${H.draft.slides.length === 1 ? '' : 's'}, ${SPEEDS.find((x) => x.v === nearestSpeed(H.draft.seconds)).label.toLowerCase()} speed, fade ${H.draft.fade ? 'on' : 'off'}.`, yes: 'Yes, publish' }))) return;
+      app.querySelectorAll('button').forEach((b) => { b.disabled = true; });
+      try {
+        const r = await api('POST', '/homepage/publish', { baseRevision: H.revision }, { idem: uuid() });
+        H = r.homepage;
+        store.set('dmh-publishing', { id: 'homepage', commit: r.commit, url: me.site.url + '/', verb: 'your homepage is updated', linkLabel: 'View your homepage', at: Date.now() });
+        banner = ''; render();
+      } catch (err) { render(); showError(err); }
+    });
+  }
   render();
 }
 

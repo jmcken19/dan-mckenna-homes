@@ -249,3 +249,77 @@ test('security headers are present on editor pages and API', async () => {
   assert.match(page.headers.get('content-security-policy') || '', /default-src 'self'/);
   await page.text();
 });
+
+/* ---------------- homepage slideshow ---------------- */
+async function heroForm(rev, { color = '#468', label = 'HERO' } = {}) {
+  const base = await testJpeg({ width: 2400, height: 1600, color, label, gps: true });
+  const fd = new FormData();
+  for (const w of [2000, 1400, 800]) fd.append(`w${w}`, new Blob([await sharp(base).resize(w).withExifMerge({ IFD0: { Make: 'X' } }).jpeg().toBuffer()]), `w${w}.jpg`);
+  fd.append('original', new Blob([base]), 'o.jpg');
+  fd.append('baseRevision', String(rev));
+  return fd;
+}
+
+test('homepage slideshow: starts from the website, add/reorder/focus/speed/fade, preview, publish, remove old', async () => {
+  assert.equal((await E.call('GET', '/api/homepage', { as: null })).status, 401);
+  let H = (await E.call('GET', '/api/homepage')).data;
+  assert.equal(H.draft.slides.length, 1);
+  assert.equal(H.draft.slides[0].id, 's-hero1');
+  assert.equal(H.draft.seconds, 7, 'normal speed by default');
+  assert.equal(H.draft.fade, false, 'fade off by default');
+  assert.equal(H.hasUnpublishedChanges, false);
+  // Existing photo thumbnail comes from the repo.
+  const th = await E.mf.dispatchFetch(E.url + '/api/homepage/photo/s-hero1?w=800', { headers: { 'Cf-Access-Jwt-Assertion': accessToken(OWNER) } });
+  assert.equal(th.status, 200); await th.arrayBuffer();
+
+  for (const c of ['#843', '#384']) { const r = await E.call('POST', '/api/homepage/photos', { form: await heroForm(H.revision, { color: c }) }); assert.equal(r.status, 200, JSON.stringify(r.data)); H = r.data; }
+  assert.equal(H.draft.slides.length, 3);
+  const [a, b, c] = H.draft.slides.map((s) => s.id);
+  H = (await E.call('PUT', '/api/homepage/photos', { body: { order: [c, a, b], focus: { [c]: '50% 15%' }, baseRevision: H.revision } })).data;
+  assert.deepEqual(H.draft.slides.map((s) => s.id), [c, a, b]);
+  assert.equal(H.draft.slides[0].focus, '50% 15%');
+  const bad = await E.call('PUT', '/api/homepage/settings', { body: { seconds: 999, fade: true, baseRevision: H.revision } });
+  assert.equal(bad.status, 400);
+  H = (await E.call('PUT', '/api/homepage/settings', { body: { seconds: 4, fade: true, baseRevision: H.revision } })).data;
+  assert.equal(H.hasUnpublishedChanges, true);
+  // Stale revision is refused.
+  assert.equal((await E.call('PUT', '/api/homepage/settings', { as: MAINT, body: { seconds: 10, fade: false, baseRevision: H.revision - 1 } })).status, 409);
+
+  // Website not changed yet.
+  assert.equal(JSON.parse(E.gh.read('content/site.json')).heroSlides.length, 1);
+  const pv = await E.call('GET', '/api/homepage/preview');
+  assert.equal(pv.status, 200);
+  assert.match(pv.data, /hero--fade/); assert.match(pv.data, /data-interval="4"/); assert.match(pv.data, /Preview only/);
+  assert.equal((await E.call('GET', '/api/homepage/preview', { as: null })).status, 401);
+  const pv2 = await E.call('GET', '/api/homepage/preview?design=option2');
+  assert.match(pv2.data, /lx-hero/);
+
+  const p = await E.call('POST', '/api/homepage/publish', { body: { baseRevision: H.revision } });
+  assert.equal(p.status, 200, JSON.stringify(p.data));
+  const site = JSON.parse(E.gh.read('content/site.json'));
+  assert.deepEqual(site.heroSlides.map((s) => s.id), [c, a, b]);
+  assert.equal(site.heroSlideSeconds, 4); assert.equal(site.heroFade, true);
+  assert.equal(site.phone, '704-441-4556', 'other site settings untouched');
+  for (const w of [800, 1400, 2000]) {
+    const bytes = E.gh.read(`public/assets/img/hero/${c}-${w}.jpg`);
+    assert.ok(bytes); assert.equal(hasMetadata(bytes), false, 'no GPS/EXIF on public slideshow photo');
+  }
+  assert.equal(await waitLive(p.data.commit), 'live');
+  H = p.data.homepage;
+  assert.equal(H.hasUnpublishedChanges, false);
+
+  // a = the original site photo, b/c = new. Remove down to one, then the last one is refused.
+  assert.equal(a, 's-hero1');
+  H = (await E.call('DELETE', `/api/homepage/photos/${b}?baseRevision=${H.revision}`)).data;
+  H = (await E.call('DELETE', `/api/homepage/photos/${a}?baseRevision=${H.revision}`)).data;
+  assert.deepEqual(H.draft.slides.map((s) => s.id), [c]);
+  const last = await E.call('DELETE', `/api/homepage/photos/${c}?baseRevision=${H.revision}`);
+  assert.equal(last.status, 422, 'cannot remove the last photo');
+  H = (await E.call('POST', '/api/homepage/discard', { body: { baseRevision: H.revision } })).data;
+  assert.equal(H.draft.slides.length, 3, 'undo goes back to what is live');
+  H = (await E.call('DELETE', `/api/homepage/photos/${b}?baseRevision=${H.revision}`)).data;
+  const p2 = await E.call('POST', '/api/homepage/publish', { body: { baseRevision: H.revision } });
+  assert.equal(p2.status, 200);
+  assert.equal(E.gh.read(`public/assets/img/hero/${b}-800.jpg`), null, 'removed photo deleted from site');
+  assert.ok(E.gh.read('public/assets/img/hero-1-800.jpg'), 'original site photo files are left alone');
+});

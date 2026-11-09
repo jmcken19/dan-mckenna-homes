@@ -10,7 +10,7 @@ import { existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { execSync } from 'node:child_process';
-import { validatePublicListing } from '../src/lib/listing.mjs';
+import { validatePublicListing, validateHomepage, HERO_SIZES } from '../src/lib/listing.mjs';
 import { layout } from '../src/templates/layout.mjs';
 import { listingDetail } from '../src/templates/listing.mjs';
 import * as P from '../src/templates/pages.mjs';
@@ -37,6 +37,11 @@ export async function loadContent() {
   const files = existsSync(dir) ? (await readdir(dir)).filter((f) => f.endsWith('.json')) : [];
   const listings = [];
   const problems = [];
+  const heroProblems = validateHomepage(site);
+  for (const sl of site.heroSlides || []) for (const w of HERO_SIZES) {
+    if (sl.src && !existsSync(join(root, 'public', `${sl.src}-${w}.jpg`))) heroProblems.push(`missing image file public${sl.src}-${w}.jpg`);
+  }
+  if (heroProblems.length) problems.push(`content/site.json (homepage slideshow):\n  - ${heroProblems.join('\n  - ')}`);
   for (const f of files) {
     const l = JSON.parse(await readFile(join(dir, f), 'utf8'));
     const errs = validatePublicListing(l);

@@ -164,3 +164,33 @@ export function randomId(prefix, bytes = 8) {
   crypto.getRandomValues(a);
   return prefix + Array.from(a, (b) => (b % 36).toString(36)).join('');
 }
+
+/* ---------- homepage slideshow ---------- */
+export const HERO_SPEEDS = { slow: 10, normal: 7, fast: 4 };
+export const HERO_FOCUS = { top: '50% 15%', middle: '50% 50%', bottom: '50% 85%' };
+export const HERO_SIZES = [800, 1400, 2000];
+export const MAX_HERO_SLIDES = 12;
+const HERO_SRC_RE = /^\/assets\/img\/(hero-\d{1,2}|hero\/s-[a-z0-9]{6,32})$/;
+
+/** Validate the slideshow part of content/site.json. Returns a list of problems. */
+export function validateHomepage(site) {
+  const p = [];
+  const slides = site?.heroSlides;
+  if (!Array.isArray(slides) || slides.length < 1) p.push('heroSlides needs at least one photo');
+  else {
+    if (slides.length > MAX_HERO_SLIDES) p.push(`heroSlides can have at most ${MAX_HERO_SLIDES} photos`);
+    const ids = new Set();
+    slides.forEach((s, i) => {
+      if (!/^s-[a-z0-9]{3,32}$/.test(s.id || '')) p.push(`heroSlides[${i}].id must look like s-xxxxxx`);
+      if (ids.has(s.id)) p.push(`heroSlides[${i}].id is duplicated`);
+      ids.add(s.id);
+      if (!HERO_SRC_RE.test(s.src || '')) p.push(`heroSlides[${i}].src must be /assets/img/hero/<id> (files <src>-800.jpg, -1400.jpg, -2000.jpg)`);
+      if (typeof s.alt !== 'string' || s.alt.length > 200) p.push(`heroSlides[${i}].alt must be text (max 200)`);
+      if (s.focus && !/^\d{1,3}% \d{1,3}%$/.test(s.focus)) p.push(`heroSlides[${i}].focus must look like "50% 50%"`);
+    });
+  }
+  const n = site?.heroSlideSeconds;
+  if (!(typeof n === 'number' && n >= 2 && n <= 30)) p.push('heroSlideSeconds must be a number from 2 to 30');
+  if (typeof site?.heroFade !== 'boolean') p.push('heroFade must be true or false');
+  return p;
+}

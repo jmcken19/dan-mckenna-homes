@@ -102,3 +102,31 @@ dialog::backdrop { background: rgba(0,0,0,.45); }
 dialog h2 { margin-top: 0; }
 .dialog__btns { display: grid; gap: .5rem; margin-top: 1rem; }
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* drag to reorder */
+.drag-handle { display: inline-flex; align-items: center; gap: .35rem; min-height: 44px; min-width: 44px; padding: 0 .75rem; border: 2px dashed var(--soft); border-radius: 8px; background: #fff; color: var(--ink); font: 700 .95rem inherit; font-family: inherit; cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none; }
+.drag-handle span[aria-hidden] { font-size: 1.3rem; line-height: 1; }
+.drag-handle:active { cursor: grabbing; }
+.is-sorting { user-select: none; -webkit-user-select: none; }
+.photo.is-dragging { opacity: .85; transform: scale(1.02); box-shadow: 0 10px 30px rgba(0,0,0,.25); border-color: #1d5fc4; position: relative; z-index: 3; }
+/* compact rows: small photo on the left, controls on the right – easy to drag on a phone */
+.photos--rows { grid-template-columns: 1fr !important; gap: .6rem; }
+.photos--rows .photo { display: grid; grid-template-columns: 112px 1fr; grid-auto-rows: auto; column-gap: .25rem; align-items: start; }
+.photos--rows .photo > img, .photos--rows .photo__img { grid-row: 1 / span 3; padding: .5rem 0 .5rem .5rem; }
+.photos--rows .photo > img, .photos--rows .photo__img img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 6px; display: block; background: var(--wash); }
+.photos--rows .photo__bar { padding: .5rem; gap: .35rem; }
+.photos--rows .photo__focus { padding: 0 .5rem .25rem; }
+@media (min-width: 560px) { .photos--rows .photo { grid-template-columns: 180px 1fr; } }
+.photo__focus { display: flex; flex-wrap: wrap; gap: .4rem; align-items: center; padding: 0 .6rem .2rem; }
+.photo__focus-label { font-size: .9rem; color: var(--soft); width: 100%; }
+.seg { min-height: 44px; padding: 0 1rem; border: 2px solid var(--line); border-radius: 8px; background: #fff; font: 600 .95rem inherit; font-family: inherit; color: var(--ink); cursor: pointer; }
+.seg.is-on { border-color: var(--red); background: #fdf3f3; color: var(--red-dark); }
+/* upload box: tap to choose, or drop files on a computer */
+.dropzone { position: relative; display: grid; place-items: center; gap: .25rem; text-align: center; min-height: 110px; padding: 1rem; border: 2px dashed var(--ink); border-radius: 10px; background: var(--wash); cursor: pointer; margin: .5rem 0; }
+.dropzone:hover, .dropzone.is-over { background: #fdf3f3; border-color: var(--red); }
+.dropzone__big { font-weight: 700; font-size: 1.2rem; }
+.dropzone__sub { font-size: .9rem; color: var(--soft); }
+.dropzone input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; }
+.dropzone:focus-within { outline: 3px solid #1d5fc4; outline-offset: 2px; }
+.actions__in--2 { grid-template-columns: 1fr 1.4fr; }
+.radio .hint { font-size: .9rem; }

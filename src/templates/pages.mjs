@@ -19,6 +19,11 @@ function testimonialCard(ctx, t, { full = false } = {}) {
 </article>`;
 }
 
+export function heroSeconds(site) {
+  const n = Number(site.heroSlideSeconds);
+  return Number.isFinite(n) && n >= 2 && n <= 30 ? n : 7;
+}
+
 export function homePage(ctx) {
   const { site, url, listings } = ctx;
   const slides = site.heroSlides.map((s, i) => `<div class="hero__slide${i === 0 ? ' is-active' : ''}"${i ? ' aria-hidden="true"' : ''}>
@@ -38,7 +43,7 @@ export function homePage(ctx) {
 </section>` : '';
 
   const t = ctx.testimonials.slice(0, 6);
-  return `<section class="hero" aria-label="Welcome"${multi ? ` data-interval="${Number(site.heroSlideSeconds) || 7}"` : ''}>
+  return `<section class="hero${site.heroFade ? ' hero--fade' : ''}" aria-label="Welcome"${multi ? ` data-interval="${heroSeconds(site)}"` : ''}>
   <div class="hero__slides">${slides}</div>
   <div class="hero__text">
     <h1>${e(site.name)}</h1>

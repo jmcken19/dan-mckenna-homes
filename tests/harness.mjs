@@ -151,11 +151,16 @@ export async function startEditor({ resend = true, port, mirror = null, siteUrl 
       return new Response('blocked in test: ' + req.url, { status: 599 });
     },
   });
-  const migration = await readFile(join(root, 'owner/migrations/0001_init.sql'), 'utf8');
+  const migDir = join(root, 'owner/migrations');
+  const migration = (await Promise.all((await readdir(migDir)).filter((f) => f.endsWith('.sql')).sort().map((f) => readFile(join(migDir, f), 'utf8')))).join(';\n');
   const db = await mf.getD1Database('DB');
   if (!persist || !existsSync(persist + '/.migrated')) for (const stmt of migration.replace(/--.*$/gm, '').split(';').map((s) => s.trim()).filter(Boolean)) await db.prepare(stmt).run();
   if (persist) { mkdirSync(persist, { recursive: true }); writeFileSync(persist + '/.migrated', '1'); }
-  if (!mirror) gh.seed('content/removed.json', await readFile(join(root, 'content/removed.json'), 'utf8'));
+  if (!mirror) {
+    gh.seed('content/removed.json', await readFile(join(root, 'content/removed.json'), 'utf8'));
+    gh.seed('content/site.json', await readFile(join(root, 'content/site.json'), 'utf8'));
+    for (const w of [800, 1400, 2000]) gh.seed(`public/assets/img/hero-1-${w}.jpg`, await readFile(join(root, `public/assets/img/hero-1-${w}.jpg`)));
+  }
   const url = port ? `http://127.0.0.1:${port}` : 'http://editor.test';
   const call = async (method, path, { as = OWNER, body, form, idem, headers = {}, token } = {}) => {
     const h = { 'X-DMH-Editor': '1', ...headers };
@@ -202,11 +207,11 @@ export function realMirror(dir, { repo = 'jmcken19/dan-mckenna-homes', branch = 
       gh = fake;
       git('pull', '-q', '--rebase', 'origin', branch);
       const walk = (rel) => { const abs = join(dir, rel); if (!existsSync(abs)) return []; return readdirSync(abs).flatMap((n) => { const r = rel + '/' + n; return statSync(join(dir, r)).isDirectory() ? walk(r) : [r]; }); };
-      for (const f of ['content/removed.json', ...walk('content/listings'), ...walk('public/listings')]) gh.seed(f, readFileSync(join(dir, f)));
+      for (const f of ['content/removed.json', 'content/site.json', ...walk('content/listings'), ...walk('public/listings'), ...walk('public/assets/img/hero'), 'public/assets/img/hero-1-800.jpg', 'public/assets/img/hero-1-1400.jpg', 'public/assets/img/hero-1-2000.jpg']) gh.seed(f, readFileSync(join(dir, f)));
       fake.onCommit = async (sha, before, after, message) => {
         for (const [path, blob] of after) if (before.get(path) !== blob) { mkdirSync(dirname(join(dir, path)), { recursive: true }); writeFileSync(join(dir, path), gh.blobs.get(blob)); }
         for (const path of before.keys()) if (!after.has(path) && !path.startsWith('README-race')) rmSync(join(dir, path), { force: true });
-        git('add', '-A', 'content', 'public/listings');
+        git('add', '-A', 'content', 'public/listings', 'public/assets/img');
         execFileSync('git', ['-C', dir, '-c', 'user.name=James McKenna', '-c', 'user.email=jmck2134@gmail.com', 'commit', '-q', '-m', message + '\n\n[acceptance test via owner editor]\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01V7nEdbx1J3PYduWzdcbP3f']);
         git('push', '-q', 'origin', branch);
         map.set(sha, git('rev-parse', 'HEAD'));

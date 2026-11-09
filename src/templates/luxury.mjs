@@ -3,6 +3,7 @@
 // Same content and pages as the classic design; only the frame and homepage differ.
 import { escapeHtml as e, formatPrice, factsList, STATUS_LABEL } from '../lib/listing.mjs';
 import { NAV } from './layout.mjs';
+import { heroSeconds } from './pages.mjs';
 
 export function luxLayout(ctx, { path, title, description, body, bodyClass = '', ogImage }) {
   const { site, url, preview } = ctx;
@@ -89,11 +90,8 @@ function luxCard(ctx, l) {
 export function luxHome(ctx) {
   const { site, url, listings, testimonials } = ctx;
   const current = listings.filter((l) => l.status !== 'sold');
-  // Like the inspiration sites: when Dan has listings, the slideshow features them (photo + price +
-  // address). Otherwise it uses the site's own hero photos.
-  const slides = current.length
-    ? current.slice(0, 5).map((l) => ({ img: l.photos[0], href: url(`/listings/${l.slug}/`), caption: `${l.status !== 'active' ? STATUS_LABEL[l.status] + ' · ' : ''}${l.price ? formatPrice(l.price) + ' · ' : ''}${l.address.street}, ${l.address.city}` }))
-    : site.heroSlides.map((s) => ({ hero: s }));
+  // The slideshow shows exactly the photos Dan chose in the editor's "Homepage photos" screen.
+  const slides = site.heroSlides.map((s) => ({ hero: s }));
   const slideHtml = slides.map((s, i) => {
     const img = s.hero
       ? `<img src="${url(s.hero.src)}-1400.jpg" srcset="${url(s.hero.src)}-800.jpg 800w, ${url(s.hero.src)}-1400.jpg 1400w, ${url(s.hero.src)}-2000.jpg 2000w" sizes="100vw" alt="${e(s.hero.alt)}" style="object-position:${e(s.hero.focus || '50% 50%')}" ${i ? 'loading="lazy"' : 'fetchpriority="high"'} decoding="async">`
@@ -104,7 +102,7 @@ export function luxHome(ctx) {
 
   const quotes = testimonials.filter((t) => !t.excerptOnly && t.text[0].length < 420).slice(0, 5);
 
-  return `<section class="hero lx-hero" aria-label="Welcome"${multi ? ` data-interval="${Number(site.heroSlideSeconds) || 7}"` : ''}>
+  return `<section class="hero lx-hero${site.heroFade ? ' hero--fade' : ''}" aria-label="Welcome"${multi ? ` data-interval="${heroSeconds(site)}"` : ''}>
   <div class="hero__slides">${slideHtml}</div>
   <div class="lx-hero__text">
     <p class="lx-eyebrow">Charlotte · Waxhaw · Weddington · Marvin</p>

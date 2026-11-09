@@ -1,5 +1,5 @@
 {
-  "_comment": "Site-wide facts. Every value here was copied from the live danmckennahomes.com in Nov 2026. Do not add facts that Dan has not confirmed.",
+  "_comment": "Site-wide facts. Every value here was copied from the live danmckennahomes.com in Nov 2026. Do not add facts that Dan has not confirmed. heroSlides/heroSlideSeconds/heroFade are managed from the editor's Homepage photos screen.",
   "name": "Dan McKenna Homes",
   "agent": "Dan McKenna",
   "agentTitle": "NC/SC Broker/REALTOR®",
@@ -9,15 +9,22 @@
   "smsHref": "sms:+17044414556",
   "email": "danmckenna@kw.com",
   "brokerage": "Keller Williams Ballantyne Area, Charlotte, NC",
-  "serviceAreas": ["Charlotte", "Waxhaw", "Weddington", "Marvin"],
+  "serviceAreas": [
+    "Charlotte",
+    "Waxhaw",
+    "Weddington",
+    "Marvin"
+  ],
   "serviceAreaSentence": "Serving Charlotte, Waxhaw, Weddington, Marvin, and surrounding communities in North Carolina and South Carolina.",
   "metaDescription": "Dan McKenna, NC/SC Broker/REALTOR® with Keller Williams Ballantyne Area, Charlotte, NC. Serving Charlotte, Waxhaw, Weddington, Marvin, and surrounding communities.",
   "heroSlides": [
     {
+      "id": "s-hero1",
       "src": "/assets/img/hero-1",
       "alt": "Backyard patio with a stone fire pit, wicker chairs, and a pool surrounded by trees",
       "focus": "50% 70%"
     }
   ],
-  "heroSlideSeconds": 7
+  "heroSlideSeconds": 7,
+  "heroFade": false
 }
