@@ -137,10 +137,10 @@ export async function startEditor({ resend = true, port, mirror = null, siteUrl 
     outboundService: async (req) => {
       const u = new URL(req.url);
       if (u.host === TEAM && u.pathname === '/cdn-cgi/access/certs') return Response.json({ keys: [jwk] });
-      if (u.host === 'api.github.com') return gh.handle(req);
       if (mirror && u.host === 'api.github.com' && u.pathname.endsWith('/actions/runs')) return mirror.runs(u.searchParams.get('head_sha'));
       if (mirror && u.host === 'api.github.com' && u.pathname.includes('/compare/')) return mirror.compare(u.pathname);
       if (mirror && req.url.startsWith(siteUrl) && u.pathname.endsWith('/version.json')) return mirror.version();
+      if (u.host === 'api.github.com') return gh.handle(req);
       if (u.origin === SITE && u.pathname === '/version.json') {
         // The fake site "deploys" the head commit after a couple of status checks, unless the run failed.
         site.calls++;
@@ -158,7 +158,10 @@ export async function startEditor({ resend = true, port, mirror = null, siteUrl 
   if (persist) { mkdirSync(persist, { recursive: true }); writeFileSync(persist + '/.migrated', '1'); }
   if (!mirror) {
     gh.seed('content/removed.json', await readFile(join(root, 'content/removed.json'), 'utf8'));
-    gh.seed('content/site.json', await readFile(join(root, 'content/site.json'), 'utf8'));
+    const site = JSON.parse(await readFile(join(root, 'content/site.json'), 'utf8'));
+    site.heroSlides = [{ id: 's-hero1', src: '/assets/img/hero-1', alt: 'Backyard patio', focus: '50% 70%' }];
+    site.heroSlideSeconds = 7; site.heroFade = false;
+    gh.seed('content/site.json', JSON.stringify(site, null, 2));
     for (const w of [800, 1400, 2000]) gh.seed(`public/assets/img/hero-1-${w}.jpg`, await readFile(join(root, `public/assets/img/hero-1-${w}.jpg`)));
   }
   const url = port ? `http://127.0.0.1:${port}` : 'http://editor.test';
@@ -211,7 +214,7 @@ export function realMirror(dir, { repo = 'jmcken19/dan-mckenna-homes', branch = 
       fake.onCommit = async (sha, before, after, message) => {
         for (const [path, blob] of after) if (before.get(path) !== blob) { mkdirSync(dirname(join(dir, path)), { recursive: true }); writeFileSync(join(dir, path), gh.blobs.get(blob)); }
         for (const path of before.keys()) if (!after.has(path) && !path.startsWith('README-race')) rmSync(join(dir, path), { force: true });
-        git('add', '-A', 'content', 'public/listings', 'public/assets/img');
+        git('add', '-A', '--', ...['content', 'public/listings', 'public/assets/img'].filter((d) => existsSync(join(dir, d)) || git('ls-files', d)));
         execFileSync('git', ['-C', dir, '-c', 'user.name=James McKenna', '-c', 'user.email=jmck2134@gmail.com', 'commit', '-q', '-m', message + '\n\n[acceptance test via owner editor]\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01V7nEdbx1J3PYduWzdcbP3f']);
         git('push', '-q', 'origin', branch);
         map.set(sha, git('rev-parse', 'HEAD'));

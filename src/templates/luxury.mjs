@@ -24,7 +24,10 @@ ${preview ? '<meta name="robots" content="noindex, nofollow, noarchive">' : ''}
 <meta property="og:title" content="${e(fullTitle)}">
 ${ogImage ? `<meta property="og:image" content="${e(ogImage)}">` : ''}
 <meta name="theme-color" content="#1d1d1f">
-<link rel="icon" href="${url('/assets/img/favicon.png')}">
+<link rel="icon" href="${url('/favicon.ico')}" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="${url('/assets/img/favicon-32.png')}">
+<link rel="apple-touch-icon" href="${url('/assets/img/apple-touch-icon.png')}">
+<link rel="manifest" href="${url('/site.webmanifest')}">
 <link rel="preload" href="${url('/assets/fonts/cormorant-garamond-latin-500-normal.woff2')}" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="${url('/assets/css/luxury.css')}?v=${ctx.buildId}">
 <script src="${url('/assets/js/site.js')}?v=${ctx.buildId}" defer></script>

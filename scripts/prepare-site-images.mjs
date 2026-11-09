@@ -26,5 +26,6 @@ await sharp(`${src}/construction.jpg`).rotate().jpeg({ quality: 82, mozjpeg: tru
 await sharp(`${src}/headshot.png`).flatten({ background: '#ffffff' }).jpeg({ quality: 85, mozjpeg: true }).toFile(`${dst}/dan-mckenna-headshot.jpg`);
 await sharp(`${src}/logo.png`).png({ compressionLevel: 9 }).toFile(`${dst}/logo-kw-charlotte-ballantyne.png`);
 await sharp(`${src}/kw-logo.png`).resize({ width: 428 }).png({ compressionLevel: 9 }).toFile(`${dst}/logo-kw-white.png`);
-await sharp(`${src}/logo.png`).extract({ left: 0, top: 0, width: 58, height: 58 }).resize(64, 64, { fit: 'contain', background: '#ffffff' }).png().toFile(`${dst}/favicon.png`);
+// Favicons (favicon.ico, favicon-32/favicon/apple-touch-icon/icon-192/icon-512.png) are made from
+// assets-src/kw-mark-red.png – see docs/MAINTAINER.md. They are not regenerated here.
 console.log('Images written to', dst, '(hero slides:', HERO.length + ')');

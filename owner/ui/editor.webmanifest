@@ -1,0 +1,9 @@
+{
+  "name": "Dan McKenna Homes – Website Editor",
+  "short_name": "Website",
+  "icons": [{ "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" }],
+  "theme_color": "#c41e1d",
+  "background_color": "#ffffff",
+  "display": "standalone",
+  "start_url": "/"
+}

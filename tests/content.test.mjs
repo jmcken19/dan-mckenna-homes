@@ -46,3 +46,12 @@ test('public listing validation rejects bad paths and zero values', () => {
   assert.ok(p.some((m) => m.startsWith('price')));
   assert.ok(p.some((m) => m.includes('path')));
 });
+
+test('favicon set is present and linked', async () => {
+  const { existsSync, readFileSync } = await import('node:fs');
+  for (const f of ['public/favicon.ico', 'public/assets/img/favicon-32.png', 'public/assets/img/apple-touch-icon.png', 'public/assets/img/icon-192.png', 'public/assets/img/icon-512.png', 'public/site.webmanifest', 'owner/ui/favicon.ico', 'owner/ui/apple-touch-icon.png']) assert.ok(existsSync(f), f);
+  for (const t of ['src/templates/layout.mjs', 'src/templates/luxury.mjs']) {
+    const s = readFileSync(t, 'utf8');
+    assert.match(s, /favicon\.ico/); assert.match(s, /apple-touch-icon/); assert.match(s, /site\.webmanifest/);
+  }
+});
