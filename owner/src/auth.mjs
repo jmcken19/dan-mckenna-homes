@@ -5,6 +5,9 @@
 
 let jwksCache = { at: 0, keys: null, url: '' };
 
+// Accept the team domain with or without https:// and a trailing slash.
+const teamHost = (env) => String(env.ACCESS_TEAM_DOMAIN || '').trim().replace(/^https?:\/\//, '').replace(/\/+$/, '');
+
 function b64urlToBytes(s) {
   s = s.replace(/-/g, '+').replace(/_/g, '/');
   while (s.length % 4) s += '=';
@@ -14,7 +17,7 @@ function b64urlToBytes(s) {
 const dec = new TextDecoder();
 
 async function getKeys(env) {
-  const url = `https://${env.ACCESS_TEAM_DOMAIN}/cdn-cgi/access/certs`;
+  const url = `https://${teamHost(env)}/cdn-cgi/access/certs`;
   if (jwksCache.keys && jwksCache.url === url && Date.now() - jwksCache.at < 10 * 60 * 1000) return jwksCache.keys;
   const res = await fetch(url);
   if (!res.ok) throw new Error('jwks-fetch-failed');
@@ -39,8 +42,8 @@ export async function verifyAccessJwt(token, env) {
   if (typeof payload.exp !== 'number' || payload.exp < now - 30) return null;
   if (payload.nbf && payload.nbf > now + 30) return null;
   const aud = Array.isArray(payload.aud) ? payload.aud : [payload.aud];
-  if (!aud.includes(env.ACCESS_AUD)) return null;
-  if (payload.iss && payload.iss !== `https://${env.ACCESS_TEAM_DOMAIN}`) return null;
+  if (!aud.includes(String(env.ACCESS_AUD).trim())) return null;
+  if (payload.iss && payload.iss !== `https://${teamHost(env)}`) return null;
   if (typeof payload.email !== 'string') return null;
   return { email: payload.email.toLowerCase() };
 }

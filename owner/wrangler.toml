@@ -25,17 +25,16 @@ GITHUB_REPO = "jmcken19/dan-mckenna-homes"
 GITHUB_BRANCH = "main"
 # Where the public site lives. Preview now; change to https://www.danmckennahomes.com at launch.
 PUBLIC_SITE_URL = "https://jmcken19.github.io/dan-mckenna-homes"
-# Cloudflare Access (Zero Trust) team domain and the application's AUD tag.
+# Cloudflare Access: your team domain (e.g. "dmh.cloudflareaccess.com", https:// optional) and the AUD tag.
 ACCESS_TEAM_DOMAIN = "REPLACE.cloudflareaccess.com"
 ACCESS_AUD = "REPLACE_WITH_ACCESS_AUD"
-# Who may edit. Comma-separated. Must ALSO be allowed in the Access policy.
-OWNER_EMAILS = "danmckenna@kw.com"
-MAINTAINER_EMAILS = "REPLACE_WITH_JAMES_EMAIL"
-# Change requests are emailed here (Resend). NOTIFY_FROM must be a verified Resend sender.
-NOTIFY_TO = "REPLACE_WITH_JAMES_EMAIL"
 SUPPORT_NAME = "James McKenna"
-SUPPORT_EMAIL = "REPLACE_WITH_JAMES_EMAIL"
-SUPPORT_PHONE = ""
 
-# Secrets (never in this file):  npx wrangler secret put GITHUB_TOKEN
-#                                npx wrangler secret put RESEND_API_KEY
+# Private settings – set with `npx wrangler secret put NAME` (kept out of this public repo):
+#   GITHUB_TOKEN       fine-grained token, this repo only (Contents RW, Actions RW)
+#   RESEND_API_KEY     for emailing change requests
+#   OWNER_EMAILS       Dan's sign-in email(s), comma-separated
+#   MAINTAINER_EMAILS  James's sign-in email
+#   NOTIFY_TO          where change requests are emailed (James)
+#   SUPPORT_EMAIL      shown to Dan as his help contact
+#   SUPPORT_PHONE      shown to Dan as his help contact (optional)

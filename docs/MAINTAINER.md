@@ -21,40 +21,73 @@ Technical setup, deployment and recovery. Dan's guide is `OWNER-GUIDE.md`; AI/ma
 | Resend | emails change requests to James | Free (3,000/mo) | James | Re-create API key → `wrangler secret put RESEND_API_KEY` |
 | Domain `danmckennahomes.com` | live site | Unknown registrar (currently pointed at Placester) | Dan | **Owner decision** before any DNS change |
 
-## Connect the editor (one time, ~20 minutes)
+## Connect the editor (one time, ~30 minutes)
 
-You need: a Cloudflare account, Node 22, this repo cloned.
+Run these on your own computer (PowerShell on Windows is fine). You need Node 22+ and Git.
 
-1. **Log in:** `cd owner && npx wrangler login`
-2. **Create storage:**
-   ```bash
-   npx wrangler d1 create dmh-owner          # copy database_id into wrangler.toml
-   npx wrangler kv namespace create PHOTOS   # copy id into wrangler.toml
-   npx wrangler d1 migrations apply dmh-owner --remote
-   ```
-3. **GitHub token:** GitHub → Settings → Developer settings → Fine-grained tokens → *Generate*.
-   Repository access: **only** `jmcken19/dan-mckenna-homes`. Permissions: **Contents: Read and write**,
-   **Actions: Read and write** (read status + re-run failed publish), Metadata: read. Expiry: 1 year (calendar a reminder).
-   `npx wrangler secret put GITHUB_TOKEN`
-4. **Email:** create a Resend account (with the address that should receive requests), make an API key
-   with "Sending access" only. `npx wrangler secret put RESEND_API_KEY`. Without a verified domain,
-   Resend only delivers to your own account email – that's fine, that's where requests should go.
-5. **Edit `wrangler.toml` vars:** `MAINTAINER_EMAILS`, `NOTIFY_TO`, `SUPPORT_EMAIL`, `SUPPORT_PHONE`
-   (these are shown to Dan as his help contact), `OWNER_EMAILS` (Dan; add Wendy if wanted).
-6. **Deploy:** `npx wrangler deploy` → note the URL `https://dmh-owner.<you>.workers.dev`.
-7. **Turn on sign-in (Cloudflare Access):** Dashboard → Workers & Pages → dmh-owner → Settings →
-   Domains & Routes → workers.dev → **Enable Cloudflare Access**. Then Zero Trust → Access →
-   Applications → the new app → Policies: *Allow* → Include → Emails: Dan's + yours. Login method:
-   **One-time PIN** (email code). Copy the app's **AUD tag** and your team domain
-   (`<team>.cloudflareaccess.com`) into `ACCESS_AUD` / `ACCESS_TEAM_DOMAIN`, then `npx wrangler deploy` again.
-8. **Check it (must pass before giving Dan the link):**
-   * Private window, editor URL → you get the Cloudflare sign-in page. Sign in with a *non-listed*
-     email → refused.
-   * `curl -i https://dmh-owner.<you>.workers.dev/api/listings` → **401** (`Please sign in again`).
-   * Sign in as yourself → Request a website change → send "test" → the email arrives, the page says **Sent**.
-   * Add a listing with street containing `TEST`, publish, see ✓ Done + link works, then take it off
-     and delete the leftover entry from `content/removed.json`.
-9. Put the editor URL and your phone/email into `OWNER-GUIDE.md`, export it to PDF, send it to Dan.
+**0. Accounts**: Cloudflare (free; sign up with an email you'll keep, turn on 2-step verification),
+Resend (free, sign up with the email that should receive Dan's requests).
+
+**1. Get the code**
+```powershell
+git clone https://github.com/jmcken19/dan-mckenna-homes.git
+cd dan-mckenna-homes
+npm ci
+cd owner
+npx wrangler login            # browser opens → Allow
+```
+
+**2. Create the private storage** (each command prints an ID – paste it into `owner/wrangler.toml`)
+```powershell
+npx wrangler d1 create dmh-owner             # copy database_id → [[d1_databases]] database_id
+npx wrangler kv namespace create PHOTOS      # copy id → [[kv_namespaces]] id
+npx wrangler d1 migrations apply dmh-owner --remote   # answer "y"
+```
+
+**3. GitHub token** – github.com → Settings → Developer settings → Personal access tokens →
+Fine-grained tokens → Generate new token. Name `dmh-editor`, expiration 1 year (calendar a reminder),
+Repository access: *Only select repositories* → `dan-mckenna-homes`. Permissions: **Contents: Read and write**,
+**Actions: Read and write**. Generate → copy.
+
+**4. Resend key** – resend.com → API Keys → Create → permission *Sending access* → copy.
+
+**5. Private settings** (each command asks you to paste the value)
+```powershell
+npx wrangler secret put GITHUB_TOKEN
+npx wrangler secret put RESEND_API_KEY
+npx wrangler secret put OWNER_EMAILS        # danmckenna@kw.com  (add Wendy with a comma if wanted)
+npx wrangler secret put MAINTAINER_EMAILS   # your email
+npx wrangler secret put NOTIFY_TO           # your email (must be your Resend sign-up email)
+npx wrangler secret put SUPPORT_EMAIL       # your email
+npx wrangler secret put SUPPORT_PHONE       # your cell, e.g. 704-555-1234
+```
+(The first `secret put` may offer to create the Worker – say yes.)
+
+**6. First deploy** – `npx wrangler deploy` → note the address `https://dmh-owner.<your-subdomain>.workers.dev`.
+
+**7. Turn on sign-in (Cloudflare Access)** – dashboard → **Workers & Pages** → `dmh-owner` → **Access**
+(older dashboards: Settings → Domains & Routes → workers.dev → *Enable Cloudflare Access*).
+Choose **All traffic**. Policy: allow these **emails**: Dan's + yours. Login method: **One-time PIN** (email code).
+The dialog shows the **team domain** and **Application Audience (AUD) tag** – paste them into
+`ACCESS_TEAM_DOMAIN` / `ACCESS_AUD` in `owner/wrangler.toml`, then `npx wrangler deploy` again.
+Commit the two IDs + Access values (`git commit -am "Connect editor" && git push`) – they are not secrets.
+
+**8. Check it (all must pass before giving Dan the link)**
+* Private/incognito window → editor address → Cloudflare sign-in page appears.
+* Sign in with an email that is **not** on the list → refused.
+* PowerShell: `curl.exe -i https://dmh-owner.<sub>.workers.dev/api/listings` → **401** (or a redirect to sign-in).
+* Sign in as yourself → start screen shows *Signed in as …* and three buttons.
+* **Request a website change** → "test" → page says **Sent** and the email arrives.
+* **Homepage photos** → shows the current photo → Preview opens.
+* Add a listing with **TEST** in the street, 1 photo → Publish → **✓ Done** → link opens. Then
+  **Take off website**, and delete its line from `content/removed.json` on GitHub.
+
+**9. Hand over** – put the editor address + your phone/email into `OWNER-GUIDE.md`, export to PDF, and set up
+Dan's phone with him (sign in once, *Add to Home Screen*).
+
+Note: Cloudflare describes `*.workers.dev` addresses as meant for non-critical projects; it's fine for a private
+editor. When the domain moves to Cloudflare, give the editor its own address (e.g. `edit.danmckennahomes.com`:
+Worker → Settings → Domains & Routes → Add custom domain) and update Dan's bookmark.
 
 ## Production hosting (owner decision needed)
 
