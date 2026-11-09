@@ -323,3 +323,17 @@ test('homepage slideshow: starts from the website, add/reorder/focus/speed/fade,
   assert.equal(E.gh.read(`public/assets/img/hero/${b}-800.jpg`), null, 'removed photo deleted from site');
   assert.ok(E.gh.read('public/assets/img/hero-1-800.jpg'), 'original site photo files are left alone');
 });
+
+test('laptop only: phone browsers are refused, laptops are allowed', async () => {
+  const iphone = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148 Safari/604.1';
+  const android = 'Mozilla/5.0 (Linux; Android 15; Pixel 9) AppleWebKit/537.36 Chrome/130.0 Mobile Safari/537.36';
+  const windows = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/130.0 Safari/537.36';
+  const mac = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 14_6) AppleWebKit/605.1.15 Version/18.0 Safari/605.1.15';
+  for (const ua of [iphone, android]) {
+    const r = await E.call('GET', '/api/listings', { headers: { 'User-Agent': ua } });
+    assert.equal(r.status, 403); assert.equal(r.data.laptopOnly, true); assert.match(r.data.error, /laptop/);
+  }
+  for (const ua of [windows, mac]) assert.equal((await E.call('GET', '/api/listings', { headers: { 'User-Agent': ua } })).status, 200);
+  // signed-out phone still gets "sign in", not a hint that the editor exists
+  assert.equal((await E.call('GET', '/api/listings', { as: null, headers: { 'User-Agent': iphone } })).status, 401);
+});

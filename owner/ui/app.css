@@ -8,7 +8,7 @@ a { color: var(--red); }
 .bar__home { color: #fff; text-decoration: none; font-weight: 700; line-height: 1.2; }
 .bar__home span { display: block; font-weight: 400; font-size: .85rem; opacity: .9; }
 .bar__who { font-size: .8rem; opacity: .9; text-align: right; word-break: break-all; }
-main { max-width: 720px; margin: 0 auto; padding: 1.25rem 1rem 8rem; }
+main { max-width: 880px; margin: 0 auto; padding: 1.25rem 1rem 8rem; }
 main:focus { outline: none; }
 h1 { font-size: 1.6rem; line-height: 1.2; margin: .25rem 0 1rem; }
 h2 { font-size: 1.25rem; margin: 2rem 0 .75rem; }
@@ -80,8 +80,8 @@ fieldset { border: 0; padding: 0; margin: 0 0 1.1rem; }
 .file-btn input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; }
 
 .actions { position: fixed; left: 0; right: 0; bottom: 0; background: #fff; border-top: 1px solid var(--line); padding: .6rem 1rem; padding-bottom: max(.6rem, env(safe-area-inset-bottom)); box-shadow: 0 -4px 16px rgba(0,0,0,.06); z-index: 5; }
-.actions__in { max-width: 720px; margin: 0 auto; display: grid; grid-template-columns: 1fr 1fr 1.3fr; gap: .5rem; }
-.actions__state { max-width: 720px; margin: 0 auto .4rem; font-size: .9rem; color: var(--soft); text-align: center; }
+.actions__in { max-width: 880px; margin: 0 auto; display: grid; grid-template-columns: 1fr 1fr 1.3fr; gap: .5rem; }
+.actions__state { max-width: 880px; margin: 0 auto .4rem; font-size: .9rem; color: var(--soft); text-align: center; }
 .danger-zone { border-top: 1px solid var(--line); margin-top: 2.5rem; padding-top: 1rem; display: grid; gap: .75rem; }
 .status-buttons { display: grid; gap: .5rem; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
 
@@ -130,3 +130,6 @@ dialog h2 { margin-top: 0; }
 .dropzone:focus-within { outline: 3px solid #1d5fc4; outline-offset: 2px; }
 .actions__in--2 { grid-template-columns: 1fr 1.4fr; }
 .radio .hint { font-size: .9rem; }
+
+@media (min-width: 900px) { .photos--rows .photo { grid-template-columns: 200px 1fr; } }
+html { scroll-padding-bottom: 140px; scroll-padding-top: 20px; }

@@ -39,7 +39,7 @@ async function api(method, path, body, { idem = null } = {}) {
     throw new ApiError(0, { error: 'No internet connection right now. Nothing was lost — try again when you have signal.' });
   }
   if (res.redirected || (res.headers.get('content-type') || '').includes('text/html')) {
-    throw new ApiError(401, { error: 'You were signed out. Tap "Sign in again" — your typing stays on this page.', signIn: true });
+    throw new ApiError(401, { error: 'You were signed out. Click "Sign in again" — your typing stays on this page.', signIn: true });
   }
   let data = {};
   try { data = await res.json(); } catch { /* empty */ }
@@ -254,7 +254,21 @@ function handleHtml(n) {
 window.addEventListener('hashchange', route);
 window.addEventListener('beforeunload', (e) => { if (unsavedGuard && unsavedGuard()) { e.preventDefault(); e.returnValue = ''; } });
 
+// Laptop only: phones see a friendly note instead of the editor (the server refuses phones too).
+function isPhoneDevice() {
+  const ua = navigator.userAgent || '';
+  if (/iPhone|iPod|Windows Phone|BlackBerry|Opera Mini|IEMobile/i.test(ua) || (/Android/i.test(ua) && /Mobile/i.test(ua))) return true;
+  return window.matchMedia('(pointer: coarse)').matches && Math.min(screen.width, screen.height) < 600;
+}
+
+function laptopOnlyScreen() {
+  setScreen(`<h1>Please use your laptop</h1>
+  <div class="note"><p>The website editor is set up for your <strong>laptop</strong>. Open the <strong>Website Editor</strong> bookmark on your laptop to add homes, change photos, or request a change.</p></div>
+  <p class="hint">Took photos on your phone? Send them to your laptop first (for example by email, AirDrop, or Google Photos), then add them in the editor.</p>`);
+}
+
 async function route() {
+  if (isPhoneDevice()) return laptopOnlyScreen();
   if (unsavedGuard && unsavedGuard() && !(await confirmBox({ title: 'Leave without saving?', body: 'You have typing that is not saved yet.', yes: 'Leave anyway', no: 'Stay here', danger: true }))) {
     history.replaceState(null, '', route.last || '#/');
     return;
@@ -264,7 +278,7 @@ async function route() {
   const h = location.hash.replace(/^#\/?/, '');
   try {
     if (!me) {
-      me = await api('GET', '/me');
+      try { me = await api('GET', '/me'); } catch (e) { if (e.data?.laptopOnly) return laptopOnlyScreen(); throw e; }
       document.getElementById('who').textContent = `Signed in as ${me.email}`;
     }
     if (h === '' ) return startScreen();
@@ -284,7 +298,7 @@ async function route() {
 function startScreen() {
   setScreen(`
   <h1>What would you like to do?</h1>
-  <div class="note"><p><strong>Bookmark this page</strong> (or "Add to Home Screen") so you can come back to it any time.</p></div>
+  <div class="note"><p><strong>Bookmark this page</strong> in your browser (press <strong>Ctrl + D</strong> on Windows, <strong>⌘ + D</strong> on a Mac) so you can come back to it any time.</p></div>
   <div class="big-choices">
     <a class="big-choice" href="#/listings"><strong>Manage listings</strong>Add a home, change price or photos, mark it Pending or Sold, or take it off the website.</a>
     <a class="big-choice" href="#/homepage"><strong>Homepage photos</strong>Choose the photos that rotate at the top of your homepage, their order, and how fast they change.</a>
@@ -303,7 +317,7 @@ async function listingsScreen() {
   const draw = (q) => {
     const words = q.toLowerCase().split(/\s+/).filter(Boolean);
     const shown = items.filter((l) => { const t = `${l.address.street} ${l.address.city} ${l.address.zip}`.toLowerCase(); return words.every((w) => t.includes(w)); });
-    document.getElementById('results').innerHTML = shown.length ? shown.map(card).join('') : `<li class="hint">${items.length ? 'No home matches that address.' : 'No listings yet. Tap "Add a new home" to start.'}</li>`;
+    document.getElementById('results').innerHTML = shown.length ? shown.map(card).join('') : `<li class="hint">${items.length ? 'No home matches that address.' : 'No listings yet. Click "Add a new home" to start.'}</li>`;
   };
   setScreen(`<a class="back" href="#/">← Back</a>
   <h1>Manage listings</h1>
@@ -369,8 +383,8 @@ async function editScreen(id) {
   if (backup && (backup.rev === (L?.revision || 0) || backup.rev === 'conflict') && JSON.stringify(backup.values) !== JSON.stringify(saved)) {
     values = backup.values;
     banner = backup.rev === 'conflict'
-      ? '<div class="note note--warn"><p>This is the newest version, with your unsaved typing put back in the boxes. Check the boxes, then tap <strong>Save draft</strong>. Photos below are the newest ones.</p></div>'
-      : '<div class="note note--warn"><p>We brought back typing you had not saved last time. Tap <strong>Save draft</strong> to keep it.</p></div>';
+      ? '<div class="note note--warn"><p>This is the newest version, with your unsaved typing put back in the boxes. Check the boxes, then click <strong>Save draft</strong>. Photos below are the newest ones.</p></div>'
+      : '<div class="note note--warn"><p>We brought back typing you had not saved last time. Click <strong>Save draft</strong> to keep it.</p></div>';
     if (backup.rev === 'conflict') store.set(draftKey, { rev: L?.revision || 0, values });
   }
   const pending = store.get('dmh-publishing');
@@ -421,7 +435,7 @@ async function editScreen(id) {
 
     <h2>4. Photos</h2>
     ${photos.length ? '<p class="hint">The first photo is the <strong>cover photo</strong> buyers see first.</p>' : '<p class="hint">Add the cover photo first. You can choose several photos at once.</p>'}
-    ${photos.length > 1 ? '<p class="hint">To change the order, hold <strong>⠿ Drag</strong> and move the photo.</p>' : ''}
+    ${photos.length > 1 ? '<p class="hint">To change the order, drag a photo by its <strong>⠿ Drag</strong> handle.</p>' : ''}
     <ul class="photos photos--rows" id="lphotos">${photos.map((p, i) => `<li class="photo${i === 0 ? ' photo--cover' : ''}" data-id="${esc(p.id)}">
         <img src="/api/photo/${esc(L.id)}/${esc(p.id)}/small" alt="Photo ${i + 1}" loading="lazy">
         <div class="photo__bar">
@@ -433,7 +447,7 @@ async function editScreen(id) {
           <span class="btn btn--small file-btn">Replace<input type="file" accept="image/*,.heic,.heif" data-replace="${p.id}" aria-label="Replace photo ${i + 1}"></span>
           <button type="button" class="btn btn--small btn--danger" data-remove="${p.id}" aria-label="Remove photo ${i + 1}">Remove</button>
         </div></li>`).join('')}</ul>
-    ${dropZoneHtml('addphotos', '+ Add photos', 'Tap to choose from your phone — or drag photos here on a computer')}
+    ${dropZoneHtml('addphotos', '+ Add photos', 'Click to choose photos — or drag them here from a folder')}
     <ul class="upload-list" id="uploads" aria-live="polite"></ul>
 
     ${L && L.visibility === 'published' ? `<div class="danger-zone">
@@ -478,7 +492,7 @@ async function editScreen(id) {
         store.del(draftKey);
       }
       saved = fieldsFrom(L.draft); values = { ...saved }; errors = {};
-      banner = quiet ? '' : '<div class="note note--ok"><p>Saved as a draft. Buyers will not see changes until you tap <strong>Publish</strong>.</p></div>';
+      banner = quiet ? '' : '<div class="note note--ok"><p>Saved as a draft. Buyers will not see changes until you click <strong>Publish</strong>.</p></div>';
       render();
       return true;
     } catch (err) { showError(err); return false; }
@@ -511,7 +525,7 @@ async function editScreen(id) {
       }
     }
     const summary = list.innerHTML;
-    banner = failed ? `<div class="note note--warn"><p>${files.length - failed} of ${files.length} photos added. The others are listed below with what to do.</p></div>` : `<div class="note note--ok"><p>${files.length === 1 ? 'Photo added' : files.length + ' photos added'} to the draft. Tap <strong>Publish</strong> when you're ready for buyers to see them.</p></div>`;
+    banner = failed ? `<div class="note note--warn"><p>${files.length - failed} of ${files.length} photos added. The others are listed below with what to do.</p></div>` : `<div class="note note--ok"><p>${files.length === 1 ? 'Photo added' : files.length + ' photos added'} to the draft. Click <strong>Publish</strong> when you're ready for buyers to see them.</p></div>`;
     values = readForm(); render();
     if (failed) document.getElementById('uploads').innerHTML = summary;
   }
@@ -625,7 +639,7 @@ async function homepageScreen() {
     <div id="pub"></div>
 
     <h2>1. Your photos</h2>
-    ${d.slides.length > 1 ? '<p class="hint">To change the order, hold <strong>⠿ Drag</strong> and move the photo up or down.</p>' : ''}
+    ${d.slides.length > 1 ? '<p class="hint">To change the order, drag a photo by its <strong>⠿ Drag</strong> handle.</p>' : ''}
     <ul class="photos photos--rows" id="hphotos">${d.slides.map((sl, i) => `<li class="photo${i === 0 ? ' photo--cover' : ''}" data-id="${esc(sl.id)}">
       <div class="photo__img"><img src="/api/homepage/photo/${esc(sl.id)}?w=800" alt="Homepage photo ${i + 1}" loading="lazy" style="object-position:${esc(sl.focus)}"></div>
       <div class="photo__bar">
@@ -633,7 +647,7 @@ async function homepageScreen() {
         <span class="photo__label">${i === 0 ? '<span class="cover">★ Photo 1 – shows first</span>' : `Photo ${i + 1}`}</span>
       </div>
       <div class="photo__focus" role="group" aria-label="On phones, keep this part of photo ${i + 1} in view">
-        <span class="photo__focus-label">On phones, keep in view:</span>
+        <span class="photo__focus-label">On phones, keep this part in view:</span>
         ${FOCUS.map((f) => `<button type="button" class="seg${nearestFocus(sl.focus) === f.v ? ' is-on' : ''}" data-focus="${esc(sl.id)}" data-v="${f.v}" aria-pressed="${nearestFocus(sl.focus) === f.v}">${f.label}</button>`).join('')}
       </div>
       <div class="photo__bar">
@@ -641,7 +655,7 @@ async function homepageScreen() {
         <span class="btn btn--small file-btn">Replace<input type="file" accept="image/*,.heic,.heif" data-replace="${esc(sl.id)}" aria-label="Replace photo ${i + 1}"></span>
         ${d.slides.length > 1 ? `<button type="button" class="btn btn--small btn--danger" data-remove="${esc(sl.id)}" aria-label="Remove photo ${i + 1}">Remove</button>` : ''}
       </div></li>`).join('')}</ul>
-    ${dropZoneHtml('addhero', '+ Add photos', 'Tap to choose from your phone — or drag photos here on a computer')}
+    ${dropZoneHtml('addhero', '+ Add photos', 'Click to choose photos — or drag them here from a folder')}
     <ul class="upload-list" id="uploads" aria-live="polite"></ul>
     <p class="hint">Wide (landscape) photos look best. Tall photos get trimmed at the top and bottom.</p>
 
@@ -655,7 +669,7 @@ async function homepageScreen() {
       <label class="radio"><input type="radio" name="fade" value="off" ${d.fade ? '' : 'checked'}> <span><strong>Off</strong> (recommended)<br><span class="hint">Photos switch cleanly</span></span></label>
       <label class="radio"><input type="radio" name="fade" value="on" ${d.fade ? 'checked' : ''}> <span><strong>On</strong><br><span class="hint">Each photo slowly fades into the next</span></span></label>
     </div></fieldset>
-    <p class="hint">Visitors who have "reduce motion" turned on in their phone settings see Photo 1 only.</p>
+    <p class="hint">Visitors who have "reduce motion" turned on in their device settings see Photo 1 only.</p>
 
     ${H.hasUnpublishedChanges ? '<p style="margin-top:1.5rem"><button type="button" class="btn btn--small" data-discard>Undo my unpublished changes</button></p>' : ''}
     <p class="hint" style="margin-top:1rem">Want to see it in design option 2? <a href="/api/homepage/preview?design=option2" target="_blank" rel="noopener">Preview option 2</a></p>
@@ -676,7 +690,7 @@ async function homepageScreen() {
     try { H = await api(method, path, { ...body, baseRevision: H.revision }); return true; } catch (err) { showError(err); return false; }
   }
   const order = () => H.draft.slides.map((x) => x.id);
-  const arrange = async (ord, focus) => { if (await save('PUT', '/homepage/photos', { order: ord, focus })) { ok(''); toast('Saved. Tap Publish when you\'re ready.'); } };
+  const arrange = async (ord, focus) => { if (await save('PUT', '/homepage/photos', { order: ord, focus })) { ok(''); toast('Saved. Click Publish when you\'re ready.'); } };
 
   async function upload(files, replaceId = null) {
     if (!files.length) return;
@@ -707,7 +721,7 @@ async function homepageScreen() {
     const added = files.length - failed;
     banner = failed
       ? `<div class="note note--warn"><p>${added} of ${files.length} photos added. The others are listed below with what to do.</p></div>`
-      : `<div class="note note--ok"><p>${added === 1 ? 'Photo added' : added + ' photos added'} to the end of the slideshow. Drag to change the order, then tap <strong>Publish</strong>.${tall ? ' Tip: tall photos get trimmed – use "Keep in view" to choose what shows.' : ''}</p></div>`;
+      : `<div class="note note--ok"><p>${added === 1 ? 'Photo added' : added + ' photos added'} to the end of the slideshow. Drag to change the order, then click <strong>Publish</strong>.${tall ? ' Tip: tall photos get trimmed – use "Keep in view" to choose what shows.' : ''}</p></div>`;
     render();
     if (failed) document.getElementById('uploads').innerHTML = summary;
   }
@@ -721,12 +735,12 @@ async function homepageScreen() {
     app.querySelectorAll('[data-focus]').forEach((b) => b.addEventListener('click', () => arrange(order(), { [b.dataset.focus]: b.dataset.v })));
     app.querySelectorAll('[data-remove]').forEach((b) => b.addEventListener('click', async () => {
       if (!(await confirmBox({ title: 'Remove this photo from the slideshow?', body: 'Visitors keep seeing it until you publish. You can undo before publishing.', yes: 'Remove photo', danger: true }))) return;
-      try { H = await api('DELETE', `/homepage/photos/${b.dataset.remove}?baseRevision=${H.revision}`); ok(''); toast('Photo removed. Tap Publish when you\'re ready.'); } catch (err) { showError(err); }
+      try { H = await api('DELETE', `/homepage/photos/${b.dataset.remove}?baseRevision=${H.revision}`); ok(''); toast('Photo removed. Click Publish when you\'re ready.'); } catch (err) { showError(err); }
     }));
     app.querySelectorAll('input[name=speed], input[name=fade]').forEach((r) => r.addEventListener('change', async () => {
       const seconds = Number(app.querySelector('input[name=speed]:checked').value);
       const fade = app.querySelector('input[name=fade]:checked').value === 'on';
-      if (await save('PUT', '/homepage/settings', { seconds, fade })) { ok(''); toast('Saved. Tap Preview to watch it, or Publish to put it live.'); }
+      if (await save('PUT', '/homepage/settings', { seconds, fade })) { ok(''); toast('Saved. Click Preview to watch it, or Publish to put it live.'); }
     }));
     app.querySelector('[data-discard]')?.addEventListener('click', async () => {
       if (!(await confirmBox({ title: 'Undo unpublished changes?', body: 'The slideshow goes back to exactly what is on the website now.', yes: 'Undo changes', danger: true }))) return;

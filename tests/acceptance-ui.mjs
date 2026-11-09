@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Phone-screen acceptance run of the owner editor UI against the REAL repo + GitHub Pages.
+// Laptop-screen acceptance run of the owner editor UI against the REAL repo + GitHub Pages.
 // Usage: node tests/acceptance-ui.mjs <phase> <mirror-clone-dir>
 // Phases: add | edit | sold | takedown | restore | requests | failures | cleanup
 // Not part of `npm test` (it pushes real commits). Screenshots go to /tmp/acc/.
@@ -19,7 +19,8 @@ const mirror = realMirror(mirrorDir);
 const E = await startEditor({ port: 8790, mirror, siteUrl: SITE, persist: `${out}/persist` });
 const browser = await puppeteer.launch({ executablePath: '/usr/bin/google-chrome', headless: true, args: ['--no-sandbox'] });
 const page = await browser.newPage();
-await page.emulate({ viewport: { width: 390, height: 844, deviceScaleFactor: 2, isMobile: true, hasTouch: true }, userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1' });
+// Dan edits on a laptop.
+await page.emulate({ viewport: { width: 1366, height: 768, deviceScaleFactor: 1, isMobile: false, hasTouch: false }, userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36' });
 await page.setExtraHTTPHeaders({ 'Cf-Access-Jwt-Assertion': accessToken(OWNER, { exp: Math.floor(Date.now() / 1000) + 7200 }) });
 // The preview page loads the public site's stylesheet; serve it from the local build so screenshots are styled.
 await page.setRequestInterception(true);
@@ -94,7 +95,7 @@ try {
     log('signed-out GET preview →', anonPrev.status);
     // Preview.
     const pv = await browser.newPage();
-    await pv.emulate({ viewport: { width: 390, height: 844, deviceScaleFactor: 2, isMobile: true, hasTouch: true }, userAgent: 'iPhone' });
+    await pv.emulate({ viewport: { width: 390, height: 844, deviceScaleFactor: 2, isMobile: true, hasTouch: true }, userAgent: 'Mozilla/5.0 (Windows NT 10.0) Chrome/130' }); // buyer's phone view of the preview
     await pv.setExtraHTTPHeaders({ 'Cf-Access-Jwt-Assertion': accessToken(OWNER) });
     await pv.setRequestInterception(true);
     pv.on('request', (r) => { const u = r.url(); if (u.startsWith(SITE + '/assets/')) { const f = `/home/claude/dan-mckenna-homes/public${u.slice(SITE.length).split('?')[0]}`; if (existsSync(f)) return r.respond({ status: 200, contentType: f.endsWith('.css') ? 'text/css' : f.endsWith('.js') ? 'text/javascript' : f.endsWith('.woff2') ? 'font/woff2' : 'image/png', body: readFileSync(f) }); } r.continue(); });

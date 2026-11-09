@@ -17,7 +17,7 @@ Technical setup, deployment and recovery. Dan's guide is `OWNER-GUIDE.md`; AI/ma
 | Service | Used for | Plan / cost | Owner | Recovery |
 |---|---|---|---|---|
 | GitHub `jmcken19/dan-mckenna-homes` | code + published content, preview hosting | Free | James | Repo is the source of truth; everything public is in git history |
-| Cloudflare (Workers, D1, KV, Access, Pages) | editor, sign-in, private drafts/photos, production hosting | Free plan (Workers 100k req/day, D1 5 GB, KV 1 GB, Access ≤50 users). No card needed; over-limit requests fail rather than bill | Recommend Dan's business email as account owner, James as member | Account recovery via owner email + 2FA backup codes (store in Dan's password manager / printed) |
+| Cloudflare (Workers, D1, KV, Access, Pages) | editor, sign-in, private drafts/photos, production hosting | Free plan (Workers 100k req/day, D1 5 GB, KV 1 GB, Access ≤50 users). No card needed; over-limit requests fail rather than bill | Project shared with James's personal email (James runs setup). Write down who owns the account and how Dan gets in if James is unavailable | Account recovery via owner email + 2FA backup codes (store in Dan's password manager / printed) |
 | Resend | emails change requests to James | Free (3,000/mo) | James | Re-create API key → `wrangler secret put RESEND_API_KEY` |
 | Domain `danmckennahomes.com` | live site | Unknown registrar (currently pointed at Placester) | Dan | **Owner decision** before any DNS change |
 
@@ -129,6 +129,11 @@ HTTPS, same account as the editor):
 * Verified: API tests; phone-size UI run (finger drag, keyboard, drop-a-file on desktop); a real publish of a 3-photo,
   4 s, fade-on slideshow to the preview (both designs rotated on schedule), then restored to the original single photo
   through the editor (test photo files removed, status reported ✓ live).
+
+### Laptop only (owner decision, Nov 8)
+The editor refuses phone browsers (friendly "Please use your laptop" screen + server returns 403 `laptopOnly`).
+It's a house rule, not a security boundary (a browser can pretend to be a laptop) – sign-in is the security.
+To allow phones again: `npx wrangler secret put ALLOW_PHONES` → `true`.
 
 ## Recovery
 

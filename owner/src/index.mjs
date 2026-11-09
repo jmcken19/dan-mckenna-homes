@@ -51,9 +51,19 @@ export default {
   },
 };
 
+// Dan edits on his laptop only (owner's decision). Phones get a friendly refusal.
+// This is a house rule, not a security boundary – sign-in is the security boundary.
+export function isPhone(ua) {
+  ua = String(ua || '');
+  return /iPhone|iPod|Windows Phone|BlackBerry|Opera Mini|IEMobile/i.test(ua) || (/Android/i.test(ua) && /Mobile/i.test(ua));
+}
+
 async function handleApi(request, env, url, ctx) {
   const user = await authenticate(request, env);
   if (!user) throw new HttpError(401, 'Please sign in again.', { signIn: true });
+  if (env.ALLOW_PHONES !== 'true' && isPhone(request.headers.get('User-Agent'))) {
+    throw new HttpError(403, 'The website editor works on your laptop only. Please open your bookmark on your laptop.', { laptopOnly: true });
+  }
 
   const method = request.method;
   if (!['GET', 'HEAD'].includes(method)) {
