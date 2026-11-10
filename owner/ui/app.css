@@ -191,7 +191,7 @@ body.is-visual main { flex: 1 1 auto; min-height: 0; max-width: none; width: 100
 .vis__top { flex: none; display: flex; align-items: center; gap: .5rem 1.25rem; margin-bottom: .5rem; }
 .vis__pages { flex: 0 1 auto; min-width: 0; display: flex; align-items: center; gap: .5rem; }
 .vis__pagebtns { display: flex; flex-wrap: nowrap; gap: .4rem; overflow: hidden; min-width: 0; }
-.vis__pagebtns .seg { flex: none; max-width: 16ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.vis__pagebtns .seg { flex: none; max-width: 24ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .vis__select { display: none; width: auto; max-width: 22rem; min-height: 50px; padding: .35rem .75rem; font-weight: 600; border-color: var(--brand); }
 .vis__pages.is-select .vis__pagebtns { display: none; }
 .vis__pages.is-select .vis__select { display: block; }

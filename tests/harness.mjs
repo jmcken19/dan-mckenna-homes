@@ -173,7 +173,15 @@ export async function startEditor({ resend = true, port, mirror = null, siteUrl 
     if (idem !== false && method !== 'GET') h['Idempotency-Key'] = idem || 'k' + randomBytes(8).toString('hex');
     let payload;
     if (form) { const r = new Response(form); h['Content-Type'] = r.headers.get('content-type'); payload = Buffer.from(await r.arrayBuffer()); } else if (body !== undefined) { payload = JSON.stringify(body); h['Content-Type'] = 'application/json'; }
-    const res = await mf.dispatchFetch(url + path, { method, headers: h, body: payload });
+    // Miniflare's local connection very rarely drops a request (≈1 in 25 runs, seen on big uploads): retry it.
+    // The same Idempotency-Key goes with the retry, so the editor never does a save twice.
+    let res;
+    for (let attempt = 1; ; attempt++) {
+      try { res = await mf.dispatchFetch(url + path, { method, headers: h, body: payload }); break; } catch (e) {
+        if (attempt >= 3 || !/fetch failed/.test(String(e?.message))) throw e;
+        await new Promise((r) => setTimeout(r, 250));
+      }
+    }
     const text = await res.text();
     let data; try { data = JSON.parse(text); } catch { data = text; }
     return { status: res.status, data, headers: res.headers };

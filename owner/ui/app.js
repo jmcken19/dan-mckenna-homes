@@ -462,7 +462,7 @@ async function visualScreen() {
       </div>
       <div class="vis__status">
         <p class="actions__state" id="state"></p>
-        <p class="flash" id="flash" hidden></p>
+        <p class="flash" id="flash" role="status" hidden></p>
         <div id="vpub" class="vis__pub" aria-live="polite"></div>
       </div>
       <div class="vis__btns">
