@@ -2,7 +2,7 @@
   "_comment": "Site-wide facts. Every value here was copied from the live danmckennahomes.com in Nov 2026. Do not add facts that Dan has not confirmed. heroSlides/heroSlideSeconds/heroFade are managed from the editor's Homepage photos screen.",
   "name": "Dan McKenna Homes",
   "agent": "Dan McKenna",
-  "agentTitle": "NC/SC Broker/REALTOR\u00ae",
+  "agentTitle": "NC/SC Broker/REALTOR®",
   "tagline": "Experience Counts. Buy. Sell. Build. Relocate.",
   "phone": "704-441-4556",
   "phoneHref": "tel:+17044414556",
@@ -16,13 +16,19 @@
     "Marvin"
   ],
   "serviceAreaSentence": "Serving Charlotte, Waxhaw, Weddington, Marvin, and surrounding communities in North Carolina and South Carolina.",
-  "metaDescription": "Dan McKenna, NC/SC Broker/REALTOR\u00ae with Keller Williams Ballantyne Area, Charlotte, NC. Serving Charlotte, Waxhaw, Weddington, Marvin, and surrounding communities.",
+  "metaDescription": "Dan McKenna, NC/SC Broker/REALTOR® with Keller Williams Ballantyne Area, Charlotte, NC. Serving Charlotte, Waxhaw, Weddington, Marvin, and surrounding communities.",
   "heroSlides": [
     {
       "id": "s-hero1",
       "src": "/assets/img/hero-1",
       "alt": "Backyard patio with a stone fire pit, wicker chairs, and a pool surrounded by trees",
       "focus": "50% 70%"
+    },
+    {
+      "id": "s-fh6wzhnxaq",
+      "src": "/assets/img/hero/s-fh6wzhnxaq",
+      "alt": "Homepage photo",
+      "focus": "50% 50%"
     }
   ],
   "heroSlideSeconds": 7,
