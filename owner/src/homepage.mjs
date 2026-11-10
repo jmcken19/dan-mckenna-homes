@@ -8,6 +8,7 @@ import { layout } from '../../src/templates/layout.mjs';
 import { homePage, aboutPage, contactPage, newConstructionPage, luxuryPage, testimonialsPage } from '../../src/templates/pages.mjs';
 import { PHOTO_SPOTS, sitePhoto, validatePhotos } from '../../src/lib/photos.mjs';
 import { luxLayout, luxHome } from '../../src/templates/luxury.mjs';
+import { previewHeaders, markPreview, parseReviewsDraft } from './preview.mjs';
 import siteContent from '../../content/site.json';
 import testimonialsContent from '../../content/testimonials.json';
 
@@ -87,7 +88,7 @@ export function homepageRoutes(H) {
     const cols = Object.keys(fields);
     const vals = cols.map((c) => ((c === 'draft' || c === 'live') && fields[c] && typeof fields[c] === 'object' ? JSON.stringify(fields[c]) : fields[c]));
     const res = await A.db.prepare(`UPDATE settings SET ${cols.map((c) => `${c} = ?`).join(', ')}, revision = revision + 1 WHERE key = ? AND revision = ?`).bind(...vals, KEY, expectedRevision).run();
-    if (!res.meta.changes) throw new HttpError(409, 'The homepage photos were changed on another phone or computer since you opened this page. Tap "Reload latest" to see the newest version.', { conflict: true });
+    if (!res.meta.changes) throw new HttpError(409, 'The homepage photos were changed on another computer since you opened this page. Click "Reload latest" to see the newest version.', { conflict: true });
     return readRow(A);
   }
 
@@ -212,7 +213,7 @@ export function homepageRoutes(H) {
       const row = await load(A);
       const byId = new Map(row.draft.slides.map((s) => [s.id, s]));
       const order = Array.isArray(body.order) ? body.order : [];
-      if (order.length !== byId.size || !order.every((x) => byId.has(x))) throw new HttpError(409, 'The photos changed since you opened this page. Please tap "Reload latest".', { conflict: true });
+      if (order.length !== byId.size || !order.every((x) => byId.has(x))) throw new HttpError(409, 'The photos changed since you opened this page. Please click "Reload latest".', { conflict: true });
       const focus = body.focus && typeof body.focus === 'object' ? body.focus : {};
       const alts = body.alts && typeof body.alts === 'object' ? body.alts : {};
       const slides = order.map((id) => {
@@ -281,7 +282,7 @@ export function homepageRoutes(H) {
       const pg = PAGES[A.url.searchParams.get('page')] || Object.values(PAGES).find((p) => p.path === A.url.searchParams.get('path')) || PAGES.home;
       // Reviews: show Dan's unpublished review changes too, so the page is exactly what Publish will make.
       const rrow = await A.db.prepare('SELECT draft FROM settings WHERE key = ?').bind('reviews').first();
-      const testimonials = rrow ? (JSON.parse(rrow.draft).items || []) : testimonialsContent.items;
+      const testimonials = rrow ? parseReviewsDraft(rrow.draft, testimonialsContent.items) : testimonialsContent.items;
       const ctx = {
         site, preview: true, editMode, siteUrl: '', buildId: 'preview-' + Date.now(), listings: [], removed: [], testimonials,
         // Templates build photo addresses as url(src) + "-800.jpg", so a slide's src maps to a
@@ -296,13 +297,7 @@ export function homepageRoutes(H) {
       const html = design === 'option2'
         ? luxLayout(ctx, { path: pg.path, title: pg.title, body: (pg.lux || pg.classic)(ctx) })
         : layout(ctx, { path: pg.path, title: pg.title, body: pg.classic(ctx) });
-      const origin = publicBase(A.env) ? new URL(publicBase(A.env)).origin : "'self'";
-      return new Response(html, {
-        headers: {
-          'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store', 'X-Robots-Tag': 'noindex',
-          'Content-Security-Policy': `default-src 'none'; img-src 'self' ${origin}; style-src ${origin} 'unsafe-inline'; font-src ${origin}; script-src ${origin}; manifest-src ${origin}; frame-ancestors 'self'; base-uri 'none'; form-action 'none'`,
-        },
-      });
+      return new Response(editMode ? markPreview(html) : html, { headers: previewHeaders(publicBase(A.env)) });
     },
 
     async publish(A) {
@@ -311,7 +306,7 @@ export function homepageRoutes(H) {
       const body = await readJsonBody(A.request);
       const rev = needRevision(body);
       const row = await load(A);
-      if (row.revision !== rev) throw new HttpError(409, 'The homepage photos were changed on another phone or computer. Tap "Reload latest" first.', { conflict: true });
+      if (row.revision !== rev) throw new HttpError(409, 'The homepage photos were changed on another computer. Click "Reload latest" first.', { conflict: true });
       const t = Date.now();
       const lock = await A.db.prepare('UPDATE settings SET lock_until = ? WHERE key = ? AND (lock_until IS NULL OR lock_until < ?)').bind(t + 90_000, KEY, t).run();
       if (!lock.meta.changes) throw new HttpError(409, 'The homepage is already being published. Please wait a minute.');

@@ -31,7 +31,7 @@ export function layout(ctx, { path, title, description, body, bodyClass = '', og
 <title>${e(fullTitle)}</title>
 <meta name="description" content="${e(description || site.metaDescription)}">
 ${preview ? '<meta name="robots" content="noindex, nofollow, noarchive">' : ''}
-${preview ? '<script>try{if(localStorage.getItem("dmhHidePreview")==="1")document.documentElement.classList.add("preview-hidden")}catch(e){}</script>' : ''}
+${preview && !ctx.editMode ? '<script>try{if(localStorage.getItem("dmhHidePreview")==="1")document.documentElement.classList.add("preview-hidden")}catch(e){}</script>' : ''}
 ${canonical && !preview ? `<link rel="canonical" href="${e(canonical)}">` : ''}
 <meta property="og:title" content="${e(fullTitle)}">
 <meta property="og:description" content="${e(description || site.metaDescription)}">

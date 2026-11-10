@@ -20,6 +20,8 @@ export default {
     else h.set('X-Robots-Tag', 'noindex, nofollow');
     // The editor checks this file to know when a change is live, so it must never be cached.
     if (url.pathname === '/version.json') h.set('Cache-Control', 'no-store');
+    // The owner editor shows this site's pages from its own address; fonts need CORS to load there.
+    if (/\.(woff2?|ttf|otf)$/i.test(url.pathname)) h.set('Access-Control-Allow-Origin', '*');
     return out;
   },
 };

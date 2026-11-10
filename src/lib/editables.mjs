@@ -5,17 +5,17 @@
 // the page and puts the right tool on each one. So a client's editor automatically matches what is
 // on THEIR site: if their site uses a slideshow and two photo spots, those three get ✎ buttons.
 //
-// To make something new editable (e.g. a video): 1) add a kind below, 2) call editMark() in the part
-// that draws it, 3) add the matching panel in owner/ui/app.js (KIND_TOOLS) and its save/publish route
-// in owner/src/ (homepage.mjs for photos, reviews.mjs for reviews). Ported from client-site-template.
+// To make something new editable (e.g. a video): add a kind below, call editMark() in the part that draws it,
+// then follow "Adding a new kind" in client-site-template's docs/EDITOR.md (server route + preview merge +
+// DRAFT_SOURCES + KIND_TOOLS panel in owner/ui/app.js). Ported from client-site-template.
 import { escapeHtml as e } from './listing.mjs';
 
-/** Kinds of things the owner can change. `button` is the ✎ label shown on the page. */
+/** Kinds of things the owner can change. The ✎ button's words live in owner/ui/app.js → KIND_TOOLS. */
 export const EDIT_KINDS = {
-  slideshow: { button: 'Change these photos', what: 'The big photos at the top' },
-  photo: { button: 'Change photo', what: 'A photo' },
-  reviews: { button: 'Change reviews', what: 'Client reviews' },
-  review: { button: 'Edit', what: 'One review' },
+  slideshow: { what: 'The big photos at the top' },
+  photo: { what: 'A photo' },
+  reviews: { what: 'Client reviews' },
+  review: { what: 'One review' },
   // Planned (not built yet): text, video, videos, hours, team …
 };
 

@@ -5,6 +5,7 @@ import { github } from './github.mjs';
 import { slugify } from '../../src/lib/listing.mjs';
 import { layout } from '../../src/templates/layout.mjs';
 import { testimonialsPage } from '../../src/templates/pages.mjs';
+import { previewHeaders } from './preview.mjs';
 import siteContent from '../../content/site.json';
 import testimonialsContent from '../../content/testimonials.json';
 
@@ -76,7 +77,8 @@ export function reviewsRoutes(H) {
     if (!res.meta.changes) throw new HttpError(409, 'The reviews were changed on another computer since you opened this page. Click "Reload latest" to see the newest version.', { conflict: true });
     return readRow(A);
   }
-  const uniqueSlug = (base, taken) => { let s = base || 'review'; let n = 2; while (taken.has(s)) s = `${base}-${n++}`; return s; };
+  // A title with no Latin letters (emoji, ★★★★★, other alphabets) gives no slug: use the review's date instead.
+  const uniqueSlug = (base, taken, date = '') => { const b = base || `review${date ? '-' + date : ''}`; let s = b; let n = 2; while (taken.has(s)) s = `${b}-${n++}`; return s; };
 
   const routes = {
     async get(A) { return json(view(await load(A))); },
@@ -87,7 +89,7 @@ export function reviewsRoutes(H) {
       const row = await load(A);
       const r = cleanReview(body.fields, HttpError);
       const taken = new Set([...row.draft.items, ...row.live.items].map((x) => x.slug));
-      const item = { slug: uniqueSlug(slugify(r.title).slice(0, 60), taken), ...r };
+      const item = { slug: uniqueSlug(slugify(r.title).slice(0, 60).replace(/^-+|-+$/g, ''), taken, r.date), ...r };
       const updated = await write(A, { draft: { items: [item, ...row.draft.items] } }, rev);
       await logEvent(A, 'save-review-add', null, { slug: item.slug });
       return json(view(updated));
@@ -135,13 +137,7 @@ export function reviewsRoutes(H) {
       const base = publicBase(A.env);
       const ctx = { site: siteContent, preview: true, siteUrl: '', buildId: 'preview-' + Date.now(), listings: [], removed: [], testimonials: row.draft.items, url: (p) => base + p };
       const html = layout(ctx, { path: '/testimonials/', title: 'Testimonials', body: testimonialsPage(ctx) });
-      const origin = base ? new URL(base).origin : "'self'";
-      return new Response(html, {
-        headers: {
-          'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store', 'X-Robots-Tag': 'noindex',
-          'Content-Security-Policy': `default-src 'none'; img-src 'self' ${origin}; style-src ${origin} 'unsafe-inline'; font-src ${origin}; script-src ${origin}; manifest-src ${origin}; frame-ancestors 'self'; base-uri 'none'; form-action 'none'`,
-        },
-      });
+      return new Response(html, { headers: previewHeaders(base) });
     },
 
     async publish(A) {

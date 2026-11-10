@@ -194,7 +194,7 @@ async function writeListing(A, r, changes, expectedRevision) {
   const res = await A.db.prepare(`UPDATE listings SET ${cols.map((c) => `${c} = ?`).join(', ')}, revision = revision + 1 WHERE id = ? AND revision = ?`)
     .bind(...vals, r.id, expectedRevision).run();
   if (!res.meta.changes) {
-    throw new HttpError(409, 'This listing was changed on another phone or computer since you opened it. Your typing is still on screen — tap "Reload latest" to see the newest version, then re-apply your change.', { conflict: true });
+    throw new HttpError(409, 'This listing was changed on another computer since you opened it. Your typing is still on screen — click "Reload latest" to see the newest version, then re-apply your change.', { conflict: true });
   }
   return getListing(A.db, r.id);
 }
@@ -476,7 +476,7 @@ async function publish(A, id, { restoring = false, statusOverride = null } = {})
   const body = await readJsonBody(A.request);
   const rev = needRevision(body);
   let r = await getListing(A.db, id);
-  if (r.revision !== rev) throw new HttpError(409, 'This listing was changed on another phone or computer since you opened it. Tap "Reload latest" first.', { conflict: true });
+  if (r.revision !== rev) throw new HttpError(409, 'This listing was changed on another computer since you opened it. Click "Reload latest" first.', { conflict: true });
   const draft = statusOverride ? { ...r.draft, status: statusOverride } : r.draft;
   const { errors } = normaliseFields(draft);
   if (Object.keys(errors).length) throw new HttpError(422, 'Please fix the highlighted boxes before publishing.', { fieldErrors: errors });
@@ -531,7 +531,7 @@ async function takeDown(A, id) {
   const body = await readJsonBody(A.request);
   const rev = needRevision(body);
   const r = await getListing(A.db, id);
-  if (r.revision !== rev) throw new HttpError(409, 'This listing was changed on another phone or computer. Tap "Reload latest" first.', { conflict: true });
+  if (r.revision !== rev) throw new HttpError(409, 'This listing was changed on another computer. Click "Reload latest" first.', { conflict: true });
   if (r.visibility !== 'published') throw new HttpError(400, 'This listing is not on the website.');
   await acquireLock(A, r);
   try {
