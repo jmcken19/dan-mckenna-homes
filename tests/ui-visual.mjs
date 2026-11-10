@@ -94,8 +94,8 @@ try {
   const homeLink = await f.$('header a[href$="/about-us/"]');
   assert.ok(homeLink, 'the page has a menu link to About us');
   await homeLink.click();
-  await f.waitForSelector('.jte-tbar [data-go]');
-  await (await f.$('.jte-tbar [data-go]')).click();
+  await page.waitForSelector('.jte-tbar [data-go]');
+  await (await page.$('.jte-tbar [data-go]')).click();
   await onPage('/about-us/');
   assert.equal(await page.$eval('#pagesel', (s) => s.value), '/about-us/', 'a link in the page switched the editor to that page');
 
@@ -222,6 +222,14 @@ try {
     reviewOrder = want;
     await page.click('#drawer [data-close]');
   }
+
+  // "Website Editor" at the top always goes back to the Home page.
+  { const away = (await page.$$eval('[data-page]', (bs) => bs.map((b) => b.dataset.page))).find((x) => x !== '/');
+    if (away) { await page.evaluate((x) => { const b = document.querySelector(`[data-page="${x}"]`); if (b && b.offsetParent) b.click(); else { const s = document.querySelector('#pagesel'); s.value = x; s.dispatchEvent(new Event('change')); } }, away);
+      await waitFrame((x) => location.search.includes('path=' + encodeURIComponent(x)), away);
+      await page.click('.bar__home');
+      await waitFrame(() => /[?&]path=%2F(&|$)/.test(location.search));
+    } }
 
   // 6. Phone view.
   await page.click('[data-device="phone"]');

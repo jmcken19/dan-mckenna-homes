@@ -316,8 +316,8 @@ try {
     const f = await fr();
     assert.match(await f.$eval(`a[href$="${other}"]`, (a) => a.href), /\/calm-site\//, 'links carry the sub-path');
     await f.click(`a[href$="${other}"]`); // clicking a link's words edits them; the toolbar opens the page it goes to
-    await f.waitForSelector('.jte-tbar [data-go]');
-    await (await f.$('.jte-tbar [data-go]')).click();
+    await p.waitForSelector('.jte-tbar [data-go]');
+    await (await p.$('.jte-tbar [data-go]')).click();
     await wf((q) => location.search.includes(`path=${q}&`), encodeURIComponent(other));
     // Hand-written links of other kinds, as copied client sites often have.
     const add = async (html) => (await fr()).evaluate((h) => { const d = document.createElement('div'); d.id = 'jte-test-links'; d.innerHTML = h; document.querySelector('main').prepend(d); }, html);

@@ -268,3 +268,18 @@ body.is-visual main { flex: 1 1 auto; min-height: 0; max-width: none; width: 100
 .publine--bad { color: var(--danger); }
 .publine__x { border: 0; background: none; font: inherit; font-size: 1.5rem; line-height: 1; padding: .25rem .5rem; cursor: pointer; color: var(--ink); min-width: 44px; min-height: 44px; }
 body.is-visual #toast { display: none; }
+
+/* Save/Cancel strip for changing words – below the page, never on top of it */
+.textbar { flex: none; margin-top: .5rem; padding: .6rem .9rem; border: 3px solid #1d5fc4; border-radius: 12px; background: #fff; box-shadow: 0 2px 12px rgba(0,0,0,.12); }
+.textbar[hidden] { display: none; }
+.jte-tbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .5rem 1rem; }
+.jte-tbar__info { flex: 1 1 320px; min-width: 0; }
+.jte-tbar__info p { margin: .15rem 0; font-size: 1.05rem; }
+.jte-tbar__must { padding: .3rem .7rem; background: #fff7e6; border-left: 4px solid #8a5a00; }
+.jte-tbar__err { margin: .3rem 0; padding: .4rem .7rem; background: #fdeeee; border-left: 4px solid #b3261e; font-weight: 600; }
+.jte-tbar__err[hidden] { display: none; }
+.jte-tbar__err p { margin: 0 0 .3rem; }
+.jte-tbar__btns { display: flex; gap: .6rem; flex: none; }
+.jte-tbar__input { display: block; width: 100%; min-height: 52px; margin: .2rem 0; padding: .5rem .8rem; border: 2px solid #8a8a94; border-radius: 10px; font-size: 1.15rem; }
+.jte-tbar__input:focus { border-color: #1d5fc4; outline: none; }
+.bar__home { cursor: pointer; }

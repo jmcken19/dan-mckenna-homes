@@ -360,6 +360,12 @@ function laptopOnlyScreen() {
   <p class="hint">Took photos on your phone? Send them to your laptop first (for example by email or Google Photos), then add them in the editor.</p>`);
 }
 
+// "Website Editor" at the top always goes back to the Home page.
+document.querySelector('.bar__home')?.addEventListener('click', (e) => {
+  store.set(KEYS.page, '/');
+  if (location.hash === '#/' || location.hash === '') { e.preventDefault(); route(); }
+});
+
 async function route() {
   if (isPhoneDevice()) return laptopOnlyScreen();
   if (unsavedGuard && unsavedGuard() && !(await confirmBox({ title: 'Leave without saving?', body: 'You have typing that is not saved yet.', yes: 'Leave anyway', no: 'Stay here', danger: true }))) {
@@ -513,6 +519,7 @@ async function visualScreen() {
         <div class="drawer__body" id="drawer-body"></div>
       </aside>
     </div>
+    <div class="textbar" id="textbar" hidden></div>
     <div class="vis__bar">
       <div class="vis__device" role="group" aria-label="See it on">
         <span class="vis__label">See it on:</span>
@@ -786,17 +793,17 @@ async function visualScreen() {
   function buildBar(x) {
     const doc = x.el.ownerDocument;
     const go = x.link && (() => { const to = sitePathOf(x.link.getAttribute('href') || ''); return to && pages.find((p) => (p.path === to || p.path === to + '/') && p.path !== path); })();
-    const bar = doc.createElement('div');
+    const bar = document.createElement('div');
     bar.className = 'jte-tbar'; bar.setAttribute('role', 'group'); bar.setAttribute('aria-label', 'Change these words');
-    bar.innerHTML = `<p class="jte-tbar__what">✎ ${esc(x.label)}</p>
+    bar.innerHTML = `<div class="jte-tbar__info">
       ${x.input ? `<input class="jte-tbar__input" type="text" aria-label="New words" value="${esc(x.el.textContent.replace(/\s+/g, ' ').trim())}">` : ''}
       <p>${x.input ? 'Type the new words in the box.' : x.multi === 'li' ? 'Type right on the page. <strong>Enter</strong> starts a new line in the list.' : x.multi ? 'Type right on the page. <strong>Enter</strong> starts a new paragraph.' : 'Type right on the page. <strong>Enter</strong> saves.'}</p>
       ${x.must ? '<p class="jte-tbar__must">This must stay on your website. You can change the words, but not remove them.</p>' : ''}
       ${x.kind === 'phone' ? '<p>This is your phone number – the Call and Text buttons use it.</p>' : x.kind === 'email' ? '<p>This is your email address – the Email buttons use it.</p>' : ''}
-      ${x.link ? `<p>Only the words change – the link still goes to the same place.${go ? ` <button type="button" class="jte-b jte-b--small" data-go="${esc(go.path)}">Open “${esc(go.title)}”</button>` : ''}</p>` : ''}
-      <div class="jte-tbar__err" role="alert" hidden></div>
-      <div class="jte-tbar__btns"><button type="button" class="jte-b jte-b--save" data-save>Save – show it on my page</button><button type="button" class="jte-b" data-cancel>Cancel</button></div>`;
-    doc.body.appendChild(bar);
+      ${x.link ? `<p>Only the words change – the link still goes to the same place.${go ? ` <button type="button" class="btn btn--small" data-go="${esc(go.path)}">Open “${esc(go.title)}”</button>` : ''}</p>` : ''}
+      <div class="jte-tbar__err" role="alert" hidden></div></div>
+      <div class="jte-tbar__btns"><button type="button" class="btn btn--primary" data-save>Save – show it on my page</button><button type="button" class="btn" data-cancel>Cancel</button></div>`;
+    const slot = document.getElementById('textbar'); slot.replaceChildren(bar); slot.hidden = false;
     x.bar = bar;
     if (x.input) {
       x.input = bar.querySelector('.jte-tbar__input');
@@ -814,20 +821,13 @@ async function visualScreen() {
   }
 
   function placeBar() {
-    const x = te; if (!x?.bar) return;
-    const bar = x.bar, win = x.el.ownerDocument.defaultView;
-    const r = x.el.getBoundingClientRect(), h = bar.offsetHeight, w = bar.offsetWidth, vh = win.innerHeight;
-    const fixed = isFixed(x.el) || r.height > vh * 0.45; // tall paragraphs: the toolbar stays at the bottom of the window
-    bar.classList.toggle('is-fixed', fixed);
-    const sx = fixed ? 0 : win.scrollX, sy = fixed ? 0 : win.scrollY;
-    let top;
-    if (r.height > vh * 0.45) top = vh - h - 12;
-    else if (r.bottom + 12 + h <= vh || r.top - 12 - h < 0) top = r.bottom + 12;
-    else top = r.top - 12 - h;
-    bar.style.top = `${Math.max(8, top) + sy}px`;
-    bar.style.left = `${Math.max(8, Math.min(win.innerWidth - w - 8, r.left)) + sx}px`;
-    if (!fixed) { const b = bar.getBoundingClientRect(); if (b.bottom > vh) win.scrollBy(0, b.bottom - vh + 12); else if (b.top < 0) win.scrollBy(0, b.top - 12); }
+    // The Save/Cancel strip sits below the page (outside it), so it never covers the words.
+    // Only make sure the words being changed stay in view.
+    const x = te; if (!x) return;
+    const win = x.el.ownerDocument.defaultView, r = x.el.getBoundingClientRect(), vh = win.innerHeight;
+    if (r.height < vh - 24) { if (r.bottom > vh - 12) win.scrollBy(0, r.bottom - vh + 24); else if (r.top < 8) win.scrollBy(0, r.top - 24); }
   }
+
 
   function barError(html, isHtml = false) {
     const box = te?.bar?.querySelector('.jte-tbar__err'); if (!box) return;
@@ -876,6 +876,7 @@ async function visualScreen() {
     te = null;
     if (unsavedGuard) unsavedGuard = null;
     x.bar?.remove();
+    const slot = document.getElementById('textbar'); if (slot && !slot.children.length) slot.hidden = true;
     if (x.onKey) { x.el.removeEventListener('keydown', x.onKey); x.el.removeEventListener('input', x.onInput); x.el.removeEventListener('paste', x.onPaste); x.el.removeEventListener('drop', x.onDrop); }
     x.el.removeAttribute('contenteditable');
     x.el.classList.remove('jte-editing');

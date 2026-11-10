@@ -19,8 +19,8 @@ const pickPage = async (p) => {
 const ready = (p) => waitFrame((q) => location.search.includes(`path=${q}&`) && document.readyState === 'complete' && !!document.querySelector('.jte-tpen'), encodeURIComponent(p));
 const repoText = () => JSON.parse(E.gh.read('content/text.json').toString());
 const T = async () => (await E.call('GET', '/api/text')).data;
-const editing = async () => (await frame()).evaluate(() => { const el = document.querySelector('.jte-editing'); return el ? { key: el.dataset.editKey, ce: el.getAttribute('contenteditable'), bar: !!document.querySelector('.jte-tbar') } : null; });
-const barText = async () => (await frame()).$eval('.jte-tbar', (b) => b.innerText);
+const editing = async () => (await frame()).evaluate(() => { const el = document.querySelector('.jte-editing'); return el ? { key: el.dataset.editKey, ce: el.getAttribute('contenteditable'), bar: false } : null; });
+const barText = async () => page.$eval('.jte-tbar', (b) => b.innerText);
 const selectAll = async () => { await page.keyboard.down('Control'); await page.keyboard.press('KeyA'); await page.keyboard.up('Control'); };
 const clickWords = async (sel) => { const f = await frame(); await f.$eval(sel, (el) => el.scrollIntoView({ block: 'center' })); await sleep(150); await (await f.$(sel)).click(); await sleep(250); };
 const wordsOf = async (sel) => (await frame()).$eval(sel, (el) => el.innerText.trim());
@@ -63,8 +63,10 @@ try {
   // 2. Click the heading → typing right on the page, toolbar next to it; Enter saves; the page shows it.
   await clickWords('#jt-heading');
   let ed = await editing();
-  assert.equal(ed.key, H.key); assert.equal(ed.ce, 'plaintext-only'); assert.ok(ed.bar, 'toolbar');
+  assert.equal(ed.key, H.key); assert.equal(ed.ce, 'plaintext-only'); assert.ok(await page.$('#textbar:not([hidden]) .jte-tbar'), 'toolbar');
   assert.match(await barText(), /Save – show it on my page/); assert.match(await barText(), /Cancel/);
+  assert.equal(await (await frame()).$('.jte-tbar'), null, 'the Save/Cancel strip is outside the page, never on top of the words');
+  assert.ok(await page.$eval('#textbar', (t) => !t.hidden && t.getBoundingClientRect().top >= document.querySelector('#stage').getBoundingClientRect().bottom - 1), 'strip sits below the page');
   await selectAll(); await page.keyboard.type('Fresh heading words');
   await shot('t02-editing-heading');
   await page.keyboard.press('Enter');
@@ -87,7 +89,7 @@ try {
     await page.keyboard.press('Enter'); await page.keyboard.type('Second new paragraph.');
     assert.equal(await f.$$eval('#jt-multi p', (ps) => ps.length), 2, 'Enter made a new paragraph on the page');
     await shot('t04-editing-paragraphs');
-    await (await f.$('.jte-tbar [data-save]')).click();
+    await (await page.$('.jte-tbar [data-save]')).click();
     await savedTo(MK, ['First new paragraph.', 'Second new paragraph.']);
     f = await waitFrame((k) => document.querySelectorAll(`[data-edit-key="${k}"] p`).length === 2 && !!document.querySelector('.jte-tpen'), MK);
     ran.push('paragraphs');
@@ -100,8 +102,8 @@ try {
   if (foot.must) {
     assert.match(await barText(), /This must stay on your website/);
     await selectAll(); await page.keyboard.press('Backspace');
-    await (await f.$('.jte-tbar [data-save]')).click(); await sleep(200);
-    assert.match(await (await frame()).$eval('.jte-tbar__err', (x) => x.innerText), /must stay on your website/, 'can\'t be emptied');
+    await (await page.$('.jte-tbar [data-save]')).click(); await sleep(200);
+    assert.match(await page.$eval('.jte-tbar__err', (x) => x.innerText), /must stay on your website/, 'can\'t be emptied');
   }
   await selectAll(); await page.keyboard.type(`${foot.words} Ltd`);
   await shot('t05-footer-edit');
@@ -120,13 +122,13 @@ try {
   f = await ready('/');
   assert.equal(await f.$eval(`nav a[href="${nav.href}"]`, (a) => a.innerText.trim()), `${nav.words} Us`, 'new label, same link address');
   await clickWords(`nav a[href="${nav.href}"] [data-edit="text"]`);
-  const go = await (await frame()).$('.jte-tbar [data-go]');
+  const go = await page.$('.jte-tbar [data-go]');
   if (go) {
     await go.click();
     const target = await page.evaluate(() => document.querySelector('#pagesel').value);
     assert.notEqual(target, '/', 'the link opened its page');
     f = await ready(target);
-  } else await (await (await frame()).$('.jte-tbar [data-cancel]')).click();
+  } else await (await page.$('.jte-tbar [data-cancel]')).click();
   ran.push('menu label');
 
   // 6. Phone number: letters are refused with a clear message; Escape asks before throwing typing away.
@@ -137,7 +139,7 @@ try {
     assert.match(await barText(), /phone number/);
     await selectAll(); await page.keyboard.type('call me');
     await page.keyboard.press('Enter'); await sleep(200);
-    assert.match(await (await frame()).$eval('.jte-tbar__err', (x) => x.innerText), /phone number using numbers only/);
+    assert.match(await page.$eval('.jte-tbar__err', (x) => x.innerText), /phone number using numbers only/);
     assert.ok(await editing(), 'still typing after a refused save');
     await page.keyboard.press('Escape');
     await page.waitForSelector('dialog[open]');
@@ -180,8 +182,8 @@ try {
     const B = await f.evaluate(() => { const el = [...document.querySelectorAll('button [data-edit="text"]')].find((x) => x.getBoundingClientRect().width > 20 && !x.closest('.sr-focus, [hidden]')); if (!el) return null; el.id = 'jt-btn'; return { key: el.dataset.editKey, words: el.innerText.trim() }; });
     if (!B) continue;
     await clickWords('#jt-btn');
-    assert.ok(await (await frame()).$('.jte-tbar .jte-tbar__input'), 'a box to type in');
-    await (await frame()).$eval('.jte-tbar__input', (i) => i.select());
+    assert.ok(await page.$('.jte-tbar .jte-tbar__input'), 'a box to type in');
+    await page.$eval('.jte-tbar__input', (i) => i.select());
     await page.keyboard.type(`${B.words} now`);
     await page.keyboard.press('Enter');
     await savedTo(B.key, `${B.words} now`);
