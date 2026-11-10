@@ -308,7 +308,7 @@ export function homepageRoutes(H) {
       const html = design === 'option2'
         ? luxLayout(ctx, { path: pg.path, title: pg.title, body: (pg.lux || pg.classic)(ctx) })
         : layout(ctx, { path: pg.path, title: pg.title, body: pg.classic(ctx) });
-      return new Response(editMode ? markPreview(html) : html, { headers: previewHeaders(publicBase(A.env)) });
+      return new Response(markPreview(html), { headers: previewHeaders(publicBase(A.env)) });
     },
 
     async publish(A) {

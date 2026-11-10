@@ -283,3 +283,15 @@ body.is-visual #toast { display: none; }
 .jte-tbar__input { display: block; width: 100%; min-height: 52px; margin: .2rem 0; padding: .5rem .8rem; border: 2px solid #8a8a94; border-radius: 10px; font-size: 1.15rem; }
 .jte-tbar__input:focus { border-color: #1d5fc4; outline: none; }
 .bar__home { cursor: pointer; }
+
+/* See it as a visitor */
+.vis__device .btn--visitor { min-height: 50px; margin-left: .5rem; }
+.note--visitor { margin: .25rem 0 .5rem; border-left-color: #1d5fc4; background: #eef3fb; }
+.note--visitor p { margin: 0; display: flex; align-items: center; gap: 1rem; }
+.note--visitor p > span { flex: 1 1 auto; }
+.note--visitor p > .btn { flex: none; }
+.vis.is-visitor .vis__stage { border-color: #1d5fc4; }
+
+.jte-tbar__note { color: #4a4a55; font-size: .98rem !important; }
+.jte-tbar [data-save] { background: #1d5fc4; border-color: #1d5fc4; color: #fff; } /* Save is blue – only Publish uses the brand colour */
+.jte-tbar [data-save]:hover { background: #174ea0; }

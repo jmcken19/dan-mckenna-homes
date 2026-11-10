@@ -562,10 +562,10 @@ test('edit-on-the-page: edit marks only in edit mode, page picker, preview may b
   assert.equal(api.headers.get('X-Frame-Options'), 'DENY', 'everything else still refuses to be framed');
 });
 
-test('preview: editor marker in edit mode only; allows Google Fonts, https images and video/map embeds; nothing else', async () => {
+test('preview: editor marker on every preview; allows Google Fonts, https images and video/map embeds; nothing else', async () => {
   const edit = await E.call('GET', '/api/homepage/preview?edit=1');
   assert.match(edit.data, /<meta name="editor-preview"/, 'edit-mode pages carry the editor marker');
-  assert.doesNotMatch((await E.call('GET', '/api/homepage/preview')).data, /editor-preview/);
+  assert.match((await E.call('GET', '/api/homepage/preview')).data, /editor-preview/, 'the visitor view (no edit marks) is a preview too');
   const csp = edit.headers.get('Content-Security-Policy');
   assert.match(csp, /style-src [^;]*https:\/\/fonts\.googleapis\.com/);
   assert.match(csp, /font-src [^;]*https:\/\/fonts\.gstatic\.com/);

@@ -90,7 +90,7 @@ function supportShort() {
   return `${esc(s.name || 'James')}${how ? ', ' + how : ''}`;
 }
 
-function confirmBox({ title, body, yes, no = 'Cancel', danger = false }) {
+function confirmBox({ title, body, yes, no = 'Cancel', danger = false, safeDefault = false }) {
   return new Promise((resolve) => {
     const d = document.createElement('dialog');
     d.innerHTML = `<h2>${esc(title)}</h2><p>${body}</p><div class="dialog__btns"><button class="btn ${danger ? 'btn--danger' : 'btn--primary'}" value="yes">${esc(yes)}</button><button class="btn" value="no">${esc(no)}</button></div>`;
@@ -98,6 +98,7 @@ function confirmBox({ title, body, yes, no = 'Cancel', danger = false }) {
     d.addEventListener('click', (e) => { const v = e.target.closest('button')?.value; if (v) { d.close(); resolve(v === 'yes'); d.remove(); } });
     d.addEventListener('cancel', () => { resolve(false); d.remove(); });
     d.showModal();
+    if (safeDefault) d.querySelector('button[value=no]').focus(); // Enter alone never says yes
   });
 }
 
@@ -525,6 +526,7 @@ async function visualScreen() {
         <span class="vis__label">See it on:</span>
         <button type="button" class="seg" data-device="laptop">Computer</button>
         <button type="button" class="seg" data-device="phone">Phone</button>
+        <button type="button" class="btn btn--visitor" data-visitor aria-pressed="false">See it as a visitor</button>
       </div>
       <div class="vis__status">
         <p class="actions__state" id="state"></p>
@@ -560,6 +562,9 @@ async function visualScreen() {
     if (pagemore) pagemore.value = morePages.some((p) => p.path === path) ? path : '';
     vis.querySelectorAll('[data-device]').forEach((b) => { const on = b.dataset.device === device; b.classList.toggle('is-on', on); b.setAttribute('aria-pressed', String(on)); });
     stage.classList.toggle('vis__stage--phone', device === 'phone');
+    const vb = vis.querySelector('[data-visitor]');
+    if (vb) { vb.textContent = visitor ? '← Back to editing' : 'See it as a visitor'; vb.classList.toggle('btn--primary', visitor); vb.setAttribute('aria-pressed', String(visitor)); }
+    vis.classList.toggle('is-visitor', visitor);
     fit();
   };
   busy.subs.add(paintBar);
@@ -583,7 +588,8 @@ async function visualScreen() {
   const ro = new ResizeObserver(() => { fit(); fitPicker(); });
   ro.observe(vbody); ro.observe(stage);
 
-  const previewUrl = () => `/api/homepage/preview?edit=1&path=${encodeURIComponent(path)}&r=${sources.map((s) => S[s.id]?.revision || 0).join('.')}&t=${Date.now()}`;
+  let visitor = false; // "See it as a visitor": the page with your unpublished changes, without any ✎ or outlines
+  const previewUrl = () => `/api/homepage/preview?${visitor ? '' : 'edit=1&'}path=${encodeURIComponent(path)}&r=${sources.map((s) => S[s.id]?.revision || 0).join('.')}&t=${Date.now()}`;
   const load = (keep = false) => { keepScroll = keep ? lastScroll : 0; over.hidden = true; frame.classList.remove('is-broken'); frame.src = previewUrl(); };
 
   // A panel saved something: newer state replaces older (a late answer from a slow upload never wins over a newer one).
@@ -638,10 +644,42 @@ async function visualScreen() {
   }
   escHandler = () => { if (te) escapeText(); else if (open) closeTool(); };
 
+  // Visitor view: nothing to edit; links between your pages work, the rest is paused.
+  function visitorPage(doc) {
+    const st = doc.createElement('style'); st.textContent = '.preview-bar{display:none!important}'; doc.head.appendChild(st);
+    doc.addEventListener('click', (e) => {
+      const a = e.target.closest('a[href]'); if (!a) return;
+      const raw = a.getAttribute('href') || '';
+      if (raw.startsWith('#')) { if (raw === '#') e.preventDefault(); return; }
+      e.preventDefault();
+      if (/^(tel|mailto|sms):/i.test(raw)) { toast('On the real website this opens the phone or email app.'); return; }
+      const to = sitePathOf(raw);
+      const pg = to && pages.find((x) => x.path === to || x.path === to + '/');
+      if (pg) goPage(pg.path); else toast('That link goes to another website – it works on your real website.');
+    }, true);
+    doc.addEventListener('submit', (e) => { e.preventDefault(); e.stopPropagation(); toast('The form works on your real website – it is switched off here.'); }, true);
+    doc.addEventListener('keydown', (e) => { if (e.key === 'Escape') setVisitor(false); });
+    doc.defaultView.addEventListener('scroll', () => { lastScroll = doc.defaultView.scrollY; }, { passive: true });
+    if (keepScroll) doc.defaultView.scrollTo(0, keepScroll);
+    lastScroll = keepScroll;
+  }
+  function visitorNote() {
+    msg.innerHTML = '<div class="note note--visitor"><p><span><strong>This is how visitors will see your website</strong> after you click <strong>Publish</strong> – with your unpublished changes. Click the menu to look at other pages. Nothing can be changed here.</span> <button type="button" class="btn btn--small" data-visitor-off>← Back to editing</button></p></div>';
+    msg.querySelector('[data-visitor-off]').addEventListener('click', () => setVisitor(false));
+  }
+  async function setVisitor(on) {
+    if (on === visitor) return;
+    if (on && !(await closeTool({ refocus: false }))) return; // asks first if words are being typed
+    visitor = on; toast.clear();
+    msg.innerHTML = ''; if (on) visitorNote();
+    paintBar(); load(true);
+    vis.querySelector('[data-visitor]')?.focus();
+  }
+
   async function goPage(p) {
     if (p === path && !open) return;
     if (!(await closeTool({ refocus: false }))) { paintBar(); return; }
-    path = p; store.set(KEYS.page, path); toast.clear(); msg.innerHTML = '';
+    path = p; store.set(KEYS.page, path); toast.clear(); msg.innerHTML = ''; if (visitor) visitorNote();
     lastScroll = 0; paintBar(); load();
   }
 
@@ -801,6 +839,7 @@ async function visualScreen() {
       ${x.must ? '<p class="jte-tbar__must">This must stay on your website. You can change the words, but not remove them.</p>' : ''}
       ${x.kind === 'phone' ? '<p>This is your phone number – the Call and Text buttons use it.</p>' : x.kind === 'email' ? '<p>This is your email address – the Email buttons use it.</p>' : ''}
       ${x.link ? `<p>Only the words change – the link still goes to the same place.${go ? ` <button type="button" class="btn btn--small" data-go="${esc(go.path)}">Open “${esc(go.title)}”</button>` : ''}</p>` : ''}
+      <p class="jte-tbar__note">Saving shows it here only. It goes on your real website when you click <strong>Publish</strong>.</p>
       <div class="jte-tbar__err" role="alert" hidden></div></div>
       <div class="jte-tbar__btns"><button type="button" class="btn btn--primary" data-save>Save – show it on my page</button><button type="button" class="btn" data-cancel>Cancel</button></div>`;
     const slot = document.getElementById('textbar'); slot.replaceChildren(bar); slot.hidden = false;
@@ -981,6 +1020,7 @@ async function visualScreen() {
     try { doc = frame.contentDocument; } catch { /* another site's page */ }
     if (doc && doc.location.href === 'about:blank') return;
     if (!doc || !doc.querySelector('meta[name="editor-preview"]')) return previewFailed();
+    if (visitor) { visitorPage(doc); return; }
     const st = doc.createElement('style'); st.textContent = PEN_CSS; doc.head.appendChild(st);
     // Sticky and fixed bars (a site header) stay above the ✎ buttons of the page under them.
     for (const x of doc.body.querySelectorAll('*')) {
@@ -1100,7 +1140,7 @@ async function visualScreen() {
     }
     const todo = sources.filter(isDirty);
     if (!todo.length) return;
-    if (!(await confirmBox({ title: 'Put your changes on the website?', body: `This publishes your ${esc(words(todo))} changes. Everyone visiting your website sees them in a few minutes.`, yes: 'Yes, publish' }))) return;
+    if (!(await confirmBox({ title: 'Put your changes on the website?', body: `This publishes your ${esc(words(todo))} changes. Everyone visiting your website sees them in a few minutes.`, yes: 'Yes, publish', safeDefault: true }))) return;
     publishing = true; msg.innerHTML = ''; paintBar();
     const done = [], failed = [];
     // Each source is published on its own: one going wrong never hides that another one went live.
@@ -1139,6 +1179,7 @@ async function visualScreen() {
   vis.querySelectorAll('[data-page]').forEach((b) => b.addEventListener('click', () => goPage(b.dataset.page)));
   pagesel.addEventListener('change', () => goPage(pagesel.value));
   pagemore?.addEventListener('change', () => { if (pagemore.value) goPage(pagemore.value); });
+  vis.querySelector('[data-visitor]')?.addEventListener('click', () => setVisitor(!visitor));
   vis.querySelectorAll('[data-device]').forEach((b) => b.addEventListener('click', () => { device = b.dataset.device; store.set(KEYS.device, device); paintBar(); }));
   drawer.querySelector('[data-close]').addEventListener('click', () => closeTool());
   publishBtn.addEventListener('click', publishAll);
@@ -1308,7 +1349,7 @@ async function startScreen() {
     document.getElementById('msg').addEventListener('click', async (e) => { if (e.target.matches('[data-reload]')) { try { H = await api('GET', '/homepage'); banner = ''; render(); } catch (err) { showError(err); } } });
     app.querySelector('[data-publish]').addEventListener('click', async () => {
       const list = [slidesChanged() ? 'the homepage slideshow' : null, ...Object.keys(SPOT_INFO).filter(changed).map((k) => SPOT_INFO[k].label.toLowerCase())].filter(Boolean);
-      if (!(await confirmBox({ title: 'Put your new photos on the website?', body: `This updates: ${esc(list.join(', '))}.`, yes: 'Yes, publish' }))) return;
+      if (!(await confirmBox({ title: 'Put your new photos on the website?', body: `This updates: ${esc(list.join(', '))}.`, yes: 'Yes, publish', safeDefault: true }))) return;
       app.querySelectorAll('button').forEach((x) => { x.disabled = true; });
       try {
         const r = await api('POST', '/homepage/publish', { baseRevision: H.revision }, { idem: uuid(), free: true });
@@ -1580,7 +1621,7 @@ async function editScreen(id) {
     });
     app.querySelector('[data-publish]')?.addEventListener('click', async () => {
       const first = L?.visibility === 'draft' || !L;
-      if (!(await confirmBox({ title: first ? 'Put this home on the website?' : 'Publish your changes?', body: first ? 'Buyers will be able to see this listing.' : 'Buyers will see the updated listing.', yes: 'Yes, publish' }))) return;
+      if (!(await confirmBox({ title: first ? 'Put this home on the website?' : 'Publish your changes?', body: first ? 'Buyers will be able to see this listing.' : 'Buyers will see the updated listing.', yes: 'Yes, publish', safeDefault: true }))) return;
       doPublish('publish', {}, first ? 'the listing is on the website' : 'your changes are live');
     });
     app.querySelectorAll('[data-status]').forEach((b) => b.addEventListener('click', async () => {
@@ -1795,7 +1836,7 @@ async function homepageScreen(root = app, opts = {}) {
     });
     root.querySelector('#msg').addEventListener('click', async (e) => { if (e.target.matches('[data-reload]')) { try { H = await api('GET', '/homepage'); ok(''); } catch (err) { showError(err); } } });
     root.querySelector('[data-publish]')?.addEventListener('click', async () => {
-      if (!(await confirmBox({ title: 'Put these photos on your homepage?', body: H.draft.autoplay === false ? `One still photo (Photo 1).` : `${H.draft.slides.length} photo${H.draft.slides.length === 1 ? '' : 's'}, slideshow, ${SPEEDS.find((x) => x.v === nearestSpeed(H.draft.seconds)).label.toLowerCase()} speed, ${H.draft.fade ? 'fading' : 'sliding'} between photos.`, yes: 'Yes, publish' }))) return;
+      if (!(await confirmBox({ title: 'Put these photos on your homepage?', body: H.draft.autoplay === false ? `One still photo (Photo 1).` : `${H.draft.slides.length} photo${H.draft.slides.length === 1 ? '' : 's'}, slideshow, ${SPEEDS.find((x) => x.v === nearestSpeed(H.draft.seconds)).label.toLowerCase()} speed, ${H.draft.fade ? 'fading' : 'sliding'} between photos.`, yes: 'Yes, publish', safeDefault: true }))) return;
       root.querySelectorAll('button').forEach((b) => { b.disabled = true; });
       try {
         const r = await api('POST', '/homepage/publish', { baseRevision: H.revision }, { idem: uuid(), free: true });
@@ -1823,7 +1864,7 @@ function reviewsPublishBar(R) {
 async function bindReviewsPublish(getR, setR, rerender, showError) {
   app.querySelector('[data-publish]')?.addEventListener('click', async () => {
     const R = getR();
-    if (!(await confirmBox({ title: 'Put your review changes on the website?', body: `Your website will show ${R.draft.items.length} review${R.draft.items.length === 1 ? '' : 's'}.`, yes: 'Yes, publish' }))) return;
+    if (!(await confirmBox({ title: 'Put your review changes on the website?', body: `Your website will show ${R.draft.items.length} review${R.draft.items.length === 1 ? '' : 's'}.`, yes: 'Yes, publish', safeDefault: true }))) return;
     app.querySelectorAll('button').forEach((x) => { x.disabled = true; });
     try {
       const r = await api('POST', '/reviews/publish', { baseRevision: R.revision }, { idem: uuid(), free: true });

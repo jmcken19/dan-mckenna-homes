@@ -237,6 +237,39 @@ try {
   await sleep(500); await shot('06-phone-view');
   await page.click('[data-device="laptop"]');
 
+  // 6b. See it as a visitor: the same draft page with no ✎ or outlines; menu links switch pages; back to editing.
+  {
+    const pensBefore = await (await frame()).$$eval('.jte-pen', (a) => a.length);
+    await page.click('[data-visitor]');
+    let vf = await waitFrame(() => !!document.querySelector('meta[name="editor-preview"]') && !location.search.includes('edit=1') && document.readyState === 'complete');
+    assert.equal(await vf.$$eval('[data-edit], .jte-pen, .jte-tpen', (a) => a.length), 0, 'visitor view has no edit marks or ✎');
+    assert.match(await page.$eval('#vmsg', (m) => m.innerText), /how visitors will see your website/);
+    assert.equal(await page.$eval('[data-visitor]', (b) => b.getAttribute('aria-pressed')), 'true');
+    await shot('06b-visitor-view');
+    const other = (await page.$$eval('#pagesel option', (o) => o.map((x) => x.value))).find((x) => x !== '/');
+    const link = other ? await vf.$$eval('a[href]', (as, o) => { const a = as.find((x) => new URL(x.href).pathname.endsWith(o) && x.offsetParent); return a ? a.getAttribute('href') : null; }, other) : null;
+    if (link) {
+      await vf.$eval(`a[href="${link}"]`, (a) => a.click());
+      vf = await waitFrame(() => !location.search.includes('edit=1') && !/[?&]path=%2F(&|$)/.test(location.search) && document.readyState === 'complete');
+      assert.equal(await vf.$$eval('[data-edit], .jte-pen', (a) => a.length), 0, 'still a visitor on the next page');
+      assert.match(await page.$eval('#vmsg', (m) => m.innerText), /how visitors will see/, 'banner stays on the next page');
+    }
+    await page.click('#vmsg [data-visitor-off]');
+    await waitFrame(() => location.search.includes('edit=1') && document.querySelectorAll('[data-edit]').length > 0);
+    assert.equal(await page.$eval('#vmsg', (m) => m.innerText.trim()), '', 'banner gone after Back to editing');
+    assert.ok(pensBefore >= 0);
+  }
+
+  // 6c. Saving never publishes, and Enter alone can never confirm Publish (the box starts on Cancel).
+  if (!(await page.$eval('[data-publish]', (b) => b.disabled))) {
+    await page.click('[data-publish]');
+    await page.waitForSelector('dialog[open]');
+    assert.equal(await page.evaluate(() => document.activeElement?.value), 'no', 'Publish box starts on Cancel');
+    await page.keyboard.press('Enter');
+    await page.waitForFunction(() => !document.querySelector('dialog[open]'));
+    assert.match(await page.$eval('#state', (s) => s.textContent), /not on the website yet/, 'Enter did not publish');
+  }
+
   // 7. Publish everything.
   await page.click('[data-publish]');
   assert.ok(await page.$eval('dialog[open] .btn--primary', (b) => parseFloat(getComputedStyle(b).fontSize) >= 19), '"Yes, publish" is big');
@@ -253,7 +286,7 @@ try {
 
   // 8. The real website never carries edit marks.
   const plain = await (await page.goto(E.url + '/api/homepage/preview')).text();
-  assert.doesNotMatch(plain, /data-edit=|editor-preview/, 'normal preview has no edit marks');
+  assert.doesNotMatch(plain, /data-edit=/, 'normal preview has no edit marks');
 
   assert.deepEqual(errors, [], 'no script errors');
   console.log('visual editor ok – screenshots in', out);
