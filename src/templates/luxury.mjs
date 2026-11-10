@@ -2,7 +2,10 @@
 // high-end brokerage sites: full-screen photography, serif display type, minimal cards).
 // Same content and pages as the classic design; only the frame and homepage differ.
 import { escapeHtml as e, formatPrice, factsList, STATUS_LABEL } from '../lib/listing.mjs';
-import { NAV } from './layout.mjs';
+import { NAV, navLabel } from './layout.mjs';
+import { t } from '../lib/text.mjs';
+// Not the editor's design (the editor shows the classic one), but wording that is the same as in the classic design
+// uses the same keys (src/lib/text.mjs), so Dan's word changes show in both designs.
 import { sitePhoto } from '../lib/photos.mjs';
 import { heroSeconds } from './pages.mjs';
 
@@ -12,7 +15,7 @@ export function luxLayout(ctx, { path, title, description, body, bodyClass = '',
   const isHome = path === '/';
   const navItems = NAV.filter((n) => n.href !== '/').map((n) => {
     const current = path.startsWith(n.href);
-    return `<li><a href="${url(n.href)}"${current ? ' aria-current="page"' : ''}>${e(n.label)}</a></li>`;
+    return `<li><a href="${url(n.href)}"${current ? ' aria-current="page"' : ''}>${navLabel(ctx, n)}</a></li>`;
   }).join('');
   return `<!doctype html>
 <html lang="en" class="no-js">
@@ -35,16 +38,16 @@ ${ogImage ? `<meta property="og:image" content="${e(ogImage)}">` : ''}
 <script src="${url('/assets/js/site.js')}?v=${ctx.buildId}" defer></script>
 </head>
 <body class="lux ${isHome ? 'lux--home' : ''} ${e(bodyClass)}">
-<a class="skip" href="#main">Skip to main content</a>
+<a class="skip" href="#main">${t(ctx, 'layout.skip')}</a>
 ${preview ? `<div class="preview-bar" role="note">Design option 2 – testing preview. <a href="${e(ctx.altUrl || '#')}">See the classic design</a><button type="button" class="preview-bar__hide" data-hide-preview aria-label="Hide this testing banner">Hide ×</button></div>` : ''}
 <header class="lx-header${isHome ? ' lx-header--over' : ''}">
   <div class="lx-header__in">
     <a class="lx-brand" href="${url('/')}">
       <span class="lx-brand__name">Dan McKenna</span>
-      <span class="lx-brand__sub">Keller Williams Ballantyne Area, Charlotte, NC</span>
+      <span class="lx-brand__sub">${t(ctx, 'site.brokerage')}</span>
     </a>
-    <a class="lx-header__phone" href="${e(site.phoneHref)}">${e(site.phone)}</a>
-    <button class="menu-btn lx-menu-btn" type="button" aria-expanded="false" aria-controls="site-nav"><span class="menu-btn__bars" aria-hidden="true"></span><span class="menu-btn__label">Menu</span></button>
+    <a class="lx-header__phone" href="${e(site.phoneHref)}">${t(ctx, 'site.phone')}</a>
+    <button class="menu-btn lx-menu-btn" type="button" aria-expanded="false" aria-controls="site-nav"><span class="menu-btn__bars" aria-hidden="true"></span><span class="menu-btn__label">${t(ctx, 'layout.menu')}</span></button>
     <nav id="site-nav" class="site-nav lx-nav" aria-label="Main"><ul>${navItems}</ul></nav>
   </div>
 </header>
@@ -56,13 +59,13 @@ ${body}
     <p class="lx-footer__statement">Experience Counts.</p>
     <div class="lx-footer__cols">
       <section>
-        <h2>Dan McKenna</h2>
-        <p>${e(site.agentTitle)}<br>${e(site.brokerage)}</p>
-        <p><a href="${e(site.phoneHref)}">${e(site.phone)}</a><br><a href="mailto:${e(site.email)}">${e(site.email)}</a></p>
+        <h2>${t(ctx, 'site.agent')}</h2>
+        <p>${t(ctx, 'site.agentTitle')}<br>${t(ctx, 'site.brokerage')}</p>
+        <p><a href="${e(site.phoneHref)}">${t(ctx, 'site.phone')}</a><br><a href="mailto:${e(site.email)}">${t(ctx, 'site.email')}</a></p>
       </section>
       <section>
         <h2>Explore</h2>
-        <ul>${NAV.map((n) => `<li><a href="${url(n.href)}">${e(n.label)}</a></li>`).join('')}</ul>
+        <ul>${NAV.map((n) => `<li><a href="${url(n.href)}">${navLabel(ctx, n)}</a></li>`).join('')}</ul>
       </section>
       <section>
         <h2>Serving</h2>
@@ -70,7 +73,7 @@ ${body}
         <img class="lx-footer__logo" src="${url('/assets/img/logo-kw-white.png')}" width="214" height="66" alt="Keller Williams Charlotte Ballantyne Area" loading="lazy">
       </section>
     </div>
-    <p class="lx-footer__legal">© ${new Date().getFullYear()} ${e(site.name)} · <a href="${url('/accessibility-2/')}">Accessibility</a> · <a href="${url('/dmca-compliance-2/')}">Copyright</a></p>
+    <p class="lx-footer__legal">© ${new Date().getFullYear()} ${t(ctx, 'site.name')} · <a href="${url('/accessibility-2/')}">${t(ctx, 'footer.accessibility')}</a> · <a href="${url('/dmca-compliance-2/')}">Copyright</a></p>
   </div>
 </footer>
 </body>
@@ -121,18 +124,18 @@ export function luxHome(ctx) {
     <p class="lx-hero__sub">Buy. Sell. Build. Relocate.</p>
     <p class="lx-actions"><a class="lx-btn lx-btn--ghost" href="${url('/contact/')}">Contact Dan</a></p>
   </div>
-  ${multi ? '<button class="hero__pause sr-focus" type="button" aria-pressed="false">Pause slideshow</button>' : ''}
+  ${multi ? `<button class="hero__pause sr-focus" type="button" aria-pressed="false">${t(ctx, 'hero.pause')}</button>` : ''}
 </section>
 
 <section class="lx-intro" aria-labelledby="intro-h">
   <div class="lx-wrap lx-intro__grid">
     <img class="lx-intro__photo" src="${url(sitePhoto(site, 'headshot').small)}" width="360" height="402" alt="${e(sitePhoto(site, 'headshot').alt)}" loading="lazy">
     <div>
-      <p class="lx-eyebrow lx-eyebrow--dark">${e(site.agentTitle)}</p>
+      <p class="lx-eyebrow lx-eyebrow--dark">${t(ctx, 'site.agentTitle')}</p>
       <h2 id="intro-h" class="lx-display">Dan McKenna</h2>
       <p class="lx-lede">Over 15 years ago, we relocated our family from New York to the Charlotte area, drawn by everything this wonderful region has to offer. Today, we're proud to help others discover the communities and lifestyle that make the Charlotte area so special.</p>
       <p>Full-time REALTOR® licensed in North Carolina and South Carolina · Certified Luxury Home Marketing Specialist (CLHMS) · GUILD member · Keller Williams Top Producer annually since 2015.</p>
-      <p class="lx-contact-line"><a href="${e(site.phoneHref)}">${e(site.phone)}</a><span aria-hidden="true">|</span><a href="mailto:${e(site.email)}">${e(site.email)}</a></p>
+      <p class="lx-contact-line"><a href="${e(site.phoneHref)}">${t(ctx, 'site.phone')}</a><span aria-hidden="true">|</span><a href="mailto:${e(site.email)}">${t(ctx, 'site.email')}</a></p>
       <p><a class="lx-link" href="${url('/about-us/')}">Meet Dan</a></p>
     </div>
   </div>
@@ -165,9 +168,9 @@ export function luxHome(ctx) {
     <div class="carousel" data-carousel data-marquee>
       <div class="carousel__track lx-quotes__track" tabindex="0" aria-label="Client reviews – drag or scroll sideways to read more">${quotes.map((t) => `<figure class="lx-quote"><blockquote><p>${e(shorten(t.text[0], 260))}</p></blockquote><figcaption>${t.client ? e(t.client) + ' · ' : ''}${e(t.title)}${t.text[0].length > 260 ? ` · <a href="${url(`/testimonial/${t.slug}/`)}">Read the full review</a>` : ''}</figcaption></figure>`).join('')}</div>
       <div class="carousel__dots" role="group" aria-label="Choose testimonial"></div>
-      <button class="marquee-pause sr-focus" type="button" aria-pressed="false" hidden>Pause reviews</button>
+      <button class="marquee-pause sr-focus" type="button" aria-pressed="false" hidden>${t(ctx, 'reviews.pause')}</button>
     </div>
-    <p class="center"><a class="lx-link" href="${url('/testimonials/')}">View all reviews</a></p>
+    <p class="center"><a class="lx-link" href="${url('/testimonials/')}">${t(ctx, 'home.viewAll')}</a></p>
   </div>
 </section>`;
 }

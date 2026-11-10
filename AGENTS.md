@@ -26,7 +26,7 @@ The owner is old-school and non-technical. Never ask Dan to use Git, GitHub, a t
 
 ## Ground rules
 
-1. **Never invent facts.** No made-up property details, prices, client quotes, sales numbers,
+1. **Never invent facts** (or wording: copy Dan's words; all visible words go through `t()`, see "Change page text"). No made-up property details, prices, client quotes, sales numbers,
    awards or service areas. If information is missing, ask one specific question or leave it blank.
    Unknown numbers are `null`, never `0`.
 2. **Never edit a client's testimonial wording.** Testimonials are copied verbatim.
@@ -46,6 +46,7 @@ The owner is old-school and non-technical. Never ask Dan to use Git, GitHub, a t
 
 ```
 content/site.json            contact info, tagline, homepage slideshow photos
+content/text.json            ALL other wording on the site (Dan changes it by clicking words in the editor)
 content/testimonials.json    testimonials (verbatim); the order of items = the order shown (first shows first)
 content/listings/<id>.json   PUBLISHED listings only (one file each)
 content/removed.json         listings taken off the site (old URL shows a friendly page)
@@ -106,7 +107,14 @@ by default), save as `public/listings/<id>/<photoId>-1800.jpg` / `-900.jpg`, add
 **Drafts:** drafts only exist in the owner editor (private). There are no drafts in this repo —
 anything in `content/listings/` is public as soon as it is pushed to `main`.
 
-**Change page text:** `src/templates/pages.mjs`. Contact details: `content/site.json`.
+**Change page text:** `content/text.json` (every word on the site, by key) – contact details/business facts in
+`content/site.json` (the fields listed in `text.json → siteFields`). Dan can do it himself: he clicks the words in the
+editor, types, Save, Publish. **All visible wording goes through `t()`** (`src/lib/text.mjs`): headings, paragraphs,
+buttons, menu labels, top bar, footer (incl. license/brokerage lines), contact details – in every template. Never
+hard-code visible words in `src/templates/`; new words = `t(ctx, 'page.thing')` (or `tBlock`/`tList` for paragraphs/
+lists) + the words in `content/text.json`. `npm test` (`tests/text-coverage.test.mjs`) fails for any hard-coded word.
+`mustStay` = license/brokerage lines Dan can't remove; `kinds` = phone/email (checked; changing the phone also updates
+`phoneHref`/`smsHref`). Same system as client-site-template (its `docs/EDITOR.md` → "Words").
 
 **Homepage slideshow:** Dan manages it in the editor (**Homepage photos**) – prefer that. It lives in
 `content/site.json`: `heroSlides` = `[{ "id": "s-xxxxxx", "src": "/assets/img/hero/s-xxxxxx", "alt": "…", "focus": "50% 15%" }]`

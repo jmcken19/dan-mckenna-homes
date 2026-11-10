@@ -12,7 +12,7 @@
     "images": "node scripts/prepare-site-images.mjs",
     "test": "node --test tests/*.test.mjs",
     "test:ui": "node tests/ui-editor.mjs",
-    "test:visual": "node tests/ui-visual.mjs && node tests/ui-visual-edge.mjs",
+    "test:visual": "node tests/ui-visual.mjs && node tests/ui-visual-edge.mjs && node tests/ui-text.mjs",
     "editor:demo": "node scripts/editor-demo.mjs"
   },
   "repository": {

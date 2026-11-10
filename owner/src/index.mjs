@@ -11,6 +11,8 @@ import { listingDetail } from '../../src/templates/listing.mjs';
 import siteContent from '../../content/site.json';
 import { homepageRoutes, EDITOR_PAGES } from './homepage.mjs';
 import { reviewsRoutes } from './reviews.mjs';
+import { textRoutes } from './text.mjs';
+import textContent from '../../content/text.json';
 
 const JSON_HEADERS = { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' };
 const DAILY_LIMITS = { upload: 400, request: 30, publish: 120, save: 1000 };
@@ -104,6 +106,7 @@ async function handleApi(request, env, url, ctx) {
   }
   if (parts[0] === 'homepage') return homepageHandler()(A, parts, method);
   if (parts[0] === 'reviews') return reviewsHandler()(A, parts, method, idempotent);
+  if (parts[0] === 'text') return textHandler()(A, parts, method, idempotent);
   if (parts[0] === 'photo' && method === 'GET') return servePhoto(A, parts[1], parts[2], parts[3]);
   if (parts[0] === 'publish-status' && method === 'GET') return json(await publishStatus(A, parts[1]));
   if (parts[0] === 'publish-retry' && method === 'POST') return json(await publishRetry(A, parts[1]));
@@ -121,6 +124,11 @@ async function handleApi(request, env, url, ctx) {
 let _reviews;
 function reviewsHandler() {
   return (_reviews ||= reviewsRoutes({ HttpError, json, now, readJsonBody, needRevision, rateLimit, logEvent, publicBase }));
+}
+
+let _text;
+function textHandler() {
+  return (_text ||= textRoutes({ HttpError, json, now, readJsonBody, needRevision, rateLimit, logEvent, publicBase }));
 }
 
 let _homepage;
@@ -427,7 +435,7 @@ async function previewHtml(A, id) {
   const pub = toPublic(r, r.draft, r.revision);
   const siteBase = publicBase(A.env);
   const ctx = {
-    site: siteContent, preview: true, siteUrl: '', buildId: 'preview-' + Date.now(), listings: [], testimonials: [], removed: [],
+    site: siteContent, text: textContent, preview: true, siteUrl: '', buildId: 'preview-' + Date.now(), listings: [], testimonials: [], removed: [],
     url: (p) => {
       const m = p.match(/^\/listings\/(lst-[a-z0-9]+)\/(p-[a-z0-9]+)-(1800|900)\.jpg$/);
       if (m) return `/api/photo/${m[1]}/${m[2]}/${m[3] === '1800' ? 'large' : 'small'}`;

@@ -101,6 +101,18 @@ function confirmBox({ title, body, yes, no = 'Cancel', danger = false }) {
   });
 }
 
+/** A question with several answers (big buttons, first = the main one). Resolves with the chosen value, or null (Escape). */
+function choiceBox({ title, body, choices }) {
+  return new Promise((resolve) => {
+    const d = document.createElement('dialog');
+    d.innerHTML = `<h2>${esc(title)}</h2><p>${body}</p><div class="dialog__btns">${choices.map((c) => `<button class="btn ${c.kind === 'primary' ? 'btn--primary' : c.kind === 'danger' ? 'btn--danger' : ''}" value="${esc(c.value)}">${esc(c.label)}</button>`).join('')}</div>`;
+    document.body.appendChild(d);
+    d.addEventListener('click', (e) => { const v = e.target.closest('button')?.value; if (v) { d.close(); resolve(v); d.remove(); } });
+    d.addEventListener('cancel', () => { resolve(null); d.remove(); });
+    d.showModal();
+  });
+}
+
 /** Short numbered directions shown at the top of each screen. */
 function how(steps) {
   return `<div class="how"><p class="how__title">How this works</p><ol>${steps.map((x) => `<li>${x}</li>`).join('')}</ol></div>`;
@@ -395,6 +407,7 @@ async function route() {
 const DRAFT_SOURCES = [
   { id: 'homepage', what: 'photos', api: '/homepage', result: 'homepage', enabled: () => true },
   { id: 'reviews', what: 'reviews', api: '/reviews', result: 'reviews', enabled: () => me.features?.reviews !== false },
+  { id: 'text', what: 'wording', api: '/text', result: 'text', enabled: () => true },
 ];
 
 function draftSource(def) {
@@ -413,6 +426,8 @@ const KIND_TOOLS = {
   photo: { title: (key) => spotInfo()[key]?.label || 'Photo', button: '✎ Change photo', open: (body, ctx) => spotPanel(body, ctx) },
   reviews: { title: 'Reviews', button: '✎ Change reviews', barButton: '✎ Change reviews – add, change or remove', place: 'bar', open: (body, ctx) => reviewsPanel(body, ctx, null) },
   review: { title: 'Change this review', button: '✎ Change review', place: 'bottom', open: (body, ctx) => reviewsPanel(body, ctx, ctx.key) },
+  // Words (t()/tBlock()/tList() in src/lib/text.mjs): changed right on the page, no side panel – see "Words" in visualScreen.
+  text: { inline: true, title: 'Words', button: '✎' },
 };
 
 // Reviews in the side panel: the list (slug = null) or one review's form; "← All reviews" goes back to the list.
@@ -424,8 +439,8 @@ function reviewsPanel(body, ctx, slug) {
 }
 
 const PEN_CSS = `
-[data-edit]{cursor:pointer;outline:4px solid transparent;outline-offset:3px;transition:outline-color .15s}
-[data-edit=slideshow],[data-edit=reviews]{outline-offset:-4px}
+[data-edit]{cursor:pointer;outline:4px solid transparent;outline-offset:4px;transition:outline-color .15s}
+[data-edit].jte-wide{outline-offset:-4px}
 [data-edit].jte-hover,[data-edit].jte-on{outline-color:#111}
 .jte-pen{position:absolute;z-index:60;display:inline-flex;align-items:center;gap:.4rem;min-height:50px;margin:0;padding:.5rem 1.05rem;border:3px solid #fff;border-radius:999px;background:#111;color:#fff;font:700 18px/1.1 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;letter-spacing:0;text-transform:none;white-space:nowrap;box-shadow:0 0 0 2px #111,0 4px 14px rgba(0,0,0,.4);cursor:pointer}
 .jte-pen:hover{background:#3a3a3a}
@@ -433,7 +448,30 @@ const PEN_CSS = `
 .jte-pen--round{width:52px;height:52px;min-height:0;padding:0;justify-content:center;font-size:24px}
 .jte-pen--bar{position:relative;z-index:auto;display:flex;width:max-content;max-width:100%;margin:0 0 14px auto}
 .jte-roomy{padding-bottom:76px!important}
-.preview-bar{display:none!important}`;
+.preview-bar{display:none!important}
+[data-edit=text]{cursor:text;outline:2px dashed transparent;outline-offset:3px;border-radius:2px;transition:none}
+[data-edit=text].jte-hover,[data-edit=text]:focus-visible{outline:2px dashed #1d5fc4;outline-offset:3px;background-color:rgba(29,95,196,.10)}
+[data-edit=text].jte-editing{outline:3px solid #1d5fc4;outline-offset:4px;background-color:rgba(29,95,196,.06);cursor:text;caret-color:auto}
+.jte-tpen{position:absolute;z-index:75;display:none;align-items:center;justify-content:center;width:34px;height:34px;margin:0;padding:0;border:2px solid #fff;border-radius:50%;background:#1d5fc4;color:#fff;font:700 18px/1 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;box-shadow:0 2px 8px rgba(0,0,0,.35);cursor:pointer}
+.jte-tpen.is-on{display:flex}
+.jte-tbar{position:absolute;z-index:90;box-sizing:border-box;width:min(580px,calc(100vw - 16px));margin:0;padding:14px 16px 16px;background:#fff;color:#1a1a1a;border:2px solid #1d5fc4;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.3);font:400 17px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;text-align:left;letter-spacing:0;text-transform:none;white-space:normal;cursor:default}
+.jte-tbar.is-fixed{position:fixed}
+.jte-tbar *{box-sizing:border-box;font-family:inherit;letter-spacing:0;text-transform:none;text-shadow:none}
+.jte-tbar p{margin:0 0 8px;color:#1a1a1a;font-size:17px;font-weight:400;line-height:1.4;text-align:left}
+.jte-tbar .jte-tbar__what{font-size:18px;font-weight:700}
+.jte-tbar .jte-tbar__must{padding:6px 10px;background:#fff7e6;border-left:4px solid #8a5a00}
+.jte-tbar .jte-tbar__err{margin:0 0 10px;padding:8px 10px;background:#fdeeee;border-left:4px solid #b3261e;font-weight:600}
+.jte-tbar__err p{margin:0 0 6px}
+.jte-tbar__btns{display:flex;flex-wrap:wrap;gap:10px;margin-top:10px}
+.jte-b{display:inline-flex;align-items:center;min-height:52px;margin:0;padding:10px 18px;border:2px solid #1a1a1a;border-radius:10px;background:#fff;color:#1a1a1a;font:700 18px/1.2 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;cursor:pointer;text-decoration:none}
+.jte-b:hover:not(:disabled){background:#f0f0f2}
+.jte-b--save{background:#1d5fc4;border-color:#1d5fc4;color:#fff}
+.jte-b--save:hover:not(:disabled){background:#174ea0}
+.jte-b--small{min-height:44px;padding:6px 14px;font-size:16px}
+.jte-b:disabled{background:#e6e6e9;border-color:#e6e6e9;color:#5a5a64;cursor:not-allowed}
+.jte-b:focus-visible,.jte-tpen:focus-visible{outline:3px solid #ffbf47;outline-offset:2px}
+.jte-tbar__input{display:block;width:100%;min-height:52px;margin:0 0 6px;padding:8px 12px;border:2px solid #8a8a94;border-radius:10px;background:#fff;color:#1a1a1a;font-size:19px}
+.jte-tbar__input:focus{border-color:#1d5fc4;outline:none}`;
 
 async function visualScreen() {
   document.body.classList.add('is-visual');
@@ -444,6 +482,8 @@ async function visualScreen() {
   const isDirty = (s) => !!S[s.id]?.hasUnpublishedChanges;
   const dirty = () => sources.some(isDirty);
   const pages = me.pages?.length ? me.pages : [{ path: '/', title: 'Home' }];
+  // Main pages are buttons; pages only reached from the footer or by visitors ("page not found") are under "More pages".
+  const mainPages = pages.filter((p) => !p.more), morePages = pages.filter((p) => p.more);
   let path = pages.some((p) => p.path === store.get(KEYS.page)) ? store.get(KEYS.page) : '/';
   let device = store.get(KEYS.device) === 'phone' ? 'phone' : 'laptop';
   let open = null; // { kind, key, label, host } – the panel that is open
@@ -455,10 +495,11 @@ async function visualScreen() {
     <div class="vis__top">
       <div class="vis__pages" id="vpages" role="group" aria-labelledby="pages-label">
         <label class="vis__label" id="pages-label" for="pagesel">Page:</label>
-        <span class="vis__pagebtns">${pages.map((p) => `<button type="button" class="seg" data-page="${esc(p.path)}" title="${esc(p.title)}">${esc(p.title)}</button>`).join('')}</span>
+        <span class="vis__pagebtns">${mainPages.map((p) => `<button type="button" class="seg" data-page="${esc(p.path)}" title="${esc(p.title)}">${esc(p.title)}</button>`).join('')}</span>
+        ${morePages.length ? `<select class="vis__moresel" id="pagemore" aria-label="More pages"><option value="">More pages…</option>${morePages.map((p) => `<option value="${esc(p.path)}">${esc(p.title)}</option>`).join('')}</select>` : ''}
         <select class="vis__select" id="pagesel">${pages.map((p) => `<option value="${esc(p.path)}">${esc(p.title)}</option>`).join('')}</select>
       </div>
-      <p class="vis__help">Click a <strong>✎ Change</strong> button, then <strong>Publish</strong>.</p>
+      <p class="vis__help">Click any <strong>words</strong> or a <strong>✎ Change</strong> button, then <strong>Publish</strong>.</p>
       <p class="vis__more"><a href="#/list">List view</a> · <a href="#/request">Request a change${me.role === 'maintainer' && me.openRequests ? ` (${me.openRequests} waiting)` : ''}</a> · Help: ${supportShort()}</p>
     </div>
     <div id="vmsg" class="vis__msg"></div>
@@ -495,7 +536,7 @@ async function visualScreen() {
   const $ = (sel) => vis.querySelector(sel);
   const frame = $('#frame'), stage = $('#stage'), vbody = $('#vbody'), over = $('#over');
   const drawer = $('#drawer'), dBody = $('#drawer-body'), dTitle = $('#drawer-title');
-  const msg = $('#vmsg'), pubBox = $('#vpub'), pickerEl = $('#vpages'), pagesel = $('#pagesel');
+  const msg = $('#vmsg'), pubBox = $('#vpub'), pickerEl = $('#vpages'), pagesel = $('#pagesel'), pagemore = $('#pagemore');
   const publishBtn = $('[data-publish]'), undoBtn = $('[data-undo-all]');
   let keepScroll = 0, lastScroll = 0;
   let pens = new Map(); // "kind|key" → the ✎ button in the page
@@ -509,6 +550,7 @@ async function visualScreen() {
     undoBtn.disabled = working || publishing;
     vis.querySelectorAll('[data-page]').forEach((b) => { const on = b.dataset.page === path; b.classList.toggle('is-on', on); b.setAttribute('aria-pressed', String(on)); });
     pagesel.value = path;
+    if (pagemore) pagemore.value = morePages.some((p) => p.path === path) ? path : '';
     vis.querySelectorAll('[data-device]').forEach((b) => { const on = b.dataset.device === device; b.classList.toggle('is-on', on); b.setAttribute('aria-pressed', String(on)); });
     stage.classList.toggle('vis__stage--phone', device === 'phone');
     fit();
@@ -520,7 +562,7 @@ async function visualScreen() {
     if (!alive()) return;
     pickerEl.classList.remove('is-select');
     const row = pickerEl.querySelector('.vis__pagebtns');
-    if (pages.length > 6 || row.scrollWidth > row.clientWidth + 1) pickerEl.classList.add('is-select');
+    if (mainPages.length > 6 || row.scrollWidth > row.clientWidth + 1) pickerEl.classList.add('is-select');
   };
   // While the panel is open the website keeps its full computer width and is shown smaller (never its tablet layout).
   function fit() {
@@ -541,7 +583,9 @@ async function visualScreen() {
   const update = (id, st) => {
     if (!alive() || !st) return;
     if (S[id] && Number(st.revision) < Number(S[id].revision)) return;
-    S[id] = st; paintBar(); load(true);
+    S[id] = st; paintBar();
+    if (te && textChanged()) { pendingReload = true; return; } // never wipe words being typed: redraw after Save/Cancel
+    load(true);
   };
   const setTitle = (t) => { dTitle.textContent = t; };
   const toolTitle = (tool, key, label) => (typeof tool.title === 'function' ? tool.title(key) : (tool.title || label));
@@ -570,6 +614,7 @@ async function visualScreen() {
 
   // Closes the panel. Asks first when there is unsaved typing; returns false if the owner wants to keep typing.
   async function closeTool({ ask = true, refocus = true } = {}) {
+    if (te && !(await finishText({ ask }))) return false; // words being typed on the page: save or throw away first
     if (!open) return true;
     if (ask && unsavedGuard?.() && !(await confirmBox({ title: 'Leave without saving?', body: 'You have typing that is not saved yet. It will be lost.', yes: 'Leave without saving', no: 'Keep typing', danger: true }))) return false;
     unsavedGuard = null;
@@ -584,7 +629,7 @@ async function visualScreen() {
     const doc = frame.contentDocument; if (!doc) return;
     doc.querySelectorAll('[data-edit]').forEach((el) => el.classList.toggle('jte-on', !!open && el.dataset.edit === open.kind && (el.dataset.editKey || '') === (open.key || '')));
   }
-  escHandler = () => { if (open) closeTool(); };
+  escHandler = () => { if (te) escapeText(); else if (open) closeTool(); };
 
   async function goPage(p) {
     if (p === path && !open) return;
@@ -646,9 +691,291 @@ async function visualScreen() {
     if (win.ResizeObserver) new win.ResizeObserver(place).observe(el);
   }
 
+  /* ---- Words: click any words on the page and type right there ("in place") ---- */
+  // Every visible word on the page is marked data-edit="text" (t()/tBlock()/tList() in src/lib/text.mjs). Clicking the
+  // words (or their small ✎) makes just that element typeable (contenteditable="plaintext-only") with a toolbar next to
+  // it: "Save – show it on my page" / "Cancel". One line: Enter saves. Paragraphs / lists: Enter starts a new one.
+  // Words inside a button or a form label are typed into a box in the toolbar (browsers don't allow typing inside those).
+  // Links keep their address: only the words inside change. Saved words go to the "text" draft source like every change.
+  let te = null; // the words being changed: { el, key, multi, kind, must, label, before, html, link, input, bar, saving }
+  let tpen = null, tpenFor = null; // the one small ✎ that follows the mouse / keyboard focus
+  let pendingReload = false, refocusKey = null;
+  const pageTitle = () => (pages.find((p) => p.path === path) || {}).title || 'This page';
+
+  function textLabel(el) {
+    if (el.dataset.editLabel) return el.dataset.editLabel;
+    const main = el.ownerDocument.querySelector('main');
+    const where = el.closest('nav') ? 'Menu' : el.closest('footer') ? 'Bottom of every page' : el.closest('header') ? 'Top of every page'
+      : main && !main.contains(el) ? (main.compareDocumentPosition(el) & Node.DOCUMENT_POSITION_PRECEDING ? 'Top of every page' : 'Bottom of every page') : pageTitle();
+    const what = el.dataset.textMulti === 'li' ? 'list' : el.dataset.textMulti ? 'paragraphs' : el.closest('h1') ? 'big title' : el.closest('h2, h3, h4, h5, h6') ? 'heading'
+      : el.closest('button, .btn') ? 'button' : el.closest('nav a') ? 'menu item' : el.closest('a') ? 'link' : el.closest('label') ? 'form label' : 'words';
+    const words = (el.textContent || '').replace(/\s+/g, ' ').trim();
+    return `${where} – ${what} “${words.length > 42 ? words.slice(0, 40) + '…' : words}”`;
+  }
+
+  /** What the owner typed: one line, or a list of paragraphs / list items. */
+  function wordsOf(x) {
+    if (x.input) return x.input.value.replace(/\s+/g, ' ').trim();
+    const raw = x.el.innerText || '';
+    if (!x.multi) return raw.replace(/\s+/g, ' ').trim();
+    return raw.split(x.multi === 'li' ? /\n+/ : /\n[ \t]*\n/).map((p) => p.replace(/\s+/g, ' ').trim()).filter(Boolean);
+  }
+  const textChanged = () => !!te && !te.saving && JSON.stringify(wordsOf(te)) !== te.before;
+
+  /** The same checks as the server (src/lib/text.mjs → cleanText), so the owner hears at once. */
+  function checkWords(x, v) {
+    const empty = Array.isArray(v) ? !v.length : !v;
+    if (empty) return x.must ? 'This must stay on your website. You can change the words, but not remove them.' : 'This can\'t be empty. Type the words you want here, or click Cancel.';
+    if (!Array.isArray(v) && v.length > 300) return `Please keep this short – at most 300 letters (it has ${v.length}).`;
+    if (x.kind === 'phone') { const d = v.replace(/\D/g, ''); if (!/^[+()\d\s.-]+$/.test(v) || d.length < 7 || d.length > 15) return 'Please type a phone number using numbers only, for example 704-555-0100. The Call and Text buttons use it.'; }
+    if (x.kind === 'email' && !/^[^\s@<>()"',;]+@[^\s@<>()"',;]+\.[a-z]{2,}$/i.test(v)) return 'Please type an email address, for example name@example.com. The Email buttons use it.';
+    return '';
+  }
+
+  function showTpen(el) {
+    if (!tpen?.isConnected || te) return;
+    const doc = el.ownerDocument, win = doc.defaultView;
+    const r = el.getClientRects()[0] || el.getBoundingClientRect();
+    if (!r.width && !r.height) return hideTpen();
+    tpenFor = el;
+    const fixed = isFixed(el);
+    tpen.style.position = fixed ? 'fixed' : 'absolute';
+    const sx = fixed ? 0 : win.scrollX, sy = fixed ? 0 : win.scrollY;
+    const all = el.getBoundingClientRect();
+    tpen.style.left = `${Math.max(4, Math.min(win.innerWidth - 40, all.right + 4)) + sx}px`;
+    tpen.style.top = `${Math.max(4, r.top - 20) + sy}px`;
+    tpen.setAttribute('aria-label', `Change text: ${textLabel(el)}`);
+    tpen.classList.add('is-on');
+  }
+  function hideTpen() { tpen?.classList.remove('is-on'); tpenFor = null; }
+  const isFixed = (el) => { for (let x = el; x && x.nodeType === 1; x = x.parentElement) { const p = x.ownerDocument.defaultView.getComputedStyle(x).position; if (p === 'fixed' || p === 'sticky') return true; } return false; };
+
+  async function startText(el, point = null) {
+    if (!el?.isConnected || !alive()) return;
+    if (te && te.el === el) return;
+    if (!(await closeTool({ refocus: false }))) return; // also asks about other words being typed
+    const doc = el.ownerDocument;
+    hideTpen();
+    const x = { el, key: el.dataset.editKey, multi: el.dataset.textMulti || '', kind: el.dataset.textKind || '', must: el.dataset.textMust === '1', label: textLabel(el), html: el.innerHTML, link: el.closest('a[href]'), saving: false };
+    const inBox = el.closest('button, label, select, summary, option');
+    el.classList.add('jte-editing');
+    te = x;
+    if (inBox) x.input = true;
+    else {
+      el.contentEditable = 'plaintext-only';
+      if (el.contentEditable !== 'plaintext-only') el.contentEditable = 'true';
+      el.spellcheck = true;
+      if (x.link) { x.drag = x.link.getAttribute('draggable'); x.link.setAttribute('draggable', 'false'); }
+    }
+    buildBar(x);
+    x.before = JSON.stringify(wordsOf(x));
+    unsavedGuard = () => textChanged();
+    placeBar(); focusText(point);
+  }
+
+  function focusText(point = null) {
+    if (!te) return;
+    if (te.input) { te.input.focus(); return; }
+    const el = te.el, doc = el.ownerDocument, sel = doc.getSelection();
+    el.focus({ preventScroll: true });
+    let r = point && doc.caretRangeFromPoint ? doc.caretRangeFromPoint(point.x, point.y) : null;
+    if (!r || !el.contains(r.startContainer)) { r = doc.createRange(); r.selectNodeContents(el); r.collapse(false); }
+    sel.removeAllRanges(); sel.addRange(r);
+  }
+
+  function buildBar(x) {
+    const doc = x.el.ownerDocument;
+    const go = x.link && (() => { const to = sitePathOf(x.link.getAttribute('href') || ''); return to && pages.find((p) => (p.path === to || p.path === to + '/') && p.path !== path); })();
+    const bar = doc.createElement('div');
+    bar.className = 'jte-tbar'; bar.setAttribute('role', 'group'); bar.setAttribute('aria-label', 'Change these words');
+    bar.innerHTML = `<p class="jte-tbar__what">✎ ${esc(x.label)}</p>
+      ${x.input ? `<input class="jte-tbar__input" type="text" aria-label="New words" value="${esc(x.el.textContent.replace(/\s+/g, ' ').trim())}">` : ''}
+      <p>${x.input ? 'Type the new words in the box.' : x.multi === 'li' ? 'Type right on the page. <strong>Enter</strong> starts a new line in the list.' : x.multi ? 'Type right on the page. <strong>Enter</strong> starts a new paragraph.' : 'Type right on the page. <strong>Enter</strong> saves.'}</p>
+      ${x.must ? '<p class="jte-tbar__must">This must stay on your website. You can change the words, but not remove them.</p>' : ''}
+      ${x.kind === 'phone' ? '<p>This is your phone number – the Call and Text buttons use it.</p>' : x.kind === 'email' ? '<p>This is your email address – the Email buttons use it.</p>' : ''}
+      ${x.link ? `<p>Only the words change – the link still goes to the same place.${go ? ` <button type="button" class="jte-b jte-b--small" data-go="${esc(go.path)}">Open “${esc(go.title)}”</button>` : ''}</p>` : ''}
+      <div class="jte-tbar__err" role="alert" hidden></div>
+      <div class="jte-tbar__btns"><button type="button" class="jte-b jte-b--save" data-save>Save – show it on my page</button><button type="button" class="jte-b" data-cancel>Cancel</button></div>`;
+    doc.body.appendChild(bar);
+    x.bar = bar;
+    if (x.input) {
+      x.input = bar.querySelector('.jte-tbar__input');
+      x.input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); saveText(); } });
+      x.input.addEventListener('input', () => { x.el.textContent = x.input.value; barError(''); placeBar(); });
+    } else {
+      x.el.addEventListener('keydown', x.onKey = (e) => onTextKey(e));
+      x.el.addEventListener('input', x.onInput = () => { barError(''); placeBar(); });
+      x.el.addEventListener('paste', x.onPaste = (e) => onTextPaste(e));
+      x.el.addEventListener('drop', x.onDrop = (e) => e.preventDefault());
+    }
+    bar.querySelector('[data-save]').addEventListener('click', () => saveText());
+    bar.querySelector('[data-cancel]').addEventListener('click', () => cancelText());
+    bar.querySelector('[data-go]')?.addEventListener('click', async (e) => { const to = e.currentTarget.dataset.go; if (await finishText()) goPage(to); });
+  }
+
+  function placeBar() {
+    const x = te; if (!x?.bar) return;
+    const bar = x.bar, win = x.el.ownerDocument.defaultView;
+    const r = x.el.getBoundingClientRect(), h = bar.offsetHeight, w = bar.offsetWidth, vh = win.innerHeight;
+    const fixed = isFixed(x.el) || r.height > vh * 0.45; // tall paragraphs: the toolbar stays at the bottom of the window
+    bar.classList.toggle('is-fixed', fixed);
+    const sx = fixed ? 0 : win.scrollX, sy = fixed ? 0 : win.scrollY;
+    let top;
+    if (r.height > vh * 0.45) top = vh - h - 12;
+    else if (r.bottom + 12 + h <= vh || r.top - 12 - h < 0) top = r.bottom + 12;
+    else top = r.top - 12 - h;
+    bar.style.top = `${Math.max(8, top) + sy}px`;
+    bar.style.left = `${Math.max(8, Math.min(win.innerWidth - w - 8, r.left)) + sx}px`;
+    if (!fixed) { const b = bar.getBoundingClientRect(); if (b.bottom > vh) win.scrollBy(0, b.bottom - vh + 12); else if (b.top < 0) win.scrollBy(0, b.top - 12); }
+  }
+
+  function barError(html, isHtml = false) {
+    const box = te?.bar?.querySelector('.jte-tbar__err'); if (!box) return;
+    box.hidden = !html;
+    if (isHtml) box.innerHTML = html; else box.textContent = html;
+    placeBar();
+  }
+
+  function onTextKey(e) {
+    if (e.key === 'Enter' && !e.isComposing) {
+      e.preventDefault();
+      if (te.multi && !(e.ctrlKey || e.metaKey)) newParagraph(); else saveText();
+    }
+  }
+
+  // Enter in paragraphs / a list: split the paragraph (or list item) at the cursor.
+  function newParagraph() {
+    const el = te.el, doc = el.ownerDocument, sel = doc.getSelection();
+    if (!sel.rangeCount) return;
+    const r = sel.getRangeAt(0); r.deleteContents();
+    const tag = te.multi === 'li' ? 'LI' : 'P';
+    let para = r.startContainer.nodeType === 1 ? r.startContainer : r.startContainer.parentElement;
+    while (para && para !== el && !(para.tagName === tag && para.parentElement === el)) para = para.parentElement;
+    if (!para || para === el) { doc.execCommand('insertText', false, '\n\n'); return; }
+    const tail = doc.createRange(); tail.setStart(r.startContainer, r.startOffset); tail.setEnd(para, para.childNodes.length);
+    const next = para.cloneNode(false); next.appendChild(tail.extractContents());
+    for (const p of [para, next]) if (!p.textContent) p.innerHTML = '<br>';
+    para.after(next);
+    const c = doc.createRange(); c.setStart(next, 0); c.collapse(true); sel.removeAllRanges(); sel.addRange(c);
+    placeBar();
+  }
+
+  // Pasting: plain words only; blank lines in pasted text become paragraphs (lines become list items).
+  function onTextPaste(e) {
+    e.preventDefault();
+    const doc = te.el.ownerDocument;
+    const text = (e.clipboardData?.getData('text/plain') || '').replace(/\r\n?/g, '\n');
+    if (!te.multi) { doc.execCommand('insertText', false, text.replace(/\s+/g, ' ')); return; }
+    const parts = text.split(te.multi === 'li' ? /\n+/ : /\n[ \t]*\n/).map((p) => p.replace(/\s+/g, ' '));
+    parts.forEach((p, i) => { if (i) newParagraph(); if (p) doc.execCommand('insertText', false, p); });
+  }
+
+  /** Ends typing. restore = put the old words back on the page. */
+  function stopText(restore = false) {
+    const x = te; if (!x) return;
+    te = null;
+    if (unsavedGuard) unsavedGuard = null;
+    x.bar?.remove();
+    if (x.onKey) { x.el.removeEventListener('keydown', x.onKey); x.el.removeEventListener('input', x.onInput); x.el.removeEventListener('paste', x.onPaste); x.el.removeEventListener('drop', x.onDrop); }
+    x.el.removeAttribute('contenteditable');
+    x.el.classList.remove('jte-editing');
+    if (x.link) { if (x.drag == null) x.link.removeAttribute('draggable'); else x.link.setAttribute('draggable', x.drag); }
+    if (restore) x.el.innerHTML = x.html;
+    if (msg.querySelector('[data-typing-note]')) msg.innerHTML = '';
+    if (pendingReload && alive()) { pendingReload = false; load(true); }
+  }
+
+  async function saveText() {
+    const x = te; if (!x || x.saving) return false;
+    const value = wordsOf(x);
+    const problem = checkWords(x, value);
+    if (problem) { barError(problem); focusText(); return false; }
+    if (JSON.stringify(value) === x.before) { stopText(true); return true; }
+    x.saving = true;
+    x.bar.querySelectorAll('button').forEach((b) => { b.disabled = true; });
+    x.bar.querySelector('[data-save]').textContent = 'Saving…';
+    try {
+      const st = await api('POST', '/text/item', { key: x.key, value, baseRevision: S.text.revision, ...(x.multi === 'li' ? { list: true } : {}) });
+      if (te !== x) return true;
+      refocusKey = x.key;
+      stopText(false);
+      update('text', st);
+      toast('✓ Saved. Click Publish when you\'re happy.');
+      return true;
+    } catch (err) {
+      if (te !== x) return false;
+      x.saving = false;
+      x.bar.querySelectorAll('button').forEach((b) => { b.disabled = false; });
+      x.bar.querySelector('[data-save]').textContent = 'Save – show it on my page';
+      barError(errorNote(err), true);
+      return false;
+    }
+  }
+
+  async function cancelText() {
+    if (!te || te.saving) return;
+    const key = te.key;
+    stopText(true);
+    refocusTo(key);
+  }
+  function refocusTo(key) {
+    const el = frame.contentDocument?.querySelector(`[data-edit="text"][data-edit-key="${CSS.escape(key)}"]`);
+    if (el) { el.focus({ preventScroll: true }); showTpen(el); }
+  }
+
+  // Escape: nothing typed → stop; typed → ask before throwing it away.
+  async function escapeText() {
+    if (!te || te.saving) return;
+    if (!textChanged()) return cancelText();
+    const yes = await confirmBox({ title: 'Throw away your typing?', body: 'The words you typed are not saved yet.', yes: 'Throw away my typing', no: 'Keep typing', danger: true });
+    if (!te) return;
+    if (yes) cancelText(); else focusText();
+  }
+
+  /** Before doing something else: ask to save or throw away what is typed. Returns false to keep typing. */
+  async function finishText({ ask = true } = {}) {
+    if (!te) return true;
+    if (te.saving) return false;
+    if (!textChanged()) { stopText(true); return true; }
+    if (!ask) { stopText(true); return true; }
+    const c = await choiceBox({ title: 'Save your new words?', body: 'You typed new words on the page but did not save them yet.', choices: [{ value: 'save', label: 'Save – show it on my page', kind: 'primary' }, { value: 'discard', label: 'Don\'t save', kind: 'danger' }, { value: 'keep', label: 'Keep typing' }] });
+    if (!te) return true;
+    if (c === 'save') return saveText();
+    if (c === 'discard') { stopText(true); return true; }
+    focusText(); return false;
+  }
+
+  function setupWords(doc) {
+    tpen = doc.createElement('button');
+    tpen.type = 'button'; tpen.className = 'jte-tpen'; tpen.tabIndex = -1; tpen.textContent = '✎';
+    tpen.setAttribute('aria-hidden', 'true');
+    doc.body.appendChild(tpen);
+    tpen.addEventListener('mouseleave', (e) => { if (!tpenFor?.contains(e.relatedTarget)) hideTpen(); });
+    // In a flex/grid box (e.g. a "Call 555-0100" button) the space between two marked words would vanish: keep it.
+    const keepSpace = (n) => {
+      if (n?.nodeType !== 3 || !/^\s+$/.test(n.data) || !/flex|grid/.test(doc.defaultView.getComputedStyle(n.parentElement).display)) return;
+      const sp = doc.createElement('span'); sp.className = 'jte-space'; sp.style.whiteSpace = 'pre'; sp.textContent = ' '; n.replaceWith(sp);
+    };
+    for (const el of doc.querySelectorAll('[data-edit="text"]')) {
+      keepSpace(el.previousSibling); keepSpace(el.nextSibling);
+      el.tabIndex = 0;
+      el.setAttribute('role', 'button');
+      el.setAttribute('aria-label', `Change text: ${textLabel(el)}`);
+      el.addEventListener('focus', () => { if (!te) { el.classList.add('jte-hover'); showTpen(el); } });
+      el.addEventListener('blur', () => { el.classList.remove('jte-hover'); });
+    }
+    doc.addEventListener('keydown', (e) => {
+      const w = e.target.closest?.('[data-edit="text"]');
+      if (!w || te?.el === w || !(e.key === 'Enter' || e.key === ' ' || e.key === 'F2')) return;
+      e.preventDefault(); startText(w);
+    });
+  }
+
   // Put a ✎ button on every editable thing in the page, and keep clicks inside the editor.
   frame.addEventListener('load', () => {
     if (!alive() || !frame.getAttribute('src')) return;
+    if (te) { te = null; unsavedGuard = null; } // the page was redrawn (nothing typed was waiting – see update())
+    tpen = null; tpenFor = null;
     let doc = null;
     try { doc = frame.contentDocument; } catch { /* another site's page */ }
     if (doc && doc.location.href === 'about:blank') return;
@@ -660,10 +987,31 @@ async function visualScreen() {
       if ((cs.position === 'sticky' || cs.position === 'fixed') && !(parseInt(cs.zIndex, 10) >= 70)) x.style.zIndex = '70';
     }
     pens = new Map();
-    doc.querySelectorAll('[data-edit]').forEach((el) => { const tool = KIND_TOOLS[el.dataset.edit]; if (tool) addPen(doc, el, tool); });
+    const pageW = doc.documentElement.clientWidth;
+    doc.querySelectorAll('[data-edit]').forEach((el) => {
+      const tool = KIND_TOOLS[el.dataset.edit];
+      if (!tool || tool.inline) return;
+      // Full-width parts get their outline just inside their edge; everything else just outside, so it never covers words.
+      if (el.getBoundingClientRect().width >= pageW - 4) el.classList.add('jte-wide');
+      addPen(doc, el, tool);
+    });
+    setupWords(doc);
     doc.addEventListener('click', (e) => {
       const t = e.target;
+      if (t.closest('.jte-tbar')) return; // the words toolbar's own buttons
+      if (te) {
+        if (te.el.contains(t)) { e.preventDefault(); return; } // clicks inside the words place the cursor, never follow a link
+        // Clicked somewhere else while typing: save or throw away first, then carry on with what was clicked.
+        e.preventDefault(); e.stopPropagation();
+        const next = t.closest('.jte-tpen') ? tpenFor : t.closest('[data-edit="text"]');
+        const pen = t.closest('.jte-pen');
+        finishText().then((ok) => { if (!ok) return; if (next?.isConnected) startText(next, { x: e.clientX, y: e.clientY }); else if (pen?.isConnected) pen.click(); });
+        return;
+      }
+      if (t.closest('.jte-tpen')) { e.preventDefault(); if (tpenFor) startText(tpenFor); return; }
       if (t.closest('.jte-pen') || t.closest('[data-hide-preview]')) return;
+      const words = t.closest('[data-edit="text"]');
+      if (words && editableAt(t) === words) { e.preventDefault(); startText(words, { x: e.clientX, y: e.clientY }); return; }
       const a = t.closest('a[href]');
       const ctl = t.closest('button, [role=button], input, select, textarea, label, summary');
       if (ctl && !(a && a.contains(ctl))) return; // the page's own buttons (pause, carousel arrows…) work normally
@@ -681,22 +1029,26 @@ async function visualScreen() {
     // Outline only the innermost editable thing under the mouse (a review, not the whole reviews page).
     let hov = null;
     doc.addEventListener('mouseover', (e) => {
+      if (e.target.closest?.('.jte-tpen, .jte-tbar')) return;
       const t = editableAt(e.target);
       if (t === hov) return;
       hov?.classList.remove('jte-hover'); hov = t; hov?.classList.add('jte-hover');
+      if (t && t.dataset.edit === 'text') showTpen(t); else hideTpen();
     });
-    doc.addEventListener('submit', (e) => { e.preventDefault(); toast('Forms are switched off while you edit.'); }, true);
+    doc.addEventListener('submit', (e) => { e.preventDefault(); e.stopPropagation(); toast('Forms are switched off while you edit.'); }, true);
     doc.addEventListener('keydown', onEscape);
     doc.defaultView.addEventListener('scroll', () => { lastScroll = doc.defaultView.scrollY; }, { passive: true });
+    doc.defaultView.addEventListener('resize', () => { placeBar(); hideTpen(); });
     if (keepScroll) doc.defaultView.scrollTo(0, keepScroll);
     lastScroll = keepScroll;
-    if (!pens.size) {
+    if (!pens.size && !doc.querySelector('[data-edit="text"]')) {
       over.hidden = false; over.className = 'vis__over vis__over--hint';
       over.innerHTML = nothingAtAll
         ? `<p>Nothing on your website is set up for you to change yourself yet. Contact ${supportLine()}.</p>`
         : '<p>Nothing to change on this page – try another page.</p>';
     }
     markOpen();
+    if (refocusKey) { const k = refocusKey; refocusKey = null; refocusTo(k); }
   });
 
   // The page could not be shown (signed out, server error, no internet): say so instead of a broken frame.
@@ -741,8 +1093,8 @@ async function visualScreen() {
   async function publishAll() {
     if (busy.n || publishing) return;
     if (unsavedGuard?.()) {
-      showError('<div class="note note--warn" role="alert"><p>Please save or cancel the review you are typing first. Then click <strong>Publish</strong>.</p></div>');
-      dTitle.focus({ preventScroll: true });
+      showError(`<div class="note note--warn" role="alert" data-typing-note><p>Please save or cancel ${te ? 'the words you are typing on the page' : 'the review you are typing'} first. Then click <strong>Publish</strong>.</p></div>`);
+      if (te) focusText(); else dTitle.focus({ preventScroll: true });
       return;
     }
     const todo = sources.filter(isDirty);
@@ -785,6 +1137,7 @@ async function visualScreen() {
 
   vis.querySelectorAll('[data-page]').forEach((b) => b.addEventListener('click', () => goPage(b.dataset.page)));
   pagesel.addEventListener('change', () => goPage(pagesel.value));
+  pagemore?.addEventListener('change', () => { if (pagemore.value) goPage(pagemore.value); });
   vis.querySelectorAll('[data-device]').forEach((b) => b.addEventListener('click', () => { device = b.dataset.device; store.set(KEYS.device, device); paintBar(); }));
   drawer.querySelector('[data-close]').addEventListener('click', () => closeTool());
   publishBtn.addEventListener('click', publishAll);

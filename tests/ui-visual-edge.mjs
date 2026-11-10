@@ -274,7 +274,7 @@ try {
     assert.equal((await H()).hasUnpublishedChanges, false);
     rules.length = 0;
     await page.click('[data-undo-all]'); await page.click('dialog[open] button[value=yes]');
-    await page.waitForFunction(() => document.querySelector('[data-publish]').disabled, { timeout: 30000 });
+    await page.waitForFunction(() => document.querySelector('[data-undo-all]').hidden && document.querySelector('[data-publish]').disabled, { timeout: 30000 }); // nothing left to undo
     assert.equal((await R()).hasUnpublishedChanges, false, 'Undo all undid the reviews too');
     assert.equal(await page.$eval('[data-undo-all]', (b) => b.hidden), true);
     ran.push('undo all');
@@ -315,7 +315,9 @@ try {
     const other = pages.find((x) => x !== '/');
     const f = await fr();
     assert.match(await f.$eval(`a[href$="${other}"]`, (a) => a.href), /\/calm-site\//, 'links carry the sub-path');
-    await f.click(`a[href$="${other}"]`);
+    await f.click(`a[href$="${other}"]`); // clicking a link's words edits them; the toolbar opens the page it goes to
+    await f.waitForSelector('.jte-tbar [data-go]');
+    await (await f.$('.jte-tbar [data-go]')).click();
     await wf((q) => location.search.includes(`path=${q}&`), encodeURIComponent(other));
     // Hand-written links of other kinds, as copied client sites often have.
     const add = async (html) => (await fr()).evaluate((h) => { const d = document.createElement('div'); d.id = 'jte-test-links'; d.innerHTML = h; document.querySelector('main').prepend(d); }, html);

@@ -213,6 +213,8 @@ body.is-visual main { flex: 1 1 auto; min-height: 0; max-width: none; width: 100
 .vis__select { display: none; width: auto; max-width: 22rem; min-height: 50px; padding: .35rem .75rem; font-weight: 600; border-color: var(--brand); }
 .vis__pages.is-select .vis__pagebtns { display: none; }
 .vis__pages.is-select .vis__select { display: block; }
+.vis__moresel { flex: none; width: auto; max-width: 14rem; min-height: 50px; padding: .35rem .75rem; font-weight: 600; font-size: 1.05rem; }
+.vis__pages.is-select .vis__moresel { display: none; }
 .vis__label { font-weight: 700; white-space: nowrap; }
 .vis .seg { min-height: 48px; padding: .35rem 1rem; font-size: 1.05rem; }
 .vis__help { flex: 1 1 240px; min-width: 0; margin: 0; font-size: 1.05rem; line-height: 1.35; }

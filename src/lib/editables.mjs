@@ -16,11 +16,21 @@ export const EDIT_KINDS = {
   photo: { what: 'A photo' },
   reviews: { what: 'Client reviews' },
   review: { what: 'One review' },
-  // Planned (not built yet): text, video, videos, hours, team …
+  text: { what: 'Words on the page' }, // drawn by t() / tBlock() / tList() in src/lib/text.mjs – every visible word
+  // Planned (not built yet): video, videos, hours, team …
 };
 
 /** Attributes to add to an editable element. Empty string on the real website. */
 export function editMark(ctx, kind, key = '', label = '') {
   if (!ctx.editMode || !EDIT_KINDS[kind]) return '';
   return ` data-edit="${e(kind)}"${key ? ` data-edit-key="${e(key)}"` : ''}${label ? ` data-edit-label="${e(label)}"` : ''}`;
+}
+
+/**
+ * For words that another editor already owns (a review's title and text are changed in the reviews panel), or that
+ * only exist on previews (the testing banner): marks the element so the "every word is editable" test
+ * (tests/text-coverage.test.mjs) knows it is looked after. Empty string on the real website.
+ */
+export function ownedBy(ctx, kind) {
+  return ctx.editMode ? ` data-edit-owned="${e(kind)}"` : '';
 }

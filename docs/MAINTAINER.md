@@ -141,6 +141,25 @@ HTTPS, same account as the editor):
   row was sorted newest first, so on the homepage the 2017 review "Sold a single family home in Waxhaw" moved from last
   to 4th (the row starts at a random review and loops). Dan can move it with the new buttons.
 
+### Every word editable (added Nov 10)
+* **All visible wording goes through `t()`** (`src/lib/text.mjs`, same code as client-site-template – its `docs/EDITOR.md`
+  → "Words" has the details). Words live in `content/text.json` (119 keys, migrated word for word from the templates)
+  and the `site.json` fields in its `siteFields` (name, agent, agentTitle, tagline, phone, email, brokerage,
+  serviceAreaSentence). Before/after builds of all 23 pages (classic live + testing, option 2 testing + live) read
+  identically (`node tests/text-diff.mjs <before> <after>`).
+* Editor: Dan clicks any words on the page and types in place (toolbar **Save – show it on my page / Cancel**; Enter saves
+  a line, starts a new paragraph in paragraphs). Small ✎ only on hover/keyboard focus. Menu/button words keep their link
+  (**Open “page”** in the toolbar). Phone/email are checked; changing the phone updates `phoneHref`/`smsHref`.
+  `mustStay`: Dan's name, NC/SC Broker/REALTOR®, Realtor NC/SC and the brokerage line can't be emptied.
+  The page list has **More pages…** (Accessibility, Copyright, one review, Page not found).
+* Server: `owner/src/text.mjs` – settings row `text`; `GET /api/text`, `POST /api/text/item`, `/discard`, `/publish`
+  (one commit to `content/text.json` and/or `content/site.json`, only the changed words). Previews merge the draft.
+* Guarantee: `tests/text-coverage.test.mjs` renders every page (classic) in edit mode and fails on any visible word that
+  isn't editable; option 2 (luxury) uses the same keys where the wording is the same (it isn't the editor's design).
+  Not converted: the listing templates (`listing.mjs`, the listings index/removed-listing pages and the homepage listings
+  section) – switched off, not rendered; the coverage test will name every word if listings come back.
+* Tests: `tests/text.test.mjs` (API), `tests/ui-text.mjs` (browser, part of `npm run test:visual`).
+
 ### Sign-in as set up (Nov 8)
 Access app "Dan McKenna Homes – Website Editor" (id dfd09d8c…, attached to the `dmh-owner` worker via
 `destinations: worker`), team `gentle-rice-8ea1.cloudflareaccess.com`, policy "Dan and James only"

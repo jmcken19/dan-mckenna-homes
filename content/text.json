@@ -1,0 +1,221 @@
+{
+  "_comment": "Every piece of wording on Dan's website that isn't a contact fact in site.json, copied word for word from the site (Nov 2026). Dan changes it in the editor (click the words, type, Save, Publish). Never invent or 'improve' wording. Keys are used by t()/tBlock()/tList() in src/templates (see src/lib/text.mjs). siteFields = site.json fields that are wording (key \"site.<field>\"). kinds = must stay a phone number / email address. mustStay = license/brokerage lines (the editor says they must stay on the website; they can't be emptied).",
+  "siteFields": [
+    "name",
+    "agent",
+    "agentTitle",
+    "tagline",
+    "phone",
+    "email",
+    "brokerage",
+    "serviceAreaSentence"
+  ],
+  "kinds": {
+    "site.phone": "phone",
+    "site.email": "email"
+  },
+  "mustStay": [
+    "site.agent",
+    "site.agentTitle",
+    "site.brokerage",
+    "contact.license"
+  ],
+  "text": {
+    "layout.skip": "Skip to main content",
+    "layout.menu": "Menu",
+    "nav.home": "Home",
+    "nav.about": "About us",
+    "nav.newConstruction": "New Construction",
+    "nav.luxury": "Luxury Home Marketing",
+    "nav.testimonials": "Testimonials",
+    "nav.contact": "Contact",
+    "footer.aboutTitle": "About",
+    "footer.contactTitle": "Contact Dan",
+    "footer.privacyTitle": "Consumer Protection & Privacy",
+    "footer.accessibility": "Accessibility",
+    "footer.dmca": "Copyright (DMCA)",
+    "footer.rights": "All rights reserved.",
+    "ask.title": "Have a question?",
+    "ask.note": "Dan answers his own phone.",
+    "ask.call": "Call",
+    "ask.text": "Text Dan",
+    "ask.email": "Email Dan",
+    "form.title": "Or send Dan a message",
+    "form.name": "Name",
+    "form.email": "Email",
+    "form.phone": "Phone",
+    "form.optional": "(optional)",
+    "form.message": "Message",
+    "form.send": "Send message",
+    "home.call": "Call Dan",
+    "hero.pause": "Pause slideshow",
+    "home.reviewsTitle": "What Clients Say About Working With Us",
+    "home.viewAll": "View all reviews",
+    "reviews.pause": "Pause reviews",
+    "reviews.readMore": "Read more",
+    "about.title": "Dan McKenna, NC/SC Broker/REALTOR®",
+    "about.kicker": "Experience Counts.",
+    "about.intro.text": [
+      "Over 15 years ago, we relocated our family from New York to the Charlotte area, drawn by everything this wonderful region has to offer. Having made that move ourselves, we understand the excitement and challenges of finding a new place to call home. Today, we're proud to help others discover the communities and lifestyle that make the Charlotte area so special.",
+      "I am a full-time REALTOR® licensed in North Carolina and South Carolina, specializing in residential real estate, luxury homes, relocation, buyer and seller representation, and new construction. As a Certified Luxury Home Marketing Specialist (CLHMS) and GUILD member, I bring extensive market knowledge, strong negotiation skills, and personalized service to every transaction.",
+      "I am supported by my wife, Wendy, who serves as my Administrative Assistant, and Tammy, our Closing Coordinator. Together, we are committed to making every real estate experience as smooth, organized, and successful as possible."
+    ],
+    "about.buyers.title": "Representing Buyers",
+    "about.buyers.text": [
+      "Whether you're purchasing your first home, moving into a larger home, or downsizing, I take the time to understand your needs, lifestyle, and priorities. My knowledge of the Charlotte-area market helps you make informed decisions, identify the right opportunities, and negotiate with confidence."
+    ],
+    "about.sellers.title": "Representing Sellers",
+    "about.sellers.text": [
+      "Selling a home requires more than placing a sign in the yard. I develop a personalized marketing strategy designed to showcase your property's strengths, attract qualified buyers, and achieve the best possible outcome.",
+      "From pricing and presentation to marketing and negotiations, I provide experienced guidance throughout the selling process. I also offer a complimentary market analysis and an opportunity to discuss a marketing plan tailored to your home."
+    ],
+    "about.newConstruction.title": "New Construction Representation",
+    "about.newConstruction.text": [
+      "Buying a newly constructed home is an exciting opportunity, but having an experienced REALTOR® representing your interests is essential.",
+      "I have extensive experience working with national, regional, and custom home builders throughout the Charlotte area. From selecting a homesite and reviewing builder contracts to negotiating and navigating the construction process, I provide guidance every step of the way.",
+      "Remember, the on-site sales representative works for the builder. Having your own representation helps ensure your interests remain a priority. Buyer representation fees and terms are discussed upfront."
+    ],
+    "about.relocation.title": "Relocation to the Charlotte Area",
+    "about.relocation.text": [
+      "Having personally experienced a relocation to Charlotte, I understand the importance of finding not just the right home, but the right community.",
+      "I help relocating buyers explore neighborhoods, schools, amenities, and lifestyles throughout Charlotte, Waxhaw, Weddington, Marvin, and the surrounding areas. My goal is to make your transition as informed and seamless as possible."
+    ],
+    "about.recognition.title": "Experience & Recognition",
+    "about.recognition.text": [
+      "My commitment to my clients and consistent real estate production have earned recognition throughout my career, including:"
+    ],
+    "about.recognition.list": [
+      "2022 #1 Individual Real Estate Agent — Keller Williams Ballantyne office in Charlotte, among approximately 500 agents",
+      "Consistent Keller Williams Top Producer — Recognized for production annually since 2015",
+      "Nextdoor Neighborhood Favorite — 2017, 2018, 2019, 2023 & 2024",
+      "Multiple recognitions from the Keller Williams Carolinas Region",
+      "Consistent Top Agent recognition in Union County"
+    ],
+    "about.commitment.title": "A Commitment Beyond the Closing",
+    "about.commitment.text": [
+      "Real estate is about more than buying or selling a home. It's about relationships built on trust, communication, and results.",
+      "My goal is simple: to provide an exceptional experience so that when your family, friends, or neighbors need real estate guidance, you'll feel confident referring them to me."
+    ],
+    "about.wendy.title": "Wendy McKenna, Administrative Assistant",
+    "about.wendy.text": [
+      "Over 15 years ago, Dan and I relocated our family from New York to the Charlotte area in search of more family time, excellent schools, milder weather, and a community that fit our lifestyle. Looking back, I can confidently say we found everything we were hoping for and more. Charlotte has become home, and we're grateful for the life we've built here.",
+      "As Dan's Administrative Assistant, I draw on my professional background in healthcare and education, which helped shape the attention to detail, communication skills, and commitment to helping others that I bring to my work today.",
+      "Working closely with Dan, I assist with property listings, marketing, client communication, scheduling, and the day-to-day operations of our business. I take pride in staying organized, anticipating needs, and making sure our clients feel informed and supported throughout the process.",
+      "What I enjoy most about my role is the opportunity to work with people. Whether preparing a home for the market, coordinating showings, or assisting our clients behind the scenes, my goal is to help make their real estate experience as seamless and positive as possible."
+    ],
+    "newConstruction.title": "New Construction Home Buying",
+    "newConstruction.kicker": "Building Your Dream Home? Experience Counts.",
+    "newConstruction.intro.text": [
+      "The Charlotte metropolitan area continues to offer exciting opportunities for new construction, from established neighborhoods and growing communities to exceptional custom homes.",
+      "Building or purchasing a newly constructed home can be an exciting and rewarding experience, but the process can also be complex. Having an experienced real estate professional representing your interests can make all the difference."
+    ],
+    "newConstruction.reasons.title": "5 Reasons to Work with an Experienced Buyer's Agent When Purchasing New Construction",
+    "newConstruction.reason1.title": "1. Representation That Puts Your Interests First",
+    "newConstruction.reason1.text": [
+      "The on-site sales representative works for the builder. As your buyer's agent, I represent your interests throughout the purchasing and construction process, helping you understand your options and make informed decisions. Buyer representation fees and compensation arrangements are discussed upfront."
+    ],
+    "newConstruction.reason2.title": "2. Builder Knowledge and Negotiation Experience",
+    "newConstruction.reason2.text": [
+      "With extensive experience working with national, regional, and custom home builders throughout the Charlotte area, I understand builder incentives, market conditions, comparable sales, and potential opportunities for negotiation. My goal is to help you secure the best possible value for your investment."
+    ],
+    "newConstruction.reason3.title": "3. Guidance Beyond the Purchase Agreement",
+    "newConstruction.reason3.text": [
+      "My involvement doesn't end when the contract is signed. I help you navigate important contract terms and construction milestones, coordinate with the builder, and participate in scheduled inspections and walkthroughs when permitted. When concerns arise, I advocate for your interests and work toward a satisfactory resolution."
+    ],
+    "newConstruction.reason4.title": "4. Assistance Throughout the Financing Process",
+    "newConstruction.reason4.text": [
+      "New construction financing can differ from purchasing an existing home. I help you understand available builder incentives and financing considerations while working alongside your chosen mortgage professional to keep the process moving forward."
+    ],
+    "newConstruction.reason5.title": "5. Support Through Closing and Beyond",
+    "newConstruction.reason5.text": [
+      "From your initial home search and homesite selection to the final walkthrough and closing, I remain involved every step of the way. Even after closing, I can help direct you to the appropriate builder contacts and warranty resources when questions arise."
+    ],
+    "newConstruction.build.title": "Build with Confidence",
+    "newConstruction.build.text": [
+      "Whether you're considering a move-in-ready new home, selecting a homesite in a new community, or building a fully customized residence, having an experienced REALTOR® on your side provides valuable guidance and peace of mind.",
+      "Let my experience work for you."
+    ],
+    "newConstruction.signoff.name": "Dan McKenna",
+    "newConstruction.signoff.line1": "Dan McKenna Homes | Keller Williams Ballantyne Area, Charlotte, NC",
+    "newConstruction.signoff.line2": "Serving Charlotte, Waxhaw, Weddington, Marvin, and surrounding communities in North Carolina and South Carolina.",
+    "luxury.title": "Luxury Home Marketing",
+    "luxury.kicker": "Exceptional Properties. Experienced Representation. Personalized Service.",
+    "luxury.intro.text": [
+      "Luxury real estate requires more than beautiful photography and an attractive listing. It requires an understanding of the market, thoughtful pricing, strategic marketing, skilled negotiations, and an appreciation for the distinctive qualities that make each home unique.",
+      "At Dan McKenna Homes, I combine extensive Charlotte-area real estate experience with specialized luxury credentials and the resources of Keller Williams Luxury to provide personalized representation for buyers and sellers of exceptional properties."
+    ],
+    "luxury.kwLuxury.title": "The Keller Williams Luxury Advantage",
+    "luxury.kwLuxury.text": [
+      "As a Keller Williams Luxury real estate professional, I have access to an extensive network of real estate professionals, specialized marketing resources, and connections that extend beyond the Charlotte area.",
+      "This network complements my local market expertise, providing additional opportunities to connect exceptional properties with potential buyers locally, nationally, and internationally.",
+      "My clients benefit from the resources of an established luxury real estate brand while receiving the personalized attention and experienced guidance of a dedicated local agent."
+    ],
+    "luxury.clhms.title": "Certified Luxury Home Marketing Specialist™ (CLHMS)",
+    "luxury.clhms.text": [
+      "The Certified Luxury Home Marketing Specialist™ designation is awarded by The Institute for Luxury Home Marketing to real estate professionals who have completed specialized luxury real estate education and demonstrated documented sales performance in the upper-tier residential market.",
+      "The designation recognizes both professional knowledge and proven transaction experience, reflecting my commitment to providing knowledgeable representation for luxury buyers and sellers."
+    ],
+    "luxury.guild.title": "GUILD™ Recognition",
+    "luxury.guild.text": [
+      "In addition to my CLHMS designation, I have earned GUILD™ recognition from The Institute for Luxury Home Marketing.",
+      "GUILD recognition is awarded to qualified CLHMS professionals who have demonstrated successful sales performance in the residential market at or above $1 million.",
+      "This distinction recognizes proven experience representing clients in the million-dollar luxury home market."
+    ],
+    "luxury.approach.title": "A Personalized Approach to Luxury Real Estate",
+    "luxury.approach.text": [
+      "Every luxury property is unique and deserves an individualized marketing strategy.",
+      "My approach includes strategic pricing, professional photography, compelling property descriptions, thoughtful digital marketing, agent networking, and experienced negotiations.",
+      "Whether representing an established luxury estate or an extraordinary new construction residence, I focus on highlighting the features, craftsmanship, location, and lifestyle that distinguish each home."
+    ],
+    "luxury.homes.title": "Luxury Homes & Custom Construction",
+    "luxury.homes.text": [
+      "The Charlotte metropolitan area offers a remarkable variety of luxury living opportunities, including established estates, distinctive neighborhoods, and custom-built residences.",
+      "With experience representing buyers and sellers of luxury properties and working with national, regional, and custom home builders, I understand the details involved in navigating this specialized market.",
+      "Whether you're considering the purchase of a luxury home, exploring a custom-building opportunity, or preparing to sell your property, I offer guidance tailored to your goals."
+    ],
+    "luxury.experience.title": "Experience Counts",
+    "luxury.experience.text": [
+      "Exceptional homes deserve exceptional representation.",
+      "My commitment is to provide knowledgeable guidance, personalized service, and a thoughtful approach to every real estate transaction."
+    ],
+    "luxury.caption.title": "Featured Dan McKenna Homes Listing",
+    "luxury.caption.address": "2515 Forest Lawn Drive, Weddington NC",
+    "luxury.caption.builder": "Built by Tiara Homes",
+    "luxury.signoff.name": "Dan McKenna",
+    "luxury.signoff.line1": "Certified Luxury Home Marketing Specialist™ | GUILD™ Recognition",
+    "luxury.signoff.line2": "Dan McKenna Homes | Keller Williams Luxury",
+    "luxury.signoff.line3": "Keller Williams Ballantyne Area, Charlotte, NC",
+    "reviews.title": "Testimonials",
+    "reviews.back": "← All testimonials",
+    "contact.title": "Contact",
+    "contact.license": "Realtor NC/SC",
+    "contact.mobile": "Mobile",
+    "contact.email": "Email",
+    "contact.call": "Call Dan",
+    "contact.text": "Text Dan",
+    "contact.emailButton": "Email Dan",
+    "accessibility.title": "Accessibility",
+    "accessibility.commitment.title": "Our Commitment",
+    "accessibility.commitment.text": [
+      "We are committed to providing an accessible website. If you have difficulty accessing content, have trouble viewing a file on the site, or notice any accessibility problems, please contact us to specify the nature of the accessibility issue and the assistive technology you use. We will strive to provide the content you need in the format you require. We welcome your suggestions and comments about improving ongoing efforts to increase the accessibility of this website."
+    ],
+    "accessibility.help.title": "For additional assistance",
+    "accessibility.help.call": "Call",
+    "accessibility.help.orEmail": "or email",
+    "accessibility.help.after": "if you experience difficulty in accessing any part of this website, and we will work with you to provide the information you seek through an alternate communication method that is accessible for you.",
+    "accessibility.ssa.before": "The",
+    "accessibility.ssa.link": "US Social Security Administration",
+    "accessibility.ssa.after": "offers tips for adjusting your computer and browser, such as reading pages out loud, enlarging text, and changing colors.",
+    "dmca.title": "Copyright Concerns",
+    "dmca.before": "We respect the intellectual property rights of others. If you believe material on this website infringes your copyright, please contact",
+    "dmca.at": "at",
+    "dmca.or": "or",
+    "dmca.after": "with a description of the material and where it appears, and we will review it promptly.",
+    "notFound.title": "Page not found",
+    "notFound.text": [
+      "Sorry, we couldn't find that page. It may have moved when the website was updated."
+    ],
+    "notFound.home": "Home page",
+    "notFound.contact": "Contact Dan"
+  }
+}

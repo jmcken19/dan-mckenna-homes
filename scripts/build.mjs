@@ -12,6 +12,7 @@ import { fileURLToPath } from 'node:url';
 import { execSync } from 'node:child_process';
 import { validatePublicListing, validateHomepage, HERO_SIZES } from '../src/lib/listing.mjs';
 import { PHOTO_SPOTS, sitePhoto, validatePhotos } from '../src/lib/photos.mjs';
+import { validateText } from '../src/lib/text.mjs';
 import { layout } from '../src/templates/layout.mjs';
 import { listingDetail } from '../src/templates/listing.mjs';
 import * as P from '../src/templates/pages.mjs';
@@ -32,6 +33,7 @@ const readJson = async (p) => JSON.parse(await readFile(join(root, p), 'utf8'));
 
 export async function loadContent() {
   const site = await readJson('content/site.json');
+  const text = await readJson('content/text.json'); // all wording (src/lib/text.mjs)
   const tFile = await readJson('content/testimonials.json');
   const testimonials = tFile.items;
   const removedReviewSlugs = (tFile.removedSlugs || []).filter((s) => /^[a-z0-9-]+$/.test(s) && !testimonials.some((t) => t.slug === s));
@@ -49,6 +51,8 @@ export async function loadContent() {
     const src = sitePhoto(site, k)[f];
     if (!existsSync(join(root, 'public', src))) heroProblems.push(`missing image file public${src} (photos.${k})`);
   }
+  const textProblems = validateText(text, site);
+  if (textProblems.length) problems.push(`content/text.json (wording):\n  - ${textProblems.join('\n  - ')}`);
   if (heroProblems.length) problems.push(`content/site.json (homepage slideshow):\n  - ${heroProblems.join('\n  - ')}`);
   for (const f of files) {
     const l = JSON.parse(await readFile(join(dir, f), 'utf8'));
@@ -66,13 +70,46 @@ export async function loadContent() {
   if (problems.length) throw new Error('Listing content has problems:\n' + problems.join('\n'));
   const order = { active: 0, pending: 1, sold: 2 };
   listings.sort((a, b) => order[a.status] - order[b.status] || b.updatedAt.localeCompare(a.updatedAt));
-  return { site, testimonials, removed, listings, removedReviewSlugs };
+  return { site, text, testimonials, removed, listings, removedReviewSlugs };
 }
 
 async function writePage(path, html) {
   const file = path.endsWith('.html') ? join(out, path) : join(out, path, 'index.html');
   await mkdir(dirname(file), { recursive: true });
   await writeFile(file, html);
+}
+
+/** The site's main pages: [path, title, render(ctx), layout options]. */
+export function mainPages(theme = THEME) {
+  return [
+    ['/', 'Home', theme === 'luxury' ? luxHome : P.homePage, { bodyClass: 'home' }],
+    ['/about-us/', 'About us', P.aboutPage, { description: 'Meet Dan McKenna, full-time NC/SC Broker/REALTOR® with Keller Williams Ballantyne Area in Charlotte, NC, a CLHMS and GUILD member, serving the Charlotte area.' }],
+    ['/new-construction/', 'New Construction Buyer Agent', P.newConstructionPage, { description: 'Why work with an experienced buyer\'s agent when purchasing new construction in the Charlotte area.' }],
+    ['/luxury-home-marketing/', 'Luxury Home Marketing', P.luxuryPage, { description: 'Luxury home marketing in the Charlotte area by Dan McKenna, Certified Luxury Home Marketing Specialist and GUILD member.' }],
+    ['/testimonials/', 'Testimonials', P.testimonialsPage, { description: 'What clients say about working with Dan McKenna.' }],
+    ['/contact/', 'Contact', P.contactPage, { description: 'Call, text, or email Dan McKenna: 704-441-4556, danmckenna@kw.com.' }],
+    ['/accessibility-2/', 'Accessibility', P.accessibilityPage, {}],
+    ['/dmca-compliance-2/', 'Copyright', P.dmcaPage, {}],
+  ];
+}
+
+/** One page per review, listings (switched off: none now) and removed listings: [{ path, html }]. */
+export function extraPages(ctx, page = layout) {
+  const out = [];
+  for (const t of ctx.testimonials) {
+    const path = `/testimonial/${t.slug}/`;
+    out.push({ path, html: page(ctx, { path, title: t.title, description: t.text[0].slice(0, 150), body: P.testimonialPage(ctx, t) }) });
+  }
+  for (const l of ctx.listings) {
+    const path = `/listings/${l.slug}/`;
+    const desc = `${l.address.street}, ${l.address.city}, ${l.address.state}. ${(l.description || '').slice(0, 120)}`;
+    out.push({ path, html: page(ctx, { path, title: `${l.address.street}, ${l.address.city}`, description: desc, body: listingDetail(ctx, l), ogImage: ctx.siteUrl ? ctx.siteUrl.replace(/\/$/, '') + l.photos[0].large : '' }) });
+  }
+  for (const r of ctx.removed) {
+    const path = `/listings/${r.slug}/`;
+    out.push({ path, html: page(ctx, { path, title: 'Home no longer available', body: P.removedListingPage(ctx, r) }) });
+  }
+  return out;
 }
 
 async function main() {
@@ -96,32 +133,12 @@ async function main() {
     await writeFile(join(out, 'assets/css/luxury.css'), base + '\n' + lux);
   }
 
-  const pages = [
-    ['/', 'Home', THEME === 'luxury' ? luxHome : P.homePage, { bodyClass: 'home' }],
-    ['/about-us/', 'About us', P.aboutPage, { description: 'Meet Dan McKenna, full-time NC/SC Broker/REALTOR® with Keller Williams Ballantyne Area in Charlotte, NC, a CLHMS and GUILD member, serving the Charlotte area.' }],
-    ['/new-construction/', 'New Construction Buyer Agent', P.newConstructionPage, { description: 'Why work with an experienced buyer\'s agent when purchasing new construction in the Charlotte area.' }],
-    ['/luxury-home-marketing/', 'Luxury Home Marketing', P.luxuryPage, { description: 'Luxury home marketing in the Charlotte area by Dan McKenna, Certified Luxury Home Marketing Specialist and GUILD member.' }],
-    ['/testimonials/', 'Testimonials', P.testimonialsPage, { description: 'What clients say about working with Dan McKenna.' }],
-    ['/contact/', 'Contact', P.contactPage, { description: 'Call, text, or email Dan McKenna: 704-441-4556, danmckenna@kw.com.' }],
-    ['/accessibility-2/', 'Accessibility', P.accessibilityPage, {}],
-    ['/dmca-compliance-2/', 'Copyright', P.dmcaPage, {}],
-  ];
+  const pages = mainPages(THEME);
   for (const [path, title, fn, opts] of pages) {
     await writePage(path, page(ctx, { path, title, body: fn(ctx), ...opts }));
   }
-  for (const t of content.testimonials) {
-    const path = `/testimonial/${t.slug}/`;
-    await writePage(path, page(ctx, { path, title: t.title, description: t.text[0].slice(0, 150), body: P.testimonialPage(ctx, t) }));
-  }
-  for (const l of content.listings) {
-    const path = `/listings/${l.slug}/`;
-    const desc = `${l.address.street}, ${l.address.city}, ${l.address.state}. ${(l.description || '').slice(0, 120)}`;
-    await writePage(path, page(ctx, { path, title: `${l.address.street}, ${l.address.city}`, description: desc, body: listingDetail(ctx, l), ogImage: SITE_URL ? SITE_URL.replace(/\/$/, '') + l.photos[0].large : '' }));
-  }
-  for (const r of content.removed) {
-    const path = `/listings/${r.slug}/`;
-    await writePage(path, page(ctx, { path, title: 'Home no longer available', body: P.removedListingPage(ctx, r) }));
-  }
+  for (const r of extraPages(ctx, page)) await writePage(r.path, r.html);
+
   // Reviews Dan removed: their old address forwards to the reviews page.
   for (const s of content.removedReviewSlugs || []) {
     const to = ctx.url('/testimonials/');

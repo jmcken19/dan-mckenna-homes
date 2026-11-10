@@ -1,13 +1,20 @@
+// The frame of every page (classic design): top bar, header + menu, footer, the "Have a question?" box and the form.
+// Every visible word goes through t() (src/lib/text.mjs) so Dan can change it in the editor; the words live in
+// content/text.json and content/site.json (phone, email, name, brokerage…). Never hard-code visible words.
 import { escapeHtml as e } from '../lib/listing.mjs';
+import { t, tText } from '../lib/text.mjs';
+import { ownedBy } from '../lib/editables.mjs';
 
+/** Main menu: the words of each item are content/text.json → "nav.<key>". */
 export const NAV = [
-  { href: '/', label: 'Home' },
-  { href: '/about-us/', label: 'About us' },
-  { href: '/new-construction/', label: 'New Construction' },
-  { href: '/luxury-home-marketing/', label: 'Luxury Home Marketing' },
-  { href: '/testimonials/', label: 'Testimonials' },
-  { href: '/contact/', label: 'Contact' },
+  { href: '/', key: 'home' },
+  { href: '/about-us/', key: 'about' },
+  { href: '/new-construction/', key: 'newConstruction' },
+  { href: '/luxury-home-marketing/', key: 'luxury' },
+  { href: '/testimonials/', key: 'testimonials' },
+  { href: '/contact/', key: 'contact' },
 ];
+export const navLabel = (ctx, n) => t(ctx, `nav.${n.key}`);
 
 const ICON = {
   phone: '<svg aria-hidden="true" viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M6.6 10.8a15.1 15.1 0 0 0 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1A17 17 0 0 1 3 4c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.3 0 .7-.2 1z"/></svg>',
@@ -20,7 +27,7 @@ export function layout(ctx, { path, title, description, body, bodyClass = '', og
   const canonical = ctx.siteUrl ? ctx.siteUrl.replace(/\/$/, '') + path : '';
   const navItems = NAV.map((n) => {
     const current = n.href === '/' ? path === '/' : path.startsWith(n.href);
-    return `<li><a href="${url(n.href)}"${current ? ' aria-current="page"' : ''}>${e(n.label)}</a></li>`;
+    return `<li><a href="${url(n.href)}"${current ? ' aria-current="page"' : ''}>${navLabel(ctx, n)}</a></li>`;
   }).join('');
 
   return `<!doctype html>
@@ -46,23 +53,23 @@ ${ogImage ? `<meta property="og:image" content="${e(ogImage)}">` : ''}
 <script src="${url('/assets/js/site.js')}?v=${ctx.buildId}" defer></script>
 </head>
 <body class="${e(bodyClass)}">
-<a class="skip" href="#main">Skip to main content</a>
-${preview ? `<div class="preview-bar" role="note">Testing preview – not the live website. <a href="${e(site.liveUrl || 'https://www.danmckennahomes.com/')}">Go to the live site</a>${ctx.altUrl ? ` · <a href="${e(ctx.altUrl)}">See design option 2</a>` : ''}<button type="button" class="preview-bar__hide" data-hide-preview aria-label="Hide this testing banner">Hide ×</button></div>` : ''}
+<a class="skip" href="#main">${t(ctx, 'layout.skip')}</a>
+${preview ? `<div class="preview-bar" role="note"${ownedBy(ctx, 'preview')}>Testing preview – not the live website. <a href="${e(site.liveUrl || 'https://www.danmckennahomes.com/')}">Go to the live site</a>${ctx.altUrl ? ` · <a href="${e(ctx.altUrl)}">See design option 2</a>` : ''}<button type="button" class="preview-bar__hide" data-hide-preview aria-label="Hide this testing banner">Hide ×</button></div>` : ''}
 <div class="topbar">
   <div class="wrap topbar__in">
-    <a href="${e(site.phoneHref)}">${ICON.phone}<span>${e(site.phone)}</span></a>
+    <a href="${e(site.phoneHref)}">${ICON.phone}<span>${t(ctx, 'site.phone')}</span></a>
     <span class="topbar__dot" aria-hidden="true">·</span>
-    <a href="mailto:${e(site.email)}">${ICON.mail}<span>${e(site.email)}</span></a>
+    <a href="mailto:${e(site.email)}">${ICON.mail}<span>${t(ctx, 'site.email')}</span></a>
   </div>
 </div>
 <header class="site-header">
   <div class="wrap site-header__in">
     <a class="brand" href="${url('/')}">
       <img src="${url('/assets/img/logo-kw-charlotte-ballantyne.png')}" width="188" height="58" alt="Keller Williams Charlotte Ballantyne Area – Dan McKenna Homes">
-      <span class="brand__tag">${e(site.tagline)}</span>
+      <span class="brand__tag">${t(ctx, 'site.tagline')}</span>
     </a>
     <button class="menu-btn" type="button" aria-expanded="false" aria-controls="site-nav">
-      <span class="menu-btn__bars" aria-hidden="true"></span><span class="menu-btn__label">Menu</span>
+      <span class="menu-btn__bars" aria-hidden="true"></span><span class="menu-btn__label">${t(ctx, 'layout.menu')}</span>
     </button>
     <nav id="site-nav" class="site-nav" aria-label="Main">
       <ul>${navItems}</ul>
@@ -77,27 +84,27 @@ ${body}
     <img class="site-footer__logo" src="${url('/assets/img/logo-kw-white.png')}" width="214" height="66" alt="Keller Williams Charlotte Ballantyne Area" loading="lazy">
     <div class="site-footer__cols">
       <section>
-        <h2>About</h2>
-        <ul>${NAV.map((n) => `<li><a href="${url(n.href)}">${e(n.label)}</a></li>`).join('')}</ul>
+        <h2>${t(ctx, 'footer.aboutTitle')}</h2>
+        <ul>${NAV.map((n) => `<li><a href="${url(n.href)}">${navLabel(ctx, n)}</a></li>`).join('')}</ul>
       </section>
       <section>
-        <h2>Contact Dan</h2>
+        <h2>${t(ctx, 'footer.contactTitle')}</h2>
         <ul>
-          <li><a href="${e(site.phoneHref)}">${e(site.phone)}</a></li>
-          <li><a href="mailto:${e(site.email)}">${e(site.email)}</a></li>
-          <li>${e(site.agent)}, ${e(site.agentTitle)}</li>
-          <li>${e(site.brokerage)}</li>
+          <li><a href="${e(site.phoneHref)}">${t(ctx, 'site.phone')}</a></li>
+          <li><a href="mailto:${e(site.email)}">${t(ctx, 'site.email')}</a></li>
+          <li>${t(ctx, 'site.agent')}, ${t(ctx, 'site.agentTitle')}</li>
+          <li>${t(ctx, 'site.brokerage')}</li>
         </ul>
       </section>
       <section>
-        <h2>Consumer Protection &amp; Privacy</h2>
+        <h2>${t(ctx, 'footer.privacyTitle')}</h2>
         <ul>
-          <li><a href="${url('/accessibility-2/')}">Accessibility</a></li>
-          <li><a href="${url('/dmca-compliance-2/')}">Copyright (DMCA)</a></li>
+          <li><a href="${url('/accessibility-2/')}">${t(ctx, 'footer.accessibility')}</a></li>
+          <li><a href="${url('/dmca-compliance-2/')}">${t(ctx, 'footer.dmca')}</a></li>
         </ul>
       </section>
     </div>
-    <p class="site-footer__legal">© ${new Date().getFullYear()} ${e(site.name)}. All rights reserved.</p>
+    <p class="site-footer__legal">© ${new Date().getFullYear()} ${t(ctx, 'site.name')}. ${t(ctx, 'footer.rights')}</p>
   </div>
 </footer>
 </body>
@@ -105,16 +112,17 @@ ${body}
 `;
 }
 
-/** The "Have a question?" box that sits beside inner pages, same place as the old form. */
-export function askBox(ctx, { heading = 'Have a question?', about = '' } = {}) {
+/** The "Have a question?" box that sits beside inner pages, same place as the old form.
+ *  heading/about are only used by the listing pages (switched off since Nov 2026). */
+export function askBox(ctx, { heading = '', about = '' } = {}) {
   const { site } = ctx;
   const subject = about ? `?subject=${encodeURIComponent('Question about ' + about)}` : '';
   return `<aside class="ask" aria-labelledby="ask-h">
-  <h2 id="ask-h">${e(heading)}</h2>
-  <p>${about ? `Ask Dan about <strong>${e(about)}</strong>.` : 'Dan answers his own phone.'}</p>
-  <a class="btn btn--accent" href="${e(site.phoneHref)}">Call ${e(site.phone)}</a>
-  <a class="btn" href="${e(site.smsHref)}">Text Dan</a>
-  <a class="btn" href="mailto:${e(site.email)}${subject}">Email Dan</a>
+  <h2 id="ask-h">${heading ? e(heading) : t(ctx, 'ask.title')}</h2>
+  <p>${about ? `Ask Dan about <strong>${e(about)}</strong>.` : t(ctx, 'ask.note')}</p>
+  <a class="btn btn--accent" href="${e(site.phoneHref)}">${t(ctx, 'ask.call')} ${t(ctx, 'site.phone')}</a>
+  <a class="btn" href="${e(site.smsHref)}">${t(ctx, 'ask.text')}</a>
+  <a class="btn" href="mailto:${e(site.email)}${subject}">${t(ctx, 'ask.email')}</a>
   ${contactForm(ctx, { id: 'ask', about })}
 </aside>`;
 }
@@ -131,26 +139,27 @@ export function contactForm(ctx, { id = 'cf', about = '' } = {}) {
   const next = ctx.siteUrl ? `${ctx.siteUrl.replace(/\/$/, '')}/contact/?sent=1` : '';
   const f = (name, label, type, opts = '') => `<div class="cform__field"><label for="${id}-${name}">${label}</label><input id="${id}-${name}" name="${name}" type="${type}" ${opts}></div>`;
   return `<form class="cform" data-cform action="https://formsubmit.co/${to}" method="post" data-ajax="https://formsubmit.co/ajax/${to}">
-  <h3 class="cform__title">Or send Dan a message</h3>
-  ${off ? '<p class="cform__note">Testing preview – this form is switched off here.</p>' : ''}
-  ${f('name', 'Name', 'text', 'autocomplete="name" required maxlength="100"')}
-  ${f('email', 'Email', 'email', 'autocomplete="email" required maxlength="200"')}
-  ${f('phone', 'Phone <span class="cform__opt">(optional)</span>', 'tel', 'autocomplete="tel" maxlength="40"')}
-  <div class="cform__field"><label for="${id}-message">Message</label><textarea id="${id}-message" name="message" rows="4" required maxlength="3000">${about ? e(`I have a question about ${about}.`) : ''}</textarea></div>
+  <h3 class="cform__title">${t(ctx, 'form.title')}</h3>
+  ${off ? `<p class="cform__note"${ownedBy(ctx, 'preview')}>Testing preview – this form is switched off here.</p>` : ''}
+  ${f('name', t(ctx, 'form.name'), 'text', 'autocomplete="name" required maxlength="100"')}
+  ${f('email', t(ctx, 'form.email'), 'email', 'autocomplete="email" required maxlength="200"')}
+  ${f('phone', `${t(ctx, 'form.phone')} <span class="cform__opt">${t(ctx, 'form.optional')}</span>`, 'tel', 'autocomplete="tel" maxlength="40"')}
+  <div class="cform__field"><label for="${id}-message">${t(ctx, 'form.message')}</label><textarea id="${id}-message" name="message" rows="4" required maxlength="3000">${about ? e(`I have a question about ${about}.`) : ''}</textarea></div>
   <input type="hidden" name="_subject" value="New message from danmckennahomes.com">
   <input type="hidden" name="_template" value="table">
   <input type="hidden" name="_captcha" value="false">
   ${next ? `<input type="hidden" name="_next" value="${e(next)}">` : ''}
   <div class="cform__trap" aria-hidden="true"><label>Leave this empty<input type="text" name="_honey" tabindex="-1" autocomplete="off"></label></div>
-  <button class="btn btn--accent cform__send" type="submit"${off ? ' disabled' : ''}>Send message</button>
+  <button class="btn btn--accent cform__send" type="submit"${off && !ctx.editMode ? ' disabled' : ''}>${t(ctx, 'form.send')}</button>
   <p class="cform__status" role="status" aria-live="polite"></p>
 </form>`;
 }
 
-export function pageWithSidebar(ctx, { heading, intro = '', content, about }) {
+/** heading = HTML (from t(), or escaped words); headingAttrs e.g. ownedBy(ctx, 'reviews') for a review's title. */
+export function pageWithSidebar(ctx, { heading, headingAttrs = '', intro = '', content, about }) {
   return `<div class="wrap page">
   <div class="page__main">
-    ${heading ? `<h1 class="page__title">${heading}</h1>` : ''}
+    ${heading ? `<h1 class="page__title"${headingAttrs}>${heading}</h1>` : ''}
     ${intro}
     <div class="prose">${content}</div>
   </div>

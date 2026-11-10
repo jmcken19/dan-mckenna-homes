@@ -159,6 +159,7 @@ export async function startEditor({ resend = true, port, mirror = null, siteUrl 
   if (!mirror) {
     gh.seed('content/removed.json', await readFile(join(root, 'content/removed.json'), 'utf8'));
     gh.seed('content/testimonials.json', await readFile(join(root, 'content/testimonials.json'), 'utf8'));
+    gh.seed('content/text.json', await readFile(join(root, 'content/text.json'), 'utf8'));
     const site = JSON.parse(await readFile(join(root, 'content/site.json'), 'utf8'));
     site.heroSlides = [{ id: 's-hero1', src: '/assets/img/hero-1', alt: 'Backyard patio', focus: '50% 70%' }];
     site.heroSlideSeconds = 7; site.heroFade = false; site.heroAutoplay = true;
@@ -220,7 +221,7 @@ export function realMirror(dir, { repo = 'jmcken19/dan-mckenna-homes', branch = 
       gh = fake;
       git('pull', '-q', '--rebase', 'origin', branch);
       const walk = (rel) => { const abs = join(dir, rel); if (!existsSync(abs)) return []; return readdirSync(abs).flatMap((n) => { const r = rel + '/' + n; return statSync(join(dir, r)).isDirectory() ? walk(r) : [r]; }); };
-      for (const f of ['content/removed.json', 'content/site.json', 'content/testimonials.json', ...walk('content/listings'), ...walk('public/listings'), ...walk('public/assets/img/hero'), 'public/assets/img/hero-1-800.jpg', 'public/assets/img/hero-1-1400.jpg', 'public/assets/img/hero-1-2000.jpg', 'public/assets/img/dan-mckenna-headshot.jpg', 'public/assets/img/construction.jpg', 'public/assets/img/2515-forest-lawn-dr-800.jpg', 'public/assets/img/2515-forest-lawn-dr-1400.jpg']) gh.seed(f, readFileSync(join(dir, f)));
+      for (const f of ['content/removed.json', 'content/site.json', 'content/testimonials.json', 'content/text.json', ...walk('content/listings'), ...walk('public/listings'), ...walk('public/assets/img/hero'), 'public/assets/img/hero-1-800.jpg', 'public/assets/img/hero-1-1400.jpg', 'public/assets/img/hero-1-2000.jpg', 'public/assets/img/dan-mckenna-headshot.jpg', 'public/assets/img/construction.jpg', 'public/assets/img/2515-forest-lawn-dr-800.jpg', 'public/assets/img/2515-forest-lawn-dr-1400.jpg']) gh.seed(f, readFileSync(join(dir, f)));
       fake.onCommit = async (sha, before, after, message) => {
         for (const [path, blob] of after) if (before.get(path) !== blob) { mkdirSync(dirname(join(dir, path)), { recursive: true }); writeFileSync(join(dir, path), gh.blobs.get(blob)); }
         for (const path of before.keys()) if (!after.has(path) && !path.startsWith('README-race')) rmSync(join(dir, path), { force: true });

@@ -78,20 +78,24 @@ try {
   await shot('05-headshot-replaced');
   await page.click('#drawer [data-close]');
 
-  // 4b. The other photo pages each show one ✎ on their photo (and nothing else).
+  // 4b. The other photo pages each show one ✎ on their photo (and nothing else – words only get a ✎ on hover).
   for (const [path, key] of [['/new-construction/', 'construction'], ['/luxury-home-marketing/', 'luxury'], ['/contact/', 'headshot']]) {
     await pickPage(path);
     f = await onPage(path, () => document.querySelectorAll('.jte-pen').length === 1);
-    assert.equal(await f.$eval('[data-edit]', (el) => el.dataset.editKey), key, path + ' photo spot');
-    await f.$eval('[data-edit]', (el) => window.scrollTo(0, el.getBoundingClientRect().top + window.scrollY - 120)); await sleep(300);
+    assert.equal(await f.$eval('[data-edit]:not([data-edit="text"])', (el) => el.dataset.editKey), key, path + ' photo spot');
+    await f.$eval('[data-edit]:not([data-edit="text"])', (el) => window.scrollTo(0, el.getBoundingClientRect().top + window.scrollY - 120)); await sleep(300);
     await shot('04b-' + key + (path === '/contact/' ? '-contact' : ''));
   }
 
-  // 5. Clicking a menu link inside the page switches page instead of leaving the editor.
+  // 5. Clicking a menu link's words inside the page edits the words (never leaves the editor); the toolbar's
+  //    "Open …" button switches the editor to the page the link goes to.
+  if (await page.$eval('#pagesel', (s) => s.value) === '/about-us/') { await pickPage('/'); await onPage('/'); }
   f = await frame();
   const homeLink = await f.$('header a[href$="/about-us/"]');
   assert.ok(homeLink, 'the page has a menu link to About us');
   await homeLink.click();
+  await f.waitForSelector('.jte-tbar [data-go]');
+  await (await f.$('.jte-tbar [data-go]')).click();
   await onPage('/about-us/');
   assert.equal(await page.$eval('#pagesel', (s) => s.value), '/about-us/', 'a link in the page switched the editor to that page');
 

@@ -1,9 +1,12 @@
 // Page bodies. Copy is Dan McKenna's own text from danmckennahomes.com (Nov 2026).
+// Every visible word goes through t() / tBlock() / tList() (src/lib/text.mjs): the words live in content/text.json
+// (or content/site.json for contact facts), and Dan can click and change them in the editor. Never hard-code words.
 import { escapeHtml as e, STATUS_LABEL } from '../lib/listing.mjs';
+import { t, tBlock, tList, tText } from '../lib/text.mjs';
 import { pageWithSidebar, askBox, contactForm } from './layout.mjs';
 import { listingCard } from './listing.mjs';
 import { sitePhoto, PHOTO_SPOTS } from '../lib/photos.mjs';
-import { editMark } from '../lib/editables.mjs';
+import { editMark, ownedBy } from '../lib/editables.mjs';
 
 /** Edit mark for a photo spot (only in the editor's edit-on-the-page preview). */
 const photoMark = (ctx, key) => editMark(ctx, 'photo', key, PHOTO_SPOTS[key]?.label || '');
@@ -13,14 +16,15 @@ function fmtDate(iso) {
   return `${String(m).padStart(2, '0')}/${String(d).padStart(2, '0')}/${y}`;
 }
 
-function testimonialCard(ctx, t, { full = false, mark = false } = {}) {
-  const first = t.text[0];
+function testimonialCard(ctx, r, { full = false, mark = false } = {}) {
+  const first = r.text[0];
   const short = !full && first.length > 170 ? first.slice(0, first.lastIndexOf(' ', 165)) + '…' : first;
-  return `<article class="tcard"${mark ? editMark(ctx, 'review', t.slug, t.title) : ''}>
-  <p class="tcard__meta">${t.client ? `<span>${e(t.client)}</span>` : ''}<time datetime="${e(t.date)}">${fmtDate(t.date)}</time></p>
-  <h3 class="tcard__title"><a href="${ctx.url(`/testimonial/${t.slug}/`)}">${e(t.title)}</a></h3>
-  <blockquote><p>${e(short)}</p></blockquote>
-  <a class="tcard__more" href="${ctx.url(`/testimonial/${t.slug}/`)}" aria-label="Read more: ${e(t.title)}">Read more</a>
+  const own = ownedBy(ctx, 'reviews'); // the review's own words are changed in the reviews panel
+  return `<article class="tcard"${mark ? editMark(ctx, 'review', r.slug, r.title) : ''}>
+  <p class="tcard__meta"${own}>${r.client ? `<span>${e(r.client)}</span>` : ''}<time datetime="${e(r.date)}">${fmtDate(r.date)}</time></p>
+  <h3 class="tcard__title"${own}><a href="${ctx.url(`/testimonial/${r.slug}/`)}">${e(r.title)}</a></h3>
+  <blockquote${own}><p>${e(short)}</p></blockquote>
+  <a class="tcard__more" href="${ctx.url(`/testimonial/${r.slug}/`)}" aria-label="${e(tText(ctx, 'reviews.readMore'))}: ${e(r.title)}">${t(ctx, 'reviews.readMore')}</a>
 </article>`;
 }
 
@@ -53,27 +57,27 @@ export function homePage(ctx) {
   </div>
 </section>` : '';
 
-  const t = ctx.testimonials; // the order of content/testimonials.json (Dan arranges it in the editor)
+  const reviews = ctx.testimonials; // the order of content/testimonials.json (Dan arranges it in the editor)
   return `<section class="hero${site.heroFade ? ' hero--fade' : ' hero--slide'}" aria-label="Welcome"${multi ? ` data-interval="${heroSeconds(site)}"` : ''}${editMark(ctx, 'slideshow', 'hero', 'Homepage photos')}>
   <div class="hero__slides">${slides}</div>
   <div class="hero__text">
-    <h1>${e(site.name)}</h1>
-    <p>${e(site.tagline)}</p>
+    <h1>${t(ctx, 'site.name')}</h1>
+    <p>${t(ctx, 'site.tagline')}</p>
     <p class="hero__actions">
-      <a class="btn btn--accent" href="${e(site.phoneHref)}">Call Dan ${e(site.phone)}</a>
+      <a class="btn btn--accent" href="${e(site.phoneHref)}">${t(ctx, 'home.call')} ${t(ctx, 'site.phone')}</a>
     </p>
   </div>
-  ${multi ? '<button class="hero__pause sr-focus" type="button" aria-pressed="false">Pause slideshow</button>' : ''}
+  ${multi ? `<button class="hero__pause sr-focus" type="button" aria-pressed="false">${t(ctx, 'hero.pause')}</button>` : ''}
 </section>
 <section class="home-testimonials" aria-labelledby="ht-h" data-reveal${editMark(ctx, 'reviews', 'row', 'Client reviews')}>
   <div class="wrap">
-    <h2 id="ht-h" class="section-title">What Clients Say About Working With Us</h2>
+    <h2 id="ht-h" class="section-title">${t(ctx, 'home.reviewsTitle')}</h2>
     <div class="carousel" data-carousel data-marquee>
-      <div class="carousel__track" tabindex="0" aria-label="Client reviews – drag or scroll sideways to read more">${t.map((x) => testimonialCard(ctx, x)).join('')}</div>
+      <div class="carousel__track" tabindex="0" aria-label="Client reviews – drag or scroll sideways to read more">${reviews.map((x) => testimonialCard(ctx, x)).join('')}</div>
       <div class="carousel__dots" role="group" aria-label="Choose testimonial"></div>
-      <button class="marquee-pause sr-focus" type="button" aria-pressed="false" hidden>Pause reviews</button>
+      <button class="marquee-pause sr-focus" type="button" aria-pressed="false" hidden>${t(ctx, 'reviews.pause')}</button>
     </div>
-    <p class="center"><a class="btn btn--dark btn--wide" href="${url('/testimonials/')}">View all reviews</a></p>
+    <p class="center"><a class="btn btn--dark btn--wide" href="${url('/testimonials/')}">${t(ctx, 'home.viewAll')}</a></p>
   </div>
 </section>`;
 }
@@ -117,123 +121,95 @@ export function aboutPage(ctx) {
     intro: `<div class="about-intro">
   <img class="headshot" src="${url(sitePhoto(ctx.site, 'headshot').small)}" width="360" height="402" alt="${e(sitePhoto(ctx.site, 'headshot').alt)}"${photoMark(ctx, 'headshot')}>
   <div>
-    <h1 class="page__title">Dan McKenna, NC/SC Broker/REALTOR®</h1>
-    <p class="kicker">Experience Counts.</p>
+    <h1 class="page__title">${t(ctx, 'about.title')}</h1>
+    <p class="kicker">${t(ctx, 'about.kicker')}</p>
   </div>
 </div>`,
-    content: `<p>Over 15 years ago, we relocated our family from New York to the Charlotte area, drawn by everything this wonderful region has to offer. Having made that move ourselves, we understand the excitement and challenges of finding a new place to call home. Today, we're proud to help others discover the communities and lifestyle that make the Charlotte area so special.</p>
-<p>I am a full-time REALTOR® licensed in North Carolina and South Carolina, specializing in residential real estate, luxury homes, relocation, buyer and seller representation, and new construction. As a Certified Luxury Home Marketing Specialist (CLHMS) and GUILD member, I bring extensive market knowledge, strong negotiation skills, and personalized service to every transaction.</p>
-<p>I am supported by my wife, Wendy, who serves as my Administrative Assistant, and Tammy, our Closing Coordinator. Together, we are committed to making every real estate experience as smooth, organized, and successful as possible.</p>
-<h2>Representing Buyers</h2>
-<p>Whether you're purchasing your first home, moving into a larger home, or downsizing, I take the time to understand your needs, lifestyle, and priorities. My knowledge of the Charlotte-area market helps you make informed decisions, identify the right opportunities, and negotiate with confidence.</p>
-<h2>Representing Sellers</h2>
-<p>Selling a home requires more than placing a sign in the yard. I develop a personalized marketing strategy designed to showcase your property's strengths, attract qualified buyers, and achieve the best possible outcome.</p>
-<p>From pricing and presentation to marketing and negotiations, I provide experienced guidance throughout the selling process. I also offer a complimentary market analysis and an opportunity to discuss a marketing plan tailored to your home.</p>
-<h2>New Construction Representation</h2>
-<p>Buying a newly constructed home is an exciting opportunity, but having an experienced REALTOR® representing your interests is essential.</p>
-<p>I have extensive experience working with national, regional, and custom home builders throughout the Charlotte area. From selecting a homesite and reviewing builder contracts to negotiating and navigating the construction process, I provide guidance every step of the way.</p>
-<p>Remember, the on-site sales representative works for the builder. Having your own representation helps ensure your interests remain a priority. Buyer representation fees and terms are discussed upfront.</p>
-<h2>Relocation to the Charlotte Area</h2>
-<p>Having personally experienced a relocation to Charlotte, I understand the importance of finding not just the right home, but the right community.</p>
-<p>I help relocating buyers explore neighborhoods, schools, amenities, and lifestyles throughout Charlotte, Waxhaw, Weddington, Marvin, and the surrounding areas. My goal is to make your transition as informed and seamless as possible.</p>
-<h2>Experience &amp; Recognition</h2>
-<p>My commitment to my clients and consistent real estate production have earned recognition throughout my career, including:</p>
-<ul>
-<li>2022 #1 Individual Real Estate Agent — Keller Williams Ballantyne office in Charlotte, among approximately 500 agents</li>
-<li>Consistent Keller Williams Top Producer — Recognized for production annually since 2015</li>
-<li>Nextdoor Neighborhood Favorite — 2017, 2018, 2019, 2023 &amp; 2024</li>
-<li>Multiple recognitions from the Keller Williams Carolinas Region</li>
-<li>Consistent Top Agent recognition in Union County</li>
-</ul>
-<h2>A Commitment Beyond the Closing</h2>
-<p>Real estate is about more than buying or selling a home. It's about relationships built on trust, communication, and results.</p>
-<p>My goal is simple: to provide an exceptional experience so that when your family, friends, or neighbors need real estate guidance, you'll feel confident referring them to me.</p>
-<h2>Wendy McKenna, Administrative Assistant</h2>
-<p>Over 15 years ago, Dan and I relocated our family from New York to the Charlotte area in search of more family time, excellent schools, milder weather, and a community that fit our lifestyle. Looking back, I can confidently say we found everything we were hoping for and more. Charlotte has become home, and we're grateful for the life we've built here.</p>
-<p>As Dan's Administrative Assistant, I draw on my professional background in healthcare and education, which helped shape the attention to detail, communication skills, and commitment to helping others that I bring to my work today.</p>
-<p>Working closely with Dan, I assist with property listings, marketing, client communication, scheduling, and the day-to-day operations of our business. I take pride in staying organized, anticipating needs, and making sure our clients feel informed and supported throughout the process.</p>
-<p>What I enjoy most about my role is the opportunity to work with people. Whether preparing a home for the market, coordinating showings, or assisting our clients behind the scenes, my goal is to help make their real estate experience as seamless and positive as possible.</p>`,
+    content: `${tBlock(ctx, 'about.intro.text')}
+<h2>${t(ctx, 'about.buyers.title')}</h2>
+${tBlock(ctx, 'about.buyers.text')}
+<h2>${t(ctx, 'about.sellers.title')}</h2>
+${tBlock(ctx, 'about.sellers.text')}
+<h2>${t(ctx, 'about.newConstruction.title')}</h2>
+${tBlock(ctx, 'about.newConstruction.text')}
+<h2>${t(ctx, 'about.relocation.title')}</h2>
+${tBlock(ctx, 'about.relocation.text')}
+<h2>${t(ctx, 'about.recognition.title')}</h2>
+${tBlock(ctx, 'about.recognition.text')}
+${tList(ctx, 'about.recognition.list')}
+<h2>${t(ctx, 'about.commitment.title')}</h2>
+${tBlock(ctx, 'about.commitment.text')}
+<h2>${t(ctx, 'about.wendy.title')}</h2>
+${tBlock(ctx, 'about.wendy.text')}`,
   });
 }
 
 export function newConstructionPage(ctx) {
   return pageWithSidebar(ctx, {
-    heading: 'New Construction Home Buying',
-    intro: `<p class="kicker">Building Your Dream Home? Experience Counts.</p>`,
+    heading: t(ctx, 'newConstruction.title'),
+    intro: `<p class="kicker">${t(ctx, 'newConstruction.kicker')}</p>`,
     content: `<img class="page__img" src="${ctx.url(sitePhoto(ctx.site, 'construction').large)}" width="640" height="427" alt="${e(sitePhoto(ctx.site, 'construction').alt)}"${photoMark(ctx, 'construction')}>
-<p>The Charlotte metropolitan area continues to offer exciting opportunities for new construction, from established neighborhoods and growing communities to exceptional custom homes.</p>
-<p>Building or purchasing a newly constructed home can be an exciting and rewarding experience, but the process can also be complex. Having an experienced real estate professional representing your interests can make all the difference.</p>
-<h2>5 Reasons to Work with an Experienced Buyer's Agent When Purchasing New Construction</h2>
-<h3>1. Representation That Puts Your Interests First</h3>
-<p>The on-site sales representative works for the builder. As your buyer's agent, I represent your interests throughout the purchasing and construction process, helping you understand your options and make informed decisions. Buyer representation fees and compensation arrangements are discussed upfront.</p>
-<h3>2. Builder Knowledge and Negotiation Experience</h3>
-<p>With extensive experience working with national, regional, and custom home builders throughout the Charlotte area, I understand builder incentives, market conditions, comparable sales, and potential opportunities for negotiation. My goal is to help you secure the best possible value for your investment.</p>
-<h3>3. Guidance Beyond the Purchase Agreement</h3>
-<p>My involvement doesn't end when the contract is signed. I help you navigate important contract terms and construction milestones, coordinate with the builder, and participate in scheduled inspections and walkthroughs when permitted. When concerns arise, I advocate for your interests and work toward a satisfactory resolution.</p>
-<h3>4. Assistance Throughout the Financing Process</h3>
-<p>New construction financing can differ from purchasing an existing home. I help you understand available builder incentives and financing considerations while working alongside your chosen mortgage professional to keep the process moving forward.</p>
-<h3>5. Support Through Closing and Beyond</h3>
-<p>From your initial home search and homesite selection to the final walkthrough and closing, I remain involved every step of the way. Even after closing, I can help direct you to the appropriate builder contacts and warranty resources when questions arise.</p>
-<h2>Build with Confidence</h2>
-<p>Whether you're considering a move-in-ready new home, selecting a homesite in a new community, or building a fully customized residence, having an experienced REALTOR® on your side provides valuable guidance and peace of mind.</p>
-<p>Let my experience work for you.</p>
-<p class="signoff"><strong>Dan McKenna</strong><br>Dan McKenna Homes | Keller Williams Ballantyne Area, Charlotte, NC<br>Serving Charlotte, Waxhaw, Weddington, Marvin, and surrounding communities in North Carolina and South Carolina.</p>`,
+${tBlock(ctx, 'newConstruction.intro.text')}
+<h2>${t(ctx, 'newConstruction.reasons.title')}</h2>
+<h3>${t(ctx, 'newConstruction.reason1.title')}</h3>
+${tBlock(ctx, 'newConstruction.reason1.text')}
+<h3>${t(ctx, 'newConstruction.reason2.title')}</h3>
+${tBlock(ctx, 'newConstruction.reason2.text')}
+<h3>${t(ctx, 'newConstruction.reason3.title')}</h3>
+${tBlock(ctx, 'newConstruction.reason3.text')}
+<h3>${t(ctx, 'newConstruction.reason4.title')}</h3>
+${tBlock(ctx, 'newConstruction.reason4.text')}
+<h3>${t(ctx, 'newConstruction.reason5.title')}</h3>
+${tBlock(ctx, 'newConstruction.reason5.text')}
+<h2>${t(ctx, 'newConstruction.build.title')}</h2>
+${tBlock(ctx, 'newConstruction.build.text')}
+<p class="signoff"><strong>${t(ctx, 'newConstruction.signoff.name')}</strong><br>${t(ctx, 'newConstruction.signoff.line1')}<br>${t(ctx, 'newConstruction.signoff.line2')}</p>`,
   });
 }
 
 export function luxuryPage(ctx) {
   return pageWithSidebar(ctx, {
-    heading: 'Luxury Home Marketing',
-    intro: `<p class="kicker">Exceptional Properties. Experienced Representation. Personalized Service.</p>`,
-    content: `<p>Luxury real estate requires more than beautiful photography and an attractive listing. It requires an understanding of the market, thoughtful pricing, strategic marketing, skilled negotiations, and an appreciation for the distinctive qualities that make each home unique.</p>
-<p>At Dan McKenna Homes, I combine extensive Charlotte-area real estate experience with specialized luxury credentials and the resources of Keller Williams Luxury to provide personalized representation for buyers and sellers of exceptional properties.</p>
-<h2>The Keller Williams Luxury Advantage</h2>
-<p>As a Keller Williams Luxury real estate professional, I have access to an extensive network of real estate professionals, specialized marketing resources, and connections that extend beyond the Charlotte area.</p>
-<p>This network complements my local market expertise, providing additional opportunities to connect exceptional properties with potential buyers locally, nationally, and internationally.</p>
-<p>My clients benefit from the resources of an established luxury real estate brand while receiving the personalized attention and experienced guidance of a dedicated local agent.</p>
-<h2>Certified Luxury Home Marketing Specialist™ (CLHMS)</h2>
-<p>The Certified Luxury Home Marketing Specialist™ designation is awarded by The Institute for Luxury Home Marketing to real estate professionals who have completed specialized luxury real estate education and demonstrated documented sales performance in the upper-tier residential market.</p>
-<p>The designation recognizes both professional knowledge and proven transaction experience, reflecting my commitment to providing knowledgeable representation for luxury buyers and sellers.</p>
-<h2>GUILD™ Recognition</h2>
-<p>In addition to my CLHMS designation, I have earned GUILD™ recognition from The Institute for Luxury Home Marketing.</p>
-<p>GUILD recognition is awarded to qualified CLHMS professionals who have demonstrated successful sales performance in the residential market at or above $1 million.</p>
-<p>This distinction recognizes proven experience representing clients in the million-dollar luxury home market.</p>
-<h2>A Personalized Approach to Luxury Real Estate</h2>
-<p>Every luxury property is unique and deserves an individualized marketing strategy.</p>
-<p>My approach includes strategic pricing, professional photography, compelling property descriptions, thoughtful digital marketing, agent networking, and experienced negotiations.</p>
-<p>Whether representing an established luxury estate or an extraordinary new construction residence, I focus on highlighting the features, craftsmanship, location, and lifestyle that distinguish each home.</p>
+    heading: t(ctx, 'luxury.title'),
+    intro: `<p class="kicker">${t(ctx, 'luxury.kicker')}</p>`,
+    content: `${tBlock(ctx, 'luxury.intro.text')}
+<h2>${t(ctx, 'luxury.kwLuxury.title')}</h2>
+${tBlock(ctx, 'luxury.kwLuxury.text')}
+<h2>${t(ctx, 'luxury.clhms.title')}</h2>
+${tBlock(ctx, 'luxury.clhms.text')}
+<h2>${t(ctx, 'luxury.guild.title')}</h2>
+${tBlock(ctx, 'luxury.guild.text')}
+<h2>${t(ctx, 'luxury.approach.title')}</h2>
+${tBlock(ctx, 'luxury.approach.text')}
 <figure class="feature">
   <img src="${ctx.url(sitePhoto(ctx.site, 'luxury').large)}" srcset="${ctx.url(sitePhoto(ctx.site, 'luxury').small)} 800w, ${ctx.url(sitePhoto(ctx.site, 'luxury').large)} 1400w" sizes="(min-width: 1000px) 700px, 100vw" width="1400" height="1050" alt="${e(sitePhoto(ctx.site, 'luxury').alt)}" loading="lazy"${photoMark(ctx, 'luxury')}>
-  ${sitePhoto(ctx.site, 'luxury').id ? '' : '<figcaption><strong>Featured Dan McKenna Homes Listing</strong><br>2515 Forest Lawn Drive, Weddington NC<br>Built by Tiara Homes</figcaption>'}
+  ${sitePhoto(ctx.site, 'luxury').id ? '' : `<figcaption><strong>${t(ctx, 'luxury.caption.title')}</strong><br>${t(ctx, 'luxury.caption.address')}<br>${t(ctx, 'luxury.caption.builder')}</figcaption>`}
 </figure>
-<h2>Luxury Homes &amp; Custom Construction</h2>
-<p>The Charlotte metropolitan area offers a remarkable variety of luxury living opportunities, including established estates, distinctive neighborhoods, and custom-built residences.</p>
-<p>With experience representing buyers and sellers of luxury properties and working with national, regional, and custom home builders, I understand the details involved in navigating this specialized market.</p>
-<p>Whether you're considering the purchase of a luxury home, exploring a custom-building opportunity, or preparing to sell your property, I offer guidance tailored to your goals.</p>
-<h2>Experience Counts</h2>
-<p>Exceptional homes deserve exceptional representation.</p>
-<p>My commitment is to provide knowledgeable guidance, personalized service, and a thoughtful approach to every real estate transaction.</p>
-<p class="signoff"><strong>Dan McKenna</strong><br>Certified Luxury Home Marketing Specialist™ | GUILD™ Recognition<br>Dan McKenna Homes | Keller Williams Luxury<br>Keller Williams Ballantyne Area, Charlotte, NC</p>`,
+<h2>${t(ctx, 'luxury.homes.title')}</h2>
+${tBlock(ctx, 'luxury.homes.text')}
+<h2>${t(ctx, 'luxury.experience.title')}</h2>
+${tBlock(ctx, 'luxury.experience.text')}
+<p class="signoff"><strong>${t(ctx, 'luxury.signoff.name')}</strong><br>${t(ctx, 'luxury.signoff.line1')}<br>${t(ctx, 'luxury.signoff.line2')}<br>${t(ctx, 'luxury.signoff.line3')}</p>`,
   });
 }
 
 export function testimonialsPage(ctx) {
   return `<div class="wrap page">
   <div class="page__main"${editMark(ctx, 'reviews', 'list', 'Client reviews')}>
-    <h1 class="page__title">Testimonials</h1>
+    <h1 class="page__title">${t(ctx, 'reviews.title')}</h1>
     <div class="tgrid">${ctx.testimonials.map((t) => testimonialCard(ctx, t, { mark: true })).join('')}</div>
   </div>
   ${askBox(ctx)}
 </div>`;
 }
 
-export function testimonialPage(ctx, t) {
+export function testimonialPage(ctx, r) {
   return pageWithSidebar(ctx, {
-    heading: e(t.title),
-    content: `<blockquote class="tquote">${t.text.map((p) => `<p>${e(p)}</p>`).join('')}
-  <footer>${t.client ? `<strong>${e(t.client)}</strong>` : ''}${t.role ? ` <span>${e(t.role)}</span>` : ''} <time datetime="${e(t.date)}">${fmtDate(t.date)}</time></footer>
+    heading: e(r.title),
+    headingAttrs: ownedBy(ctx, 'reviews'), // the review's own words are changed in the reviews panel
+    content: `<blockquote class="tquote"${ownedBy(ctx, 'reviews')}>${r.text.map((p) => `<p>${e(p)}</p>`).join('')}
+  <footer>${r.client ? `<strong>${e(r.client)}</strong>` : ''}${r.role ? ` <span>${e(r.role)}</span>` : ''} <time datetime="${e(r.date)}">${fmtDate(r.date)}</time></footer>
 </blockquote>
-<p><a href="${ctx.url('/testimonials/')}">← All testimonials</a></p>`,
+<p><a href="${ctx.url('/testimonials/')}">${t(ctx, 'reviews.back')}</a></p>`,
   });
 }
 
@@ -241,25 +217,25 @@ export function contactPage(ctx) {
   const { site, url } = ctx;
   return `<div class="wrap page">
   <div class="page__main">
-    <h1 class="page__title">Contact</h1>
+    <h1 class="page__title">${t(ctx, 'contact.title')}</h1>
     <div class="contact-card">
       <img class="headshot headshot--sm" src="${url(sitePhoto(site, 'headshot').small)}" width="360" height="402" alt="${e(sitePhoto(site, 'headshot').alt)}"${photoMark(ctx, 'headshot')}>
       <div>
-        <h2>${e(site.agent)}</h2>
-        <p class="kicker">${e(site.tagline)}</p>
-        <p>Realtor NC/SC<br>${e(site.brokerage)}</p>
+        <h2>${t(ctx, 'site.agent')}</h2>
+        <p class="kicker">${t(ctx, 'site.tagline')}</p>
+        <p>${t(ctx, 'contact.license')}<br>${t(ctx, 'site.brokerage')}</p>
         <dl class="contact-list">
-          <div><dt>Mobile</dt><dd><a href="${e(site.phoneHref)}">${e(site.phone)}</a></dd></div>
-          <div><dt>Email</dt><dd><a href="mailto:${e(site.email)}">${e(site.email)}</a></dd></div>
+          <div><dt>${t(ctx, 'contact.mobile')}</dt><dd><a href="${e(site.phoneHref)}">${t(ctx, 'site.phone')}</a></dd></div>
+          <div><dt>${t(ctx, 'contact.email')}</dt><dd><a href="mailto:${e(site.email)}">${t(ctx, 'site.email')}</a></dd></div>
         </dl>
         <p class="contact-actions">
-          <a class="btn btn--accent" href="${e(site.phoneHref)}">Call Dan</a>
-          <a class="btn" href="${e(site.smsHref)}">Text Dan</a>
-          <a class="btn" href="mailto:${e(site.email)}">Email Dan</a>
+          <a class="btn btn--accent" href="${e(site.phoneHref)}">${t(ctx, 'contact.call')}</a>
+          <a class="btn" href="${e(site.smsHref)}">${t(ctx, 'contact.text')}</a>
+          <a class="btn" href="mailto:${e(site.email)}">${t(ctx, 'contact.emailButton')}</a>
         </p>
       </div>
     </div>
-    <p>${e(site.serviceAreaSentence)}</p>
+    <p>${t(ctx, 'site.serviceAreaSentence')}</p>
     <div class="contact-form">${contactForm(ctx, { id: 'contact' })}</div>
   </div>
 </div>`;
@@ -268,28 +244,28 @@ export function contactPage(ctx) {
 export function accessibilityPage(ctx) {
   const { site } = ctx;
   return pageWithSidebar(ctx, {
-    heading: 'Accessibility',
-    content: `<h2>Our Commitment</h2>
-<p>We are committed to providing an accessible website. If you have difficulty accessing content, have trouble viewing a file on the site, or notice any accessibility problems, please contact us to specify the nature of the accessibility issue and the assistive technology you use. We will strive to provide the content you need in the format you require. We welcome your suggestions and comments about improving ongoing efforts to increase the accessibility of this website.</p>
-<h2>For additional assistance</h2>
-<p>Call <a href="${e(site.phoneHref)}">${e(site.phone)}</a> or email <a href="mailto:${e(site.email)}">${e(site.email)}</a> if you experience difficulty in accessing any part of this website, and we will work with you to provide the information you seek through an alternate communication method that is accessible for you.</p>
-<p>The <a href="https://www.ssa.gov/accessibility/">US Social Security Administration</a> offers tips for adjusting your computer and browser, such as reading pages out loud, enlarging text, and changing colors.</p>`,
+    heading: t(ctx, 'accessibility.title'),
+    content: `<h2>${t(ctx, 'accessibility.commitment.title')}</h2>
+${tBlock(ctx, 'accessibility.commitment.text')}
+<h2>${t(ctx, 'accessibility.help.title')}</h2>
+<p>${t(ctx, 'accessibility.help.call')} <a href="${e(site.phoneHref)}">${t(ctx, 'site.phone')}</a> ${t(ctx, 'accessibility.help.orEmail')} <a href="mailto:${e(site.email)}">${t(ctx, 'site.email')}</a> ${t(ctx, 'accessibility.help.after')}</p>
+<p>${t(ctx, 'accessibility.ssa.before')} <a href="https://www.ssa.gov/accessibility/">${t(ctx, 'accessibility.ssa.link')}</a> ${t(ctx, 'accessibility.ssa.after')}</p>`,
   });
 }
 
 export function dmcaPage(ctx) {
   const { site } = ctx;
   return pageWithSidebar(ctx, {
-    heading: 'Copyright Concerns',
-    content: `<p>We respect the intellectual property rights of others. If you believe material on this website infringes your copyright, please contact ${e(site.agent)} at <a href="mailto:${e(site.email)}">${e(site.email)}</a> or <a href="${e(site.phoneHref)}">${e(site.phone)}</a> with a description of the material and where it appears, and we will review it promptly.</p>`,
+    heading: t(ctx, 'dmca.title'),
+    content: `<p>${t(ctx, 'dmca.before')} ${t(ctx, 'site.agent')} ${t(ctx, 'dmca.at')} <a href="mailto:${e(site.email)}">${t(ctx, 'site.email')}</a> ${t(ctx, 'dmca.or')} <a href="${e(site.phoneHref)}">${t(ctx, 'site.phone')}</a> ${t(ctx, 'dmca.after')}</p>`,
   });
 }
 
 export function notFoundPage(ctx) {
   return pageWithSidebar(ctx, {
-    heading: 'Page not found',
-    content: `<p>Sorry, we couldn't find that page. It may have moved when the website was updated.</p>
-<ul><li><a href="${ctx.url('/')}">Home page</a></li><li><a href="${ctx.url('/contact/')}">Contact Dan</a></li></ul>`,
+    heading: t(ctx, 'notFound.title'),
+    content: `${tBlock(ctx, 'notFound.text')}
+<ul><li><a href="${ctx.url('/')}">${t(ctx, 'notFound.home')}</a></li><li><a href="${ctx.url('/contact/')}">${t(ctx, 'notFound.contact')}</a></li></ul>`,
   });
 }
 

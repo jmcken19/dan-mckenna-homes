@@ -1,6 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { loadContent } from '../scripts/build.mjs';
+import { readFileSync as readTextFile } from 'node:fs';
+const TEXT = JSON.parse(readTextFile(new URL('../content/text.json', import.meta.url), 'utf8'));
 import { normaliseFields, parseOptionalNumber, factsList, escapeHtml, listingSlug, validatePublicListing } from '../src/lib/listing.mjs';
 
 test('repo content is valid and loads', async () => {
@@ -60,7 +62,7 @@ test('website photos: a replaced photo shows on its pages; the house caption onl
   const { sitePhoto, validatePhotos } = await import('../src/lib/photos.mjs');
   const P = await import('../src/templates/pages.mjs');
   const site = JSON.parse(await (await import('node:fs/promises')).readFile(new URL('../content/site.json', import.meta.url), 'utf8'));
-  const ctx = (s) => ({ site: s, url: (p) => p, listings: [], removed: [], testimonials: [] });
+  const ctx = (s) => ({ site: s, text: TEXT, url: (p) => p, listings: [], removed: [], testimonials: [] });
   assert.match(P.luxuryPage(ctx(site)), /Tiara Homes/);
   const changed = { ...site, photos: { luxury: { id: 's-abc123', small: '/assets/img/hero/s-abc123-800.jpg', large: '/assets/img/hero/s-abc123-1400.jpg', alt: 'Luxury home in the Charlotte area' }, headshot: { id: 's-def456', small: '/assets/img/hero/s-def456-800.jpg', large: '/assets/img/hero/s-def456-1400.jpg', alt: 'Dan McKenna' } } };
   assert.deepEqual(validatePhotos(changed), []);
@@ -80,7 +82,7 @@ test('reviews show in the order of content/testimonials.json (Dan arranges it) o
   // Deliberately not sorted by date: the file order must win. Long text so the luxury quotes link to the full review.
   const long = 'x '.repeat(200).trim();
   const testimonials = [['b-old', '2019-05-05'], ['a-new', '2025-01-01'], ['c-mid', '2022-03-03']].map(([slug, date]) => ({ slug, title: `Title ${slug}`, date, text: [`${slug} ${long}`] }));
-  const ctx = { site, url: (p) => p, listings: [], removed: [], testimonials };
+  const ctx = { site, text: TEXT, url: (p) => p, listings: [], removed: [], testimonials };
   const order = (html) => [...new Set([...html.matchAll(/href="\/testimonial\/([a-z-]+)\/"/g)].map((m) => m[1]))];
   for (const [name, html] of [['classic homepage', P.homePage(ctx)], ['Testimonials page', P.testimonialsPage(ctx)], ['design 2 homepage', luxHome(ctx)]]) {
     assert.deepEqual(order(html), ['b-old', 'a-new', 'c-mid'], name);

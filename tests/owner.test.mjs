@@ -517,7 +517,11 @@ test('edit-on-the-page: edit marks only in edit mode, page picker, preview may b
   const me = await E.call('GET', '/api/me');
   assert.ok(Array.isArray(me.data.pages) && me.data.pages.some((p) => p.path === '/'), 'page list for the page picker');
   for (const p of ['/about-us/', '/testimonials/', '/contact/', '/new-construction/', '/luxury-home-marketing/']) assert.ok(me.data.pages.some((x) => x.path === p), 'picker has ' + p);
-  assert.ok(!me.data.pages.some((p) => /^\/(testimonial|listings)\//.test(p.path)), 'no per-review or listings pages in the picker');
+  assert.ok(!me.data.pages.some((p) => /^\/listings\//.test(p.path)), 'no listings pages in the picker');
+  const reviewPages = me.data.pages.filter((p) => /^\/testimonial\//.test(p.path));
+  assert.ok(reviewPages.length <= 1 && reviewPages.every((p) => p.more), 'one page per review is left out (only one example, under "More pages")');
+  for (const p of ['/accessibility-2/', '/dmca-compliance-2/', '/404']) assert.ok(me.data.pages.some((x) => x.path === p && x.more), 'More pages has ' + p);
+  for (const p of ['/accessibility-2/', '/404', reviewPages[0]?.path].filter(Boolean)) assert.match((await E.call('GET', `/api/homepage/preview?edit=1&path=${encodeURIComponent(p)}`)).data, /data-edit="text"/, `the editor can show ${p} with its words editable`);
 
   const edit = await E.call('GET', '/api/homepage/preview?edit=1');
   assert.match(edit.data, /data-edit="slideshow" data-edit-key="hero"/, 'slideshow is marked editable');

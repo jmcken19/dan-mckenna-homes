@@ -6,6 +6,8 @@ import { slugify } from '../../src/lib/listing.mjs';
 import { layout } from '../../src/templates/layout.mjs';
 import { testimonialsPage } from '../../src/templates/pages.mjs';
 import { previewHeaders } from './preview.mjs';
+import { withDraftWords } from './text.mjs';
+import textContent from '../../content/text.json';
 import siteContent from '../../content/site.json';
 import testimonialsContent from '../../content/testimonials.json';
 
@@ -153,7 +155,9 @@ export function reviewsRoutes(H) {
     async preview(A) {
       const row = await load(A);
       const base = publicBase(A.env);
-      const ctx = { site: siteContent, preview: true, siteUrl: '', buildId: 'preview-' + Date.now(), listings: [], removed: [], testimonials: row.draft.items, url: (p) => base + p };
+      const trow = await A.db.prepare('SELECT draft FROM settings WHERE key = ?').bind('text').first();
+      const words = withDraftWords(siteContent, textContent, trow?.draft);
+      const ctx = { site: words.site, text: words.text, preview: true, siteUrl: '', buildId: 'preview-' + Date.now(), listings: [], removed: [], testimonials: row.draft.items, url: (p) => base + p };
       const html = layout(ctx, { path: '/testimonials/', title: 'Testimonials', body: testimonialsPage(ctx) });
       return new Response(html, { headers: previewHeaders(base) });
     },

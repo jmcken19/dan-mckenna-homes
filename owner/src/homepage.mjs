@@ -5,10 +5,12 @@ import { github } from './github.mjs';
 import { validateVariant, validateOriginal } from './images.mjs';
 import { validateHomepage, HERO_SIZES, MAX_HERO_SLIDES, randomId } from '../../src/lib/listing.mjs';
 import { layout } from '../../src/templates/layout.mjs';
-import { homePage, aboutPage, contactPage, newConstructionPage, luxuryPage, testimonialsPage } from '../../src/templates/pages.mjs';
+import { homePage, aboutPage, contactPage, newConstructionPage, luxuryPage, testimonialsPage, accessibilityPage, dmcaPage, notFoundPage, testimonialPage } from '../../src/templates/pages.mjs';
 import { PHOTO_SPOTS, sitePhoto, validatePhotos } from '../../src/lib/photos.mjs';
 import { luxLayout, luxHome } from '../../src/templates/luxury.mjs';
 import { previewHeaders, markPreview, parseReviewsDraft } from './preview.mjs';
+import { withDraftWords } from './text.mjs';
+import textContent from '../../content/text.json';
 import siteContent from '../../content/site.json';
 import testimonialsContent from '../../content/testimonials.json';
 
@@ -24,10 +26,16 @@ const PAGES = {
   luxury: { path: '/luxury-home-marketing/', title: 'Luxury Home Marketing', classic: luxuryPage },
   testimonials: { path: '/testimonials/', title: 'Testimonials', classic: testimonialsPage },
   contact: { path: '/contact/', title: 'Contact', classic: contactPage },
+  // "More pages…" in the picker: pages reached from the footer, one review page and "page not found" – so Dan can
+  // change the words that only show there.
+  accessibility: { path: '/accessibility-2/', title: 'Accessibility', classic: accessibilityPage, more: true },
+  dmca: { path: '/dmca-compliance-2/', title: 'Copyright', classic: dmcaPage, more: true },
+  review: { path: `/testimonial/${testimonialsContent.items[0]?.slug}/`, title: 'One review (example)', more: true, classic: (ctx) => testimonialPage(ctx, ctx.testimonials.find((x) => x.slug === testimonialsContent.items[0]?.slug) || ctx.testimonials[0]), ok: () => testimonialsContent.items.length > 0 },
+  notFound: { path: '/404', title: 'Page not found', classic: notFoundPage, more: true },
 };
 
 /** The page list for the editor's page picker (/api/me → pages). */
-export const EDITOR_PAGES = Object.values(PAGES).map((p) => ({ path: p.path, title: p.title }));
+export const EDITOR_PAGES = Object.values(PAGES).filter((p) => !p.ok || p.ok()).map((p) => ({ path: p.path, title: p.title, ...(p.more ? { more: true } : {}) }));
 
 export function homepageRoutes(H) {
   const { HttpError, json, now, readJsonBody, needRevision, rateLimit, logEvent, idempotent, publicBase } = H;
@@ -283,8 +291,11 @@ export function homepageRoutes(H) {
       // Reviews: show Dan's unpublished review changes too, so the page is exactly what Publish will make.
       const rrow = await A.db.prepare('SELECT draft FROM settings WHERE key = ?').bind('reviews').first();
       const testimonials = rrow ? parseReviewsDraft(rrow.draft, testimonialsContent.items) : testimonialsContent.items;
+      // Words: Dan's unpublished wording (content/text.json + the site.json fields it lists).
+      const trow = await A.db.prepare('SELECT draft FROM settings WHERE key = ?').bind('text').first();
+      const words = withDraftWords(site, textContent, trow?.draft);
       const ctx = {
-        site, preview: true, editMode, siteUrl: '', buildId: 'preview-' + Date.now(), listings: [], removed: [], testimonials,
+        site: words.site, text: words.text, preview: true, editMode, siteUrl: '', buildId: 'preview-' + Date.now(), listings: [], removed: [], testimonials,
         // Templates build photo addresses as url(src) + "-800.jpg", so a slide's src maps to a
         // private photo address that the "-<width>.jpg" suffix completes (draft photos aren't public yet).
         url: (p) => {

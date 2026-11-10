@@ -17,15 +17,32 @@ on that laptop. Forgot the password? Click **Forgot your password?** on that pag
 
 ### How the editor works now: you edit right on your website
 The editor opens on **your own website**, exactly as visitors see it, but with any changes you haven't published yet.
-* Anything you can change has a dark **✎ Change …** button on it. Click the button (or the photo itself).
+* **Every word on your website can be changed** – click the words (see **Change any wording** below).
+* Photos and reviews have a dark **✎ Change …** button on them. Click the button (or the photo itself).
   A panel opens on the right and your page shows a little smaller beside it. Click **Done** to close the panel.
 * **Every change shows on the page straight away.** Nothing goes on the real website until you click **Publish**.
 * **Page:** pick a page in the list at the top (Home, About us, New Construction, Luxury Home Marketing,
-  Testimonials, Contact). Clicking the menu inside the page works too.
+  Testimonials, Contact – and further down Accessibility, Copyright, one review and "Page not found").
+  Clicking a menu item inside the page changes its words; the little box that opens has an **Open** button to go there.
 * The bar at the bottom: **See it on: Computer / Phone** shows how the page looks on a phone.
   **Publish** → **Yes, publish**: it says **Publishing… about 2 minutes**, then **✓ Done – view your website**.
   **Undo all changes** puts everything back to what's on the website now.
-* Typing a review and clicked something else? The editor asks before anything you typed is lost.
+* Typing words or a review and clicked something else? The editor asks before anything you typed is lost.
+
+### Change any wording
+Every word can be changed – headings, paragraphs (like your bio or Wendy's), buttons like **CALL DAN**, the menu,
+the phone and email at the very top, and the footer at the bottom.
+1. Go to the page and **click the words** you want to change. (A dotted line and a small **✎** show when the mouse
+   is over them.)
+2. **Type** your new words right there. In paragraphs, **Enter** starts a new paragraph.
+3. Click **Save – show it on my page** (for a short line, pressing **Enter** saves too). **Cancel** puts the old words back.
+4. When you're happy, click **Publish** at the bottom.
+* Menu items and buttons: only the words change – they still go to the same place.
+* Your phone number and email must stay a real phone number and email address – the Call, Text and Email buttons
+  use them. Change the phone in one place and every Call/Text button follows.
+* Your name, "NC/SC Broker/REALTOR®", "Realtor NC/SC" and the Keller Williams office line **must stay on your
+  website**: you can change the words, but not remove them.
+* Client reviews are changed with **✎ Change review** (below), not by clicking their words.
 
 ### Change a photo
 Go to the page with the photo, then click **✎ Change photo** on it. Your photo is on the About us and Contact
