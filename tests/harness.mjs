@@ -250,3 +250,17 @@ export function realMirror(dir, { repo = 'jmcken19/dan-mckenna-homes', branch = 
 }
 import { createRequire } from 'node:module';
 function awaitUndici() { return createRequire(import.meta.url)('undici'); }
+
+/** Dan's setup, in the same shape as client-site-template's clientSetup(), for the shared browser tests. */
+export async function clientSetup() {
+  const { PHOTO_SPOTS } = await import('../src/lib/photos.mjs');
+  const { readFile: rf } = await import('node:fs/promises');
+  const here = dirname(fileURLToPath(import.meta.url));
+  const site = JSON.parse(await rf(join(here, '../content/site.json'), 'utf8'));
+  const reviews = JSON.parse(await rf(join(here, '../content/testimonials.json'), 'utf8')).items || [];
+  return {
+    config: { photoSpots: PHOTO_SPOTS, features: { slideshow: true, reviews: true } },
+    site: { ...site, heroSlides: [{ id: 's-hero1', src: '/assets/img/hero-1' }] }, // the harness seeds one slide
+    reviews, slideshow: true, reviewsOn: true, reviewsPath: '/testimonials/', reviewsFile: 'content/testimonials.json', spots: Object.keys(PHOTO_SPOTS),
+  };
+}

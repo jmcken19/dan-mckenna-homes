@@ -169,7 +169,8 @@ try {
 
   // Desktop: drop files onto the upload box.
   await page.emulate({ viewport: { width: 1280, height: 900 }, userAgent: 'Mozilla/5.0 (Windows NT 10.0) Chrome/130' });
-  await page.goto(E.url + '/#/homepage', { waitUntil: 'networkidle0' });
+  await page.goto(E.url + '/?reload=1#/homepage', { waitUntil: 'networkidle0' }); // a real page load (a hash-only change returns before the screen is drawn)
+  await page.waitForSelector('#hphotos > li[data-id]');
   const dropped = await page.evaluate(async () => {
     const r = await fetch('/api/homepage/photo/' + document.querySelector('#hphotos > li[data-id]').dataset.id + '?w=2000');
     const blob = await r.blob();

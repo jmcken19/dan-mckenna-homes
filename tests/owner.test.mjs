@@ -489,3 +489,48 @@ test('edit-on-the-page: edit marks only in edit mode, page picker, preview may b
   const api = await E.call('GET', '/api/homepage');
   assert.equal(api.headers.get('X-Frame-Options'), 'DENY', 'everything else still refuses to be framed');
 });
+
+test('preview: editor marker in edit mode only; allows Google Fonts, https images and video/map embeds; nothing else', async () => {
+  const edit = await E.call('GET', '/api/homepage/preview?edit=1');
+  assert.match(edit.data, /<meta name="editor-preview"/, 'edit-mode pages carry the editor marker');
+  assert.doesNotMatch((await E.call('GET', '/api/homepage/preview')).data, /editor-preview/);
+  const csp = edit.headers.get('Content-Security-Policy');
+  assert.match(csp, /style-src [^;]*https:\/\/fonts\.googleapis\.com/);
+  assert.match(csp, /font-src [^;]*https:\/\/fonts\.gstatic\.com/);
+  assert.match(csp, /img-src [^;]*https:/);
+  assert.match(csp, /frame-src [^;]*https:\/\/www\.youtube-nocookie\.com/);
+  assert.match(csp, /default-src 'none'/);
+  assert.match(csp, /frame-ancestors 'self'/);
+  assert.match((await E.call('GET', '/api/reviews/preview')).headers.get('Content-Security-Policy'), /fonts\.googleapis\.com/);
+});
+
+test('preview: an unreadable reviews draft still shows the page (falls back to the published reviews)', async () => {
+  await E.call('GET', '/api/reviews');
+  const db = await E.mf.getD1Database('DB');
+  const row = await db.prepare('SELECT draft FROM settings WHERE key = ?').bind('reviews').first();
+  await db.prepare('UPDATE settings SET draft = ? WHERE key = ?').bind('{not json', 'reviews').run();
+  try {
+    const pv = await E.call('GET', '/api/homepage/preview?edit=1&path=%2Ftestimonials%2F');
+    assert.equal(pv.status, 200);
+    assert.match(pv.data, /class="tcard"/, 'published testimonials shown');
+  } finally {
+    await db.prepare('UPDATE settings SET draft = ? WHERE key = ?').bind(row.draft, 'reviews').run();
+  }
+});
+
+test('reviews: a title with no Latin letters gets a dated address, never "-2"', async () => {
+  let R = (await E.call('GET', '/api/reviews')).data;
+  const add = async (title) => { const r = await E.call('POST', '/api/reviews', { body: { fields: { title, text: 'Great.', date: '2026-03-04' }, baseRevision: R.revision } }); assert.equal(r.status, 200, JSON.stringify(r.data)); R = r.data; return R.draft.items[0].slug; };
+  assert.equal(await add('🎉🎉🎉'), 'review-2026-03-04');
+  assert.equal(await add('★★★★★'), 'review-2026-03-04-2');
+  R = (await E.call('POST', '/api/reviews/discard', { body: { baseRevision: R.revision } })).data;
+  assert.equal(R.hasUnpublishedChanges, false);
+});
+
+test('conflict messages say "Click" (the editor is laptop-only)', async () => {
+  const H = (await E.call('GET', '/api/homepage')).data;
+  const r = await E.call('PUT', '/api/homepage/settings', { body: { seconds: 7, fade: false, baseRevision: H.revision - 1 } });
+  assert.equal(r.status, 409);
+  assert.match(r.data.error, /Click "Reload latest"/);
+  assert.doesNotMatch(r.data.error, /tap|phone/i);
+});
