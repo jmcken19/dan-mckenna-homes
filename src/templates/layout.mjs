@@ -44,10 +44,11 @@ ${canonical && !preview ? `<link rel="canonical" href="${e(canonical)}">` : ''}
 <meta property="og:description" content="${e(description || site.metaDescription)}">
 ${ogImage ? `<meta property="og:image" content="${e(ogImage)}">` : ''}
 <meta name="theme-color" content="#c41e1d">
-<link rel="icon" href="${url('/favicon.ico')}" sizes="any">
-<link rel="icon" type="image/png" sizes="32x32" href="${url('/assets/img/favicon-32.png')}">
-<link rel="apple-touch-icon" href="${url('/assets/img/apple-touch-icon.png')}">
-<link rel="manifest" href="${url('/site.webmanifest')}">
+<link rel="icon" href="${url('/favicon.ico?v=20261110')}" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="${url('/assets/img/favicon-32.png?v=20261110')}">
+<link rel="apple-touch-icon" href="${url('/assets/img/apple-touch-icon.png?v=20261110')}">
+<link rel="manifest" href="${url('/site.webmanifest?v=20261110')}">
+<link rel="preload" href="${url('/assets/fonts/montserrat-latin-500-normal.woff2')}" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="${url('/assets/fonts/montserrat-latin-600-normal.woff2')}" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="${url('/assets/css/site.css')}?v=${ctx.buildId}">
 <script src="${url('/assets/js/site.js')}?v=${ctx.buildId}" defer></script>

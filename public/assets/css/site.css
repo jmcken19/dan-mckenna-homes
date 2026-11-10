@@ -73,7 +73,7 @@ p { margin: 0 0 1rem; }
   .site-nav ul { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: .25rem; border: 0; padding: 0; max-width: 660px; }
   .site-nav a { border: 0; font-size: .9rem; padding: .7rem .9rem; border-radius: 2px; }
   .site-nav a:hover { color: var(--red); }
-  .site-nav a[aria-current="page"] { background: var(--red-dark); color: #fff; font-weight: 600; }
+  .site-nav a[aria-current="page"] { background: var(--red-dark); color: #fff; font-weight: 500; }
 }
 
 /* Buttons */
