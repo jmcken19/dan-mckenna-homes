@@ -135,17 +135,17 @@ try {
   await page.waitForSelector('#r-text');
   await page.click('#r-title'); await page.keyboard.press('Enter'); // submitting empty shows a plain error
   await page.type('#r-text', 'Dan made our move painless.\n\nHighly recommend.');
-  await page.click('button[type=submit]');
+  await click('button[type=submit]');
   await page.waitForFunction(() => /title/i.test(document.getElementById('msg').innerText));
   await page.type('#r-title', 'Painless move'); await page.type('#r-client', 'The Smiths'); await page.select('#r-role', 'Buyer');
-  await page.click('button[type=submit]');
+  await click('button[type=submit]');
   await page.waitForFunction((n) => document.querySelectorAll('.review').length === n + 1, {}, n0);
   assert.match(await page.$eval('.reviews', (u) => u.innerText), /Painless move[\s\S]*New – not published yet/);
   await shot('08-reviews-added');
   await click('a[href="#/reviews/edit/painless-move"]');
   await page.waitForSelector('#r-client');
   await page.$eval('#r-client', (i) => { i.value = ''; }); await page.type('#r-client', 'J. and K. Smith');
-  await page.click('button[type=submit]');
+  await click('button[type=submit]');
   await page.waitForFunction(() => /J\. and K\. Smith/.test(document.querySelector('.reviews')?.innerText || ''));
   const lastReview = await page.$$eval('[data-remove]', (b) => b[b.length - 1].dataset.remove);
   await click(`[data-remove="${lastReview}"]`); await page.click('dialog[open] button[value=yes]');
