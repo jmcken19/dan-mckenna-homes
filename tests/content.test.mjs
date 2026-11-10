@@ -72,3 +72,17 @@ test('website photos: a replaced photo shows on its pages; the house caption onl
   assert.ok(validatePhotos({ photos: { luxury: { small: 'https://evil.example/x.jpg', large: '/assets/img/a.jpg' } } }).length);
   assert.ok(validatePhotos({ photos: { banner: {} } }).length);
 });
+
+test('reviews show in the order of content/testimonials.json (Dan arranges it) on the homepage (both designs) and the Testimonials page', async () => {
+  const P = await import('../src/templates/pages.mjs');
+  const { luxHome } = await import('../src/templates/luxury.mjs');
+  const site = JSON.parse(await (await import('node:fs/promises')).readFile(new URL('../content/site.json', import.meta.url), 'utf8'));
+  // Deliberately not sorted by date: the file order must win. Long text so the luxury quotes link to the full review.
+  const long = 'x '.repeat(200).trim();
+  const testimonials = [['b-old', '2019-05-05'], ['a-new', '2025-01-01'], ['c-mid', '2022-03-03']].map(([slug, date]) => ({ slug, title: `Title ${slug}`, date, text: [`${slug} ${long}`] }));
+  const ctx = { site, url: (p) => p, listings: [], removed: [], testimonials };
+  const order = (html) => [...new Set([...html.matchAll(/href="\/testimonial\/([a-z-]+)\/"/g)].map((m) => m[1]))];
+  for (const [name, html] of [['classic homepage', P.homePage(ctx)], ['Testimonials page', P.testimonialsPage(ctx)], ['design 2 homepage', luxHome(ctx)]]) {
+    assert.deepEqual(order(html), ['b-old', 'a-new', 'c-mid'], name);
+  }
+});

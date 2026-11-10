@@ -4,7 +4,7 @@
 import { escapeHtml as e, formatPrice, factsList, STATUS_LABEL } from '../lib/listing.mjs';
 import { NAV } from './layout.mjs';
 import { sitePhoto } from '../lib/photos.mjs';
-import { heroSeconds, newestFirst } from './pages.mjs';
+import { heroSeconds } from './pages.mjs';
 
 export function luxLayout(ctx, { path, title, description, body, bodyClass = '', ogImage }) {
   const { site, url, preview } = ctx;
@@ -111,7 +111,7 @@ export function luxHome(ctx) {
   }).join('');
   const multi = slides.length > 1 && site.heroAutoplay !== false;
 
-  const quotes = newestFirst(testimonials);
+  const quotes = testimonials; // the order of content/testimonials.json (Dan arranges it in the editor)
 
   return `<section class="hero lx-hero${site.heroFade ? ' hero--fade' : ' hero--slide'}" aria-label="Welcome"${multi ? ` data-interval="${heroSeconds(site)}"` : ''}>
   <div class="hero__slides">${slideHtml}</div>

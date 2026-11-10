@@ -150,10 +150,25 @@ try {
   const lastReview = await page.$$eval('[data-remove]', (b) => b[b.length - 1].dataset.remove);
   await click(`[data-remove="${lastReview}"]`); await page.click('dialog[open] button[value=yes]');
   await page.waitForFunction((n) => document.querySelectorAll('.review').length === n, {}, n0);
+  // The new review went to the top; Move down puts it second – saved straight away, focus stays on the button.
+  let rorder = await ids('#rlist');
+  assert.equal(rorder[0], 'painless-move', 'a new review shows first');
+  if (rorder.length >= 2) {
+    assert.match(await page.$eval('#rlist > li:first-child .review__pos', (p) => p.textContent), /1 – shows first/);
+    await click('[data-move="down"][data-slug="painless-move"]');
+    rorder = [rorder[1], rorder[0], ...rorder.slice(2)];
+    await page.waitForFunction((w) => JSON.stringify([...document.querySelectorAll('#rlist > li')].map((x) => x.dataset.id)) === w && /Order saved/.test(document.querySelector('.review__saved')?.textContent || ''), {}, JSON.stringify(rorder));
+    assert.equal(await page.evaluate(() => document.activeElement?.dataset.slug), 'painless-move', 'focus stays on the moved review');
+    assert.match(await page.$eval('.actions__state', (x) => x.textContent), /not on the website yet/);
+    const one = await page.$eval('#rlist > li:nth-child(2) .review__order', (d) => { const r = (s) => d.querySelector(s).getBoundingClientRect().top; return Math.abs(r('[data-handle]') - r('[data-move="up"]')) < 2; });
+    assert.ok(one, 'on the full screen the order controls sit on one line');
+    await shot('08b-reviews-order');
+  }
   await click('[data-publish]'); await page.click('dialog[open] button[value=yes]');
   await page.waitForFunction(() => /✓ Done/.test(document.body.innerText), { timeout: 60000 });
   await shot('09-reviews-published');
   const tf = JSON.parse(E.gh.read('content/testimonials.json'));
+  assert.deepEqual(tf.items.map((x) => x.slug), rorder, 'the arranged order is published');
   assert.ok(tf.items.some((x) => x.slug === 'painless-move' && x.client === 'J. and K. Smith' && x.role === 'Buyer'));
   assert.deepEqual(tf.removedSlugs, [lastReview]);
   console.log('reviews ok');

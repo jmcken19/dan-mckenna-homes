@@ -228,11 +228,19 @@ function watchPublish(box, job, { compact = false, onState = null } = {}) {
 
 /* ---------------- drag to reorder (finger or mouse) ---------------- */
 // Drag an item by its handle. Works with touch (pointer events), keeps working while the
-// page scrolls, and the handle also responds to arrow keys. onDone(newOrderIds) is called
-// once when the item is dropped somewhere new.
+// list scrolls (the side panel's scroll box, or the window), and the handle also responds to arrow keys.
+// onDone(newOrderIds, movedId) is called once when the item is dropped somewhere new.
 function makeSortable(list, onDone) {
   if (!list) return;
   const items = () => [...list.children].filter((li) => li.dataset.id);
+  // The box that scrolls the list: the nearest scrollable parent (the side panel), else the window.
+  const scroller = () => {
+    for (let el = list.parentElement; el && el !== document.body && el !== document.documentElement; el = el.parentElement) {
+      const o = getComputedStyle(el).overflowY;
+      if ((o === 'auto' || o === 'scroll') && el.scrollHeight > el.clientHeight) return el;
+    }
+    return null;
+  };
   list.querySelectorAll('[data-handle]').forEach((handle) => {
     const li = handle.closest('li');
     let startOrder = null, scrollTimer = null, lastX = 0, lastY = 0;
@@ -246,37 +254,47 @@ function makeSortable(list, onDone) {
       if (navigator.vibrate) navigator.vibrate(8);
     };
     const autoscroll = () => {
-      const edge = 100, speed = 12;
-      if (lastY < edge) { window.scrollBy(0, -speed); check(); }
-      else if (lastY > window.innerHeight - edge) { window.scrollBy(0, speed); check(); }
+      const box = scroller();
+      const top = box ? box.getBoundingClientRect().top : 0, bottom = box ? box.getBoundingClientRect().bottom : window.innerHeight;
+      const edge = Math.min(100, (bottom - top) / 4), speed = 12;
+      const by = lastY < top + edge ? -speed : lastY > bottom - edge ? speed : 0;
+      if (!by) return;
+      if (box) box.scrollTop += by; else window.scrollBy(0, by);
+      check();
     };
-    handle.addEventListener('pointerdown', (e) => {
-      if (e.button > 0) return;
-      e.preventDefault();
-      handle.setPointerCapture(e.pointerId);
-      startOrder = items().map((x) => x.dataset.id).join();
-      li.classList.add('is-dragging');
-      list.classList.add('is-sorting');
-      lastX = e.clientX; lastY = e.clientY;
-      scrollTimer = setInterval(autoscroll, 16);
-    });
-    handle.addEventListener('pointermove', (e) => {
+    // Move/up are watched on the window: moving the dragged item in the list makes the browser drop the handle's
+    // pointer capture, so the handle alone would never hear the drop.
+    const move = (e) => {
       if (!startOrder) return;
       lastX = e.clientX; lastY = e.clientY;
       check();
-    });
+    };
     const finish = () => {
       if (!startOrder) return;
       clearInterval(scrollTimer);
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', finish);
+      window.removeEventListener('pointercancel', finish);
       li.classList.remove('is-dragging');
       list.classList.remove('is-sorting');
       const order = items().map((x) => x.dataset.id);
       const changed = order.join() !== startOrder;
       startOrder = null;
-      if (changed) onDone(order);
+      if (changed) onDone(order, li.dataset.id);
     };
-    handle.addEventListener('pointerup', finish);
-    handle.addEventListener('pointercancel', finish);
+    handle.addEventListener('pointerdown', (e) => {
+      if (e.button > 0 || startOrder) return;
+      e.preventDefault();
+      try { handle.setPointerCapture(e.pointerId); } catch { /* not needed: the window listens too */ }
+      startOrder = items().map((x) => x.dataset.id).join();
+      li.classList.add('is-dragging');
+      list.classList.add('is-sorting');
+      lastX = e.clientX; lastY = e.clientY;
+      window.addEventListener('pointermove', move);
+      window.addEventListener('pointerup', finish);
+      window.addEventListener('pointercancel', finish);
+      scrollTimer = setInterval(autoscroll, 16);
+    });
     handle.addEventListener('keydown', (e) => {
       if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
       e.preventDefault();
@@ -284,7 +302,7 @@ function makeSortable(list, onDone) {
       const i = order.indexOf(li.dataset.id); const j = i + (e.key === 'ArrowUp' ? -1 : 1);
       if (j < 0 || j >= order.length) return;
       [order[i], order[j]] = [order[j], order[i]];
-      onDone(order);
+      onDone(order, li.dataset.id);
     });
   });
 }
@@ -308,8 +326,8 @@ function dropZoneHtml(id, label, sub) {
   return `<label class="dropzone" for="${id}"><span class="dropzone__big">${esc(label)}</span><span class="dropzone__sub">${esc(sub)}</span><input id="${id}" type="file" accept="image/*,.heic,.heif" multiple></label>`;
 }
 
-function handleHtml(n) {
-  return `<button type="button" class="drag-handle" data-handle aria-label="Drag to move photo ${n}. Or use the up and down arrow keys."><span aria-hidden="true">⠿</span><span class="drag-handle__text">Drag</span></button>`;
+function handleHtml(n, what = 'photo') {
+  return `<button type="button" class="drag-handle" data-handle aria-label="Drag to move ${what} ${n}. Or use the up and down arrow keys."><span aria-hidden="true">⠿</span><span class="drag-handle__text">Drag</span></button>`;
 }
 
 /* ---------------- router ---------------- */
@@ -1473,21 +1491,43 @@ async function reviewsScreen(root = app, opts = {}) {
   let banner = '';
   const liveBySlug = () => new Map(R.live.items.map((x) => [x.slug, JSON.stringify(x)]));
 
+  // After a move: which row moved and which button was pressed (focus goes back to it), and the short note.
+  let moved = null;
+  let moving = false;
+  const ORDER_SAVED = embedded ? 'Order saved – shows on your page now. Click Publish when you\'re happy.' : 'Order saved – not on the website yet. Click Publish when you\'re happy.';
+
   function render() {
     if (gone()) return;
     const live = liveBySlug();
-    const shown = R.draft.items.slice().sort((a, b) => String(b.date).localeCompare(String(a.date)));
+    const shown = R.draft.items; // the order they show in on the website (first = shows first)
+    const many = shown.length > 1;
     const removedCount = R.live.items.filter((x) => !R.draft.items.some((d) => d.slug === x.slug)).length;
+    const both = (list, other) => list.filter((x) => other.some((y) => y.slug === x.slug)).map((x) => x.slug).join();
+    const reordered = both(R.draft.items, R.live.items) !== both(R.live.items, R.draft.items);
+    const scrollBox = embedded ? root : null;
+    const keepScroll = scrollBox ? scrollBox.scrollTop : 0;
     root.innerHTML = `
     ${embedded ? '' : '<a class="back" href="#/">← Back</a>\n    <h1>Client reviews</h1>'}
-    ${embedded ? '<p class="hint">Click <strong>Change</strong> to fix a review, or add a new one. Changes show on your page right away.</p>' : how(['To add a review, click <strong>+ Add a review</strong> and paste it in.', 'To fix one, click <strong>Change</strong> next to it. To take one off, click <strong>Remove</strong>.', 'Click <strong>Preview</strong> to look, then <strong>Publish</strong> at the bottom.'])}
+    ${embedded ? '<p class="hint">Click <strong>Change</strong> to fix a review, or add a new one. Changes show on your page right away.</p>' : how(['To add a review, click <strong>+ Add a review</strong> and paste it in. New reviews go to the top.', 'To fix one, click <strong>Change</strong> next to it. To take one off, click <strong>Remove</strong>.', 'To change the order, drag a review by <strong>⠿ Drag</strong>, or click <strong>Move up</strong> / <strong>Move down</strong>. Review 1 shows first.', 'Click <strong>Preview</strong> to look, then <strong>Publish</strong> at the bottom.'])}
     <div id="msg">${banner}</div>
     ${embedded ? '' : '<div id="pub"></div>'}
     <p><a class="btn btn--primary${embedded ? ' btn--block' : ''}" href="#/reviews/new" data-add>+ Add a review</a></p>
     ${removedCount ? `<p class="chip chip--draft">${removedCount} review${removedCount === 1 ? '' : 's'} removed – not published yet</p>` : ''}
-    <ul class="reviews">${shown.map((t) => {
+    ${reordered ? '<p class="chip chip--draft">New order – not published yet</p>' : ''}
+    ${many ? '<p class="hint order-hint">Drag or use <strong>Move up</strong> / <strong>Move down</strong>. Review 1 shows first.</p>' : ''}
+    <ul class="reviews" id="rlist">${shown.map((t, i) => {
       const state = !live.has(t.slug) ? 'New – not published yet' : live.get(t.slug) !== JSON.stringify(t) ? 'Changed – not published yet' : '';
-      return `<li class="review${state ? ' review--changed' : ''}">
+      const n = i + 1;
+      return `<li class="review${state ? ' review--changed' : ''}${moved?.slug === t.slug ? ' is-moved' : ''}" data-id="${esc(t.slug)}">
+        ${many ? `<div class="review__order">
+          <p class="review__pos"><span class="review__num">${n}</span>${i === 0 ? ' – shows first' : ''}</p>
+          ${handleHtml(n, 'review')}
+          <div class="review__move">
+            <button type="button" class="btn btn--small" data-move="up" data-slug="${esc(t.slug)}" aria-label="Move up – review ${n}, ${esc(t.title)}" ${i === 0 ? 'disabled' : ''}><span aria-hidden="true">↑</span> Move up</button>
+            <button type="button" class="btn btn--small" data-move="down" data-slug="${esc(t.slug)}" aria-label="Move down – review ${n}, ${esc(t.title)}" ${i === shown.length - 1 ? 'disabled' : ''}><span aria-hidden="true">↓</span> Move down</button>
+          </div>
+        </div>` : ''}
+        ${moved?.slug === t.slug && moved.note ? `<p class="note note--ok review__saved" role="status">${esc(moved.note)}</p>` : ''}
         <div class="review__head"><strong class="review__title">${esc(t.title)}</strong><span class="review__meta">${t.client ? esc(t.client) + ' · ' : ''}${t.role ? esc(t.role) + ' · ' : ''}${esc(fmtDay(t.date))}</span></div>
         ${state ? `<p class="chip chip--draft">${state}</p>` : ''}
         <p class="review__text">${esc((t.text || []).join(' ').slice(0, 220))}${(t.text || []).join(' ').length > 220 ? '…' : ''}</p>
@@ -1497,11 +1537,47 @@ async function reviewsScreen(root = app, opts = {}) {
     ${R.hasUnpublishedChanges && !embedded ? '<p><button type="button" class="btn btn--small" data-discard>Undo my unpublished changes</button></p>' : ''}
     ${embedded ? '' : reviewsPublishBar(R)}`;
     bind();
+    if (scrollBox) scrollBox.scrollTop = keepScroll; // redrawing the list never jumps the panel back to the top
+    if (moved) {
+      // Keep the moved review in view and the keyboard where it was (the pressed button, or the handle).
+      const li = [...root.querySelectorAll('#rlist > li')].find((x) => x.dataset.id === moved.slug);
+      const btn = li && (moved.by === 'handle' ? li.querySelector('[data-handle]') : li.querySelector(`[data-move="${moved.by}"]:not([disabled])`) || li.querySelector('[data-move]:not([disabled])') || li.querySelector('[data-handle]'));
+      li?.scrollIntoView({ block: 'nearest' });
+      btn?.focus({ preventScroll: true });
+    }
     const job = store.get(KEYS.pub);
     if (!embedded && (job?.id === 'reviews' || job?.id === 'site')) watchPublish(root.querySelector('#pub'), job);
   }
   const showError = (err) => { if (gone()) return; const m = root.querySelector('#msg'); m.innerHTML = errorNote(err); m.scrollIntoView({ block: 'nearest' }); };
+
+  // Save a new order straight away (Publish waits for it). by = 'up' | 'down' | 'handle' (what to focus afterwards).
+  const saveOrder = (slugs, slug, by) => busyWhile(async () => {
+    if (moving) { render(); return; } // the previous move is still saving: put the list back as it is saved
+    moving = true;
+    root.querySelectorAll('[data-move], [data-handle]').forEach((b) => { b.disabled = true; });
+    try {
+      changed(await api('POST', '/reviews/order', { slugs, baseRevision: R.revision }));
+      banner = ''; moved = { slug, by, note: ORDER_SAVED };
+    } catch (err) {
+      moved = { slug, by };
+      if (err.status === 409 || err.status === 400) { try { changed(await api('GET', '/reviews')); } catch { /* keep what we have */ } }
+      moving = false; render(); showError(err); moved = null;
+      return;
+    }
+    moving = false;
+    render();
+    moved = null; // the note shows once; the next redraw drops it
+  });
+
   function bind() {
+    const order = () => R.draft.items.map((x) => x.slug);
+    root.querySelectorAll('[data-move]').forEach((b) => b.addEventListener('click', () => {
+      const o = order(); const i = o.indexOf(b.dataset.slug); const j = i + (b.dataset.move === 'up' ? -1 : 1);
+      if (i < 0 || j < 0 || j >= o.length) return;
+      [o[i], o[j]] = [o[j], o[i]];
+      saveOrder(o, b.dataset.slug, b.dataset.move);
+    }));
+    makeSortable(root.querySelector('#rlist'), (o, slug) => saveOrder(o, slug, 'handle'));
     if (embedded) {
       root.querySelector('[data-add]').addEventListener('click', (e) => { e.preventDefault(); opts.edit(null); });
       root.querySelectorAll('[data-edit-review]').forEach((a) => a.addEventListener('click', (e) => { e.preventDefault(); opts.edit(a.dataset.editReview); }));

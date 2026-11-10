@@ -128,6 +128,19 @@ HTTPS, same account as the editor):
   4 s, fade-on slideshow to the preview (both designs rotated on schedule), then restored to the original single photo
   through the editor (test photo files removed, status reported ✓ live).
 
+### Reviews order (added Nov 10)
+* Reviews show everywhere (Testimonials page, homepage row in both designs) in the order of
+  `content/testimonials.json → items` – first item shows first; nothing sorts by date any more. Dan arranges it in the
+  reviews panel (and on `#/reviews`): **⠿ Drag** (mouse/finger, scrolls the panel), **Move up / Move down**, or arrow
+  keys on the handle. Each move saves at once: `POST /api/reviews/order { slugs: [every slug, first shown first],
+  baseRevision }` → the reviews state; not exactly the draft's reviews → 400, stale revision → 409 ("Reload latest").
+  New reviews go to the top; editing keeps the place; removing keeps the others' order. Publish writes the order
+  (one commit to `content/testimonials.json`); Undo all puts the published order back; an order-only change counts as
+  unpublished. Same code as client-site-template (`docs/EDITOR.md` there).
+* Switch-over: the file kept its order (it already matched the Testimonials page and the old site). Before, the homepage
+  row was sorted newest first, so on the homepage the 2017 review "Sold a single family home in Waxhaw" moved from last
+  to 4th (the row starts at a random review and loops). Dan can move it with the new buttons.
+
 ### Sign-in as set up (Nov 8)
 Access app "Dan McKenna Homes – Website Editor" (id dfd09d8c…, attached to the `dmh-owner` worker via
 `destinations: worker`), team `gentle-rice-8ea1.cloudflareaccess.com`, policy "Dan and James only"

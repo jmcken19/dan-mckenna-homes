@@ -1,4 +1,4 @@
-// Client reviews editing: add, edit, remove. Same safety model as the homepage photos:
+// Client reviews editing: add, edit, remove, arrange the order. Same safety model as the homepage photos:
 // private draft in D1 (settings table, key "reviews"), revision check on every save,
 // one non-forced Git commit to publish, "live" only after the website reports it.
 import { github } from './github.mjs';
@@ -123,6 +123,24 @@ export function reviewsRoutes(H) {
       return json(view(updated));
     },
 
+    // The order the reviews show in = the order of the items (content/reviews.json). Body: { slugs: [every review's
+    // slug, first shown first], baseRevision }. It must be exactly the current draft's reviews, each once.
+    async order(A) {
+      const body = await readJsonBody(A.request);
+      const rev = needRevision(body);
+      const row = await load(A);
+      const slugs = Array.isArray(body.slugs) ? body.slugs : null;
+      const bySlug = new Map(row.draft.items.map((x) => [x.slug, x]));
+      if (row.revision !== rev) throw new HttpError(409, 'The reviews were changed on another computer since you opened this page. Click "Reload latest" to see the newest version.', { conflict: true });
+      if (!slugs || slugs.length !== bySlug.size || new Set(slugs).size !== slugs.length || !slugs.every((s) => typeof s === 'string' && bySlug.has(s))) {
+        throw new HttpError(400, 'The list of reviews has changed. Please reload the page and try again.');
+      }
+      if (slugs.every((s, i) => row.draft.items[i].slug === s)) return json(view(row)); // nothing moved
+      const updated = await write(A, { draft: { items: slugs.map((s) => bySlug.get(s)) } }, rev);
+      await logEvent(A, 'save-review-order', null, { first: slugs[0] });
+      return json(view(updated));
+    },
+
     async discard(A) {
       const body = await readJsonBody(A.request);
       const rev = needRevision(body);
@@ -180,6 +198,7 @@ export function reviewsRoutes(H) {
     if (parts[1] === 'preview' && method === 'GET') return routes.preview(A);
     if (parts[1] === 'publish' && method === 'POST') return idempotent(A, () => routes.publish(A));
     if (parts[1] === 'discard' && method === 'POST') return routes.discard(A);
+    if (parts[1] === 'order' && parts.length === 2 && method === 'POST') return routes.order(A);
     if (parts[1] === 'item' && parts.length === 3 && method === 'PUT') return routes.edit(A, parts[2]);
     if (parts[1] === 'item' && parts.length === 3 && method === 'DELETE') return routes.remove(A, parts[2]);
     throw new HttpError(404, 'Not found.');

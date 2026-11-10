@@ -8,10 +8,13 @@
 // Run: npm run test:visual   (needs Chrome at /usr/bin/google-chrome or CHROME_PATH)
 import assert from 'node:assert/strict';
 import { writeFileSync } from 'node:fs';
-import { testJpeg } from './harness.mjs';
+import { testJpeg, clientSetup } from './harness.mjs';
 import { openEditor, sleep } from './browser.mjs';
 
 const out = '/tmp/ui-visual';
+const C = await clientSetup(); // Dan's setup in the template's shape (reviews page /testimonials/, content/testimonials.json)
+const enc = (p) => encodeURIComponent(p).replace(/[!'()*]/g, (c) => '%' + c.charCodeAt(0).toString(16).toUpperCase());
+let reviewOrder = null; // the order arranged in step 5e (published in step 7)
 const { E, page, frame, waitFrame, shot, errors, close } = await openEditor({ out, port: Number(process.env.PORT) || 0 });
 // Switch page with whatever the picker shows: page buttons, or the drop-down when they don't fit.
 const pickPage = async (p) => { if (await page.$eval('#vpages', (el) => el.classList.contains('is-select'))) await page.select('#pagesel', p); else await page.click(`[data-page="${p}"]`); };
@@ -139,6 +142,83 @@ try {
   await page.waitForSelector('#drawer:not([hidden]) [data-add]');
   await page.click('#drawer [data-close]');
 
+  // 5e. Reviews order: Move down / Move up / keyboard / drag in the side panel – each saves straight away and the page follows.
+  if (C.reviewsOn && C.reviews.length >= 2) {
+    await pickPage(C.reviewsPath);
+    f = await waitFrame((q) => location.search.includes(`path=${q}`) && !!document.querySelector('[data-edit="reviews"] .jte-pen--bar'), enc(C.reviewsPath));
+    await f.click('[data-edit="reviews"] .jte-pen--bar');
+    await page.waitForSelector('#drawer:not([hidden]) #rlist [data-move]');
+    const panelOrder = () => page.$$eval('#drawer #rlist > li', (li) => li.map((x) => x.dataset.id));
+    const pageOrderIs = (want) => waitFrame((w) => JSON.stringify([...document.querySelectorAll('[data-edit="review"]')].map((x) => x.dataset.editKey)) === w, JSON.stringify(want));
+    const waitPanel = (want) => page.waitForFunction((w) => JSON.stringify([...document.querySelectorAll('#drawer #rlist > li')].map((x) => x.dataset.id)) === w && !document.querySelector('#drawer [data-handle][disabled]'), { timeout: 20000 }, JSON.stringify(want));
+    const savedNote = () => page.waitForFunction(() => /Order saved – shows on your page now\. Click Publish when you're happy\./.test(document.querySelector('#drawer .review__saved')?.textContent || ''), { timeout: 20000 });
+    const inView = (slug) => page.evaluate((s) => { const box = document.querySelector('#drawer-body').getBoundingClientRect(); const r = [...document.querySelectorAll('#drawer #rlist > li')].find((x) => x.dataset.id === s).querySelector('.review__order').getBoundingClientRect(); return r.top >= box.top - 1 && r.bottom <= box.bottom + 1; }, slug);
+    let o = await panelOrder();
+    await pageOrderIs(o);
+    assert.match(await page.$eval('#drawer .order-hint', (p) => p.textContent), /^Drag or use Move up \/ Move down\. Review 1 shows first\.$/);
+    assert.equal(await page.$eval('#drawer #rlist > li .review__pos', (p) => p.textContent.trim()), '1 – shows first');
+    assert.equal(await page.$$eval('#drawer #rlist > li .review__pos', (p) => p[1].textContent.trim()), '2');
+    assert.ok(await page.$eval('#drawer #rlist > li:first-child [data-move="up"]', (b) => b.disabled), 'Move up is off for the first review');
+    assert.ok(await page.$eval('#drawer #rlist > li:last-child [data-move="down"]', (b) => b.disabled), 'Move down is off for the last review');
+    const sizes = await page.$$eval('#drawer #rlist > li:nth-child(2) :is([data-move], [data-handle])', (bs) => bs.map((b) => b.getBoundingClientRect().height));
+    assert.ok(sizes.length === 3 && sizes.every((h) => h >= 50), 'Drag, Move up and Move down are at least 50px tall: ' + sizes);
+    assert.ok(await page.$eval('#drawer #rlist > li:nth-child(2) .review__order', (d) => d.scrollWidth <= d.clientWidth + 1), 'the order controls fit the panel');
+    await shot('05e-reviews-order-panel');
+
+    // Move down (mouse click): the first review becomes the second; focus stays on the pressed button.
+    const first = o[0];
+    await page.click(`#drawer [data-move="down"][data-slug="${first}"]`);
+    let want = [o[1], o[0], ...o.slice(2)];
+    await waitPanel(want); await savedNote();
+    f = await pageOrderIs(want);
+    assert.equal(await page.evaluate(() => document.activeElement?.dataset.move + '|' + document.activeElement?.dataset.slug), `${o.length > 2 ? 'down' : 'up'}|${first}`, 'focus stays on Move down of the moved review (Move up when it is now the last one)');
+    assert.ok(await inView(first), 'the moved review stays in view');
+    assert.equal(await page.$eval('#drawer #rlist > li:nth-child(2) .review__pos', (p) => p.textContent.trim()), '2');
+    assert.match(await page.$eval('#state', (x) => x.textContent), /not on the website yet/);
+    await shot('05f-reviews-moved-down');
+
+    // Move up with the keyboard (Enter on the focused button): back where it was; focus moves to Move down (Move up is now off).
+    await page.focus(`#drawer [data-move="up"][data-slug="${first}"]`);
+    await page.keyboard.press('Enter');
+    await waitPanel(o);
+    f = await pageOrderIs(o);
+    assert.equal(await page.evaluate(() => document.activeElement?.dataset.slug), first, 'focus stays on the moved review');
+    // Arrow key on the ⠿ Drag handle also moves it.
+    await page.focus(`#drawer #rlist > li[data-id="${first}"] [data-handle]`);
+    await page.keyboard.press('ArrowDown');
+    await waitPanel(want); f = await pageOrderIs(want);
+    assert.ok(await page.evaluate(() => document.activeElement?.matches('[data-handle]') && document.activeElement.closest('li').dataset.id), 'focus stays on the handle');
+
+    // Drag the last review to the top with the mouse (the panel scrolls by itself when the list is long).
+    o = await panelOrder();
+    const last = o[o.length - 1];
+    await page.$eval(`#drawer #rlist > li[data-id="${last}"] [data-handle]`, (h) => h.scrollIntoView({ block: 'center' }));
+    const hb = await (await page.$(`#drawer #rlist > li[data-id="${last}"] [data-handle]`)).boundingBox();
+    await page.mouse.move(hb.x + hb.width / 2, hb.y + hb.height / 2);
+    await page.mouse.down();
+    const top = await page.$eval('#drawer-body', (b) => b.getBoundingClientRect().top);
+    for (let y = hb.y; y > top + 8; y -= 40) { await page.mouse.move(hb.x + hb.width / 2, y); await sleep(30); }
+    await page.mouse.move(hb.x + hb.width / 2, top + 8);
+    await page.waitForFunction(() => document.querySelector('#drawer-body').scrollTop === 0, { timeout: 20000 });
+    const fr = await page.$eval('#drawer #rlist > li:not(.is-dragging)', (li) => { const r = li.getBoundingClientRect(); return { y: r.top + 6 }; });
+    await page.mouse.move(hb.x + hb.width / 2, fr.y, { steps: 4 });
+    await page.mouse.up();
+    want = [last, ...o.slice(0, -1)];
+    await waitPanel(want); await savedNote();
+    f = await pageOrderIs(want);
+    assert.ok(await inView(last), 'the dragged review stays in view');
+    await shot('05g-reviews-dragged');
+    // Laptop with a short screen: everything still fits.
+    await page.setViewport({ width: 1280, height: 585 });
+    await sleep(400);
+    assert.ok(await page.$eval('#drawer #rlist > li:nth-child(2) .review__order', (d) => d.scrollWidth <= d.clientWidth + 1), 'controls fit at 1280×585');
+    await page.$eval('#drawer #rlist > li:nth-child(2)', (li) => li.scrollIntoView({ block: 'start' }));
+    await shot('05h-reviews-order-1280x585');
+    await page.setViewport({ width: 1366, height: 768 });
+    reviewOrder = want;
+    await page.click('#drawer [data-close]');
+  }
+
   // 6. Phone view.
   await page.click('[data-device="phone"]');
   assert.equal(await page.$eval('#frame', (fr) => fr.getBoundingClientRect().width), 390);
@@ -157,6 +237,7 @@ try {
   const rv = JSON.parse(E.gh.read('content/testimonials.json')).items;
   assert.ok(rv.some((t) => t.title === 'Edited right on the page'), 'edited review published');
   assert.ok(rv.some((t) => t.title === 'Brand new review'), 'new review published');
+  if (reviewOrder) assert.deepEqual(rv.map((t) => t.slug), reviewOrder, 'the arranged order is published to the testimonials file');
 
   // 8. The real website never carries edit marks.
   const plain = await (await page.goto(E.url + '/api/homepage/preview')).text();

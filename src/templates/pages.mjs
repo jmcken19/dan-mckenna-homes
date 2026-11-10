@@ -24,7 +24,8 @@ function testimonialCard(ctx, t, { full = false, mark = false } = {}) {
 </article>`;
 }
 
-/** Newest reviews first (ties keep their order), so the oldest one is never the opener. */
+/** Newest reviews first (ties keep their order). Not used for display any more: reviews show in the order of
+ *  content/testimonials.json, which Dan arranges in the editor (Nov 2026). Kept for reference / one-time sorting. */
 export function newestFirst(list) {
   return list.map((t, i) => [t, i]).sort((a, b) => b[0].date.localeCompare(a[0].date) || a[1] - b[1]).map(([t]) => t);
 }
@@ -52,7 +53,7 @@ export function homePage(ctx) {
   </div>
 </section>` : '';
 
-  const t = newestFirst(ctx.testimonials);
+  const t = ctx.testimonials; // the order of content/testimonials.json (Dan arranges it in the editor)
   return `<section class="hero${site.heroFade ? ' hero--fade' : ' hero--slide'}" aria-label="Welcome"${multi ? ` data-interval="${heroSeconds(site)}"` : ''}${editMark(ctx, 'slideshow', 'hero', 'Homepage photos')}>
   <div class="hero__slides">${slides}</div>
   <div class="hero__text">

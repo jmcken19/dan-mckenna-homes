@@ -51,8 +51,14 @@ On the Home page, click **✎ Change slideshow**. Your photos come first, the se
   **Save – show it on my page**.
 * **Add or remove reviews:** click **✎ Change reviews – add, change or remove** (on the Testimonials page, or on
   the reviews row on the homepage). Click **+ Add a review**, paste the client's words, add a short title and the date. The name is
-  optional; only add it if the client is OK with it. Click **Save**. **Remove** takes a review off.
+  optional; only add it if the client is OK with it. Click **Save**. A new review goes to the top. **Remove** takes a review off.
 * Then **Publish** at the bottom.
+
+### Change the order of reviews
+Click **✎ Change reviews – add, change or remove**. **Review 1 shows first** – on the Testimonials page and in the
+reviews row on the homepage.
+* Click **Move up** or **Move down** on a review, or hold **⠿ Drag** and move it where you want it.
+* Each move is saved straight away and your page shows it. Then **Publish** at the bottom.
 
 **Prefer the old screen?** Click **List view** at the top right of the editor.
 

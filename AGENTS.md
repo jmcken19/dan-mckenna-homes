@@ -46,7 +46,7 @@ The owner is old-school and non-technical. Never ask Dan to use Git, GitHub, a t
 
 ```
 content/site.json            contact info, tagline, homepage slideshow photos
-content/testimonials.json    testimonials (verbatim)
+content/testimonials.json    testimonials (verbatim); the order of items = the order shown (first shows first)
 content/listings/<id>.json   PUBLISHED listings only (one file each)
 content/removed.json         listings taken off the site (old URL shows a friendly page)
 public/                      copied as-is into the site

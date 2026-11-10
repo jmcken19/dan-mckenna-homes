@@ -2,7 +2,7 @@
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import sharp from 'sharp';
-import { startEditor, accessToken, otherKey, testJpeg, OWNER, MAINT } from './harness.mjs';
+import { startEditor, accessToken, otherKey, testJpeg, clientSetup, OWNER, MAINT } from './harness.mjs';
 import { hasMetadata, cleanJpeg } from '../owner/src/images.mjs';
 
 let E;
@@ -429,6 +429,74 @@ test('client reviews: add, edit, remove, preview, publish; old address of a remo
   R = (await E.call('DELETE', `/api/reviews/item/made-selling-easy?baseRevision=${R.revision}`)).data;
   R = (await E.call('POST', '/api/reviews/discard', { body: { baseRevision: R.revision } })).data;
   assert.ok(R.draft.items.some((x) => x.slug === 'made-selling-easy'));
+});
+
+test('client reviews: arrange the order (file order = shown order); new go to the top, edit/remove keep the order', async () => {
+  const C = await clientSetup(); // Dan's setup in the template's shape
+  const FILE = C.reviewsFile;
+  const fileSlugs = () => JSON.parse(E.gh.read(FILE)).items.map((x) => x.slug);
+  // The order the page shows, read from the editor's page preview (each review card carries its slug in edit mode).
+  const pageOrder = async () => {
+    const pv = await E.call('GET', `/api/homepage/preview?edit=1&path=${encodeURIComponent(C.reviewsPath)}`);
+    assert.equal(pv.status, 200);
+    return [...pv.data.matchAll(/data-edit="review" data-edit-key="([^"]+)"/g)].map((m) => m[1]);
+  };
+  let R = (await E.call('GET', '/api/reviews')).data;
+  const start = R.draft.items.map((x) => x.slug);
+  assert.deepEqual(start, fileSlugs(), 'the editor starts in the file order');
+  assert.deepEqual(await pageOrder(), start, 'the page shows the reviews in the file order');
+  const order = (slugs, rev = R.revision, as) => E.call('POST', '/api/reviews/order', { as, body: { slugs, baseRevision: rev } });
+  assert.equal((await E.call('POST', '/api/reviews/order', { as: null, body: { slugs: start, baseRevision: R.revision } })).status, 401, 'signed out');
+  // Only a full permutation of the current reviews is accepted.
+  for (const bad of [start.slice(1), [...start, start[0]], [start[0], ...start.slice(1, -1), start[0]], [...start.slice(0, -1), 'not-a-review'], 'abc', null, [...start.slice(0, -1), 7]]) {
+    const r = await order(bad);
+    assert.equal(r.status, 400, `refused: ${JSON.stringify(bad)}`); assert.match(r.data.error, /reload/i);
+  }
+  assert.equal((await order([...start].reverse(), R.revision - 1)).status, 409, 'stale order refused');
+  assert.equal((await E.call('GET', '/api/reviews')).data.revision, R.revision, 'refused orders saved nothing');
+  // Same order: nothing to save.
+  assert.equal((await order(start)).data.revision, R.revision);
+  // Reverse: saved as a draft, shown in the preview, the website file untouched; order-only change counts as unpublished.
+  const rev = [...start].reverse();
+  let r = await order(rev); assert.equal(r.status, 200, JSON.stringify(r.data)); R = r.data;
+  assert.deepEqual(R.draft.items.map((x) => x.slug), rev);
+  assert.deepEqual(R.live.items.map((x) => x.slug), start);
+  assert.equal(R.hasUnpublishedChanges, true, 'an order-only change is an unpublished change');
+  assert.deepEqual(await pageOrder(), rev, 'the preview shows the draft order');
+  const rpv = await E.call('GET', '/api/reviews/preview');
+  const hrefOrder = [...new Set([...rpv.data.matchAll(/href="[^"]*\/([a-z0-9-]+)\/"/g)].map((m) => m[1]).filter((x) => start.includes(x)))];
+  assert.deepEqual(hrefOrder, rev, 'the reviews preview shows the draft order too');
+  assert.deepEqual(fileSlugs(), start, 'website unchanged until Publish');
+  // Undo (discard) puts the published order back.
+  R = (await E.call('POST', '/api/reviews/discard', { body: { baseRevision: R.revision } })).data;
+  assert.deepEqual(R.draft.items.map((x) => x.slug), start); assert.equal(R.hasUnpublishedChanges, false);
+  assert.deepEqual(await pageOrder(), start);
+  // Publish writes the new order to the file (and nothing else about the reviews changes).
+  const before = JSON.parse(E.gh.read(FILE));
+  R = (await order(rev)).data;
+  const p = await E.call('POST', '/api/reviews/publish', { body: { baseRevision: R.revision } });
+  assert.equal(p.status, 200, JSON.stringify(p.data));
+  const after = JSON.parse(E.gh.read(FILE));
+  assert.deepEqual(after.items.map((x) => x.slug), rev, 'published order is in the file');
+  assert.deepEqual(after.items, rev.map((s) => before.items.find((x) => x.slug === s)), 'every review is word for word the same');
+  assert.deepEqual(after.removedSlugs, before.removedSlugs, 'no review counted as removed');
+  R = p.data.reviews; assert.equal(R.hasUnpublishedChanges, false);
+  // A new review goes to the top; editing keeps its place; removing keeps the others' order.
+  r = await E.call('POST', '/api/reviews', { body: { fields: { title: 'Order test review', text: 'Great.', date: '2020-01-01' }, baseRevision: R.revision } });
+  R = r.data; const added = R.draft.items[0].slug;
+  assert.deepEqual(R.draft.items.map((x) => x.slug), [added, ...rev], 'new review shows first (even with an old date)');
+  const mid = R.draft.items[1];
+  R = (await E.call('PUT', `/api/reviews/item/${mid.slug}`, { body: { fields: { title: mid.title, client: mid.client || '', role: mid.role || '', date: mid.date, text: mid.text.join('\n\n') }, baseRevision: R.revision } })).data;
+  assert.deepEqual(R.draft.items.map((x) => x.slug), [added, ...rev], 'editing keeps the place');
+  R = (await E.call('DELETE', `/api/reviews/item/${rev[0]}?baseRevision=${R.revision}`)).data;
+  assert.deepEqual(R.draft.items.map((x) => x.slug), [added, ...rev.slice(1)], 'removing keeps the others in order');
+  // An order sent before the removal no longer matches the reviews: refused, nothing changes.
+  assert.equal((await order([added, ...rev], R.revision)).status, 400);
+  // Clean up: undo, then publish the original order again.
+  R = (await E.call('POST', '/api/reviews/discard', { body: { baseRevision: R.revision } })).data;
+  R = (await order(start)).data;
+  assert.equal((await E.call('POST', '/api/reviews/publish', { body: { baseRevision: R.revision } })).status, 200);
+  assert.deepEqual(fileSlugs(), start);
 });
 
 test('laptop only: phone browsers are refused, laptops are allowed', async () => {
