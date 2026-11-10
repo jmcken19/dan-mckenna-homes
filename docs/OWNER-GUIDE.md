@@ -15,33 +15,45 @@ on that laptop. Forgot the password? Click **Forgot your password?** on that pag
 
 ---
 
-### Change a photo on your website
-The editor opens on **Your website photos**. Each box shows one photo and where it appears on the website:
-**Your photo** (About us and Contact pages), **New Construction page photo**, and **Luxury home photo**.
-1. Click **Replace photo** and pick the new photo – or drag a photo from a folder onto the box.
-2. Click **Preview** to see the page with the new photo. Changed your mind? Click **Undo**.
-3. Click **Publish** at the bottom of the screen → **Yes, publish**. In 1–3 minutes it says **✓ Done**.
+### How the editor works now: you edit right on your website
+The editor opens on **your own website**, exactly as visitors see it, but with any changes you haven't published yet.
+* Anything you can change has a big blue **✎ Change** button on it. Click the button (or the photo itself).
+  A panel opens on the right. Click **Done** to close it.
+* **Every change shows on the page straight away.** Nothing goes on the real website until you click **Publish**.
+* **Page:** use the buttons at the top (Home, About us, New Construction, Luxury Home Marketing, Testimonials,
+  Contact) to move around. Clicking the menu inside the page works too.
+* **See it on: Computer / Phone** shows how the page looks on a phone.
+* At the bottom: **Publish** → **Yes, publish**. In 1–3 minutes it says **✓ Done**.
+  **Undo all changes** puts everything back to what's on the website now.
+
+### Change a photo
+Go to the page with the photo, then click **✎ Change photo** on it. Your photo is on the About us and Contact
+pages; the others are on New Construction and Luxury Home Marketing.
+1. Click **Choose a new photo** and pick it, or drag a photo from a folder onto the photo in the panel.
+2. The page shows the new photo. Changed your mind? Click **Undo**.
+3. Click **Publish** at the bottom.
 
 ### Change the photos at the top of your homepage
-Click **Change slideshow photos**.
-* **+ Add photos** – pick one or several. (On a computer you can also drag photos onto that box.)
-* **Change the order** – hold **⠿ Drag** and slide the photo up or down. **Photo 1 shows first.**
-  Or click **Show first** on any photo.
-* **On phones, keep in view: Top / Middle / Bottom** – phones show a narrower slice of the photo;
-  choose the part that matters (a roofline → Top, a patio → Bottom).
+On the Home page, click **✎ Change these photos**.
 * **At the top: Slideshow or One still photo.** Slideshow = the photos take turns; One still photo = only Photo 1 shows.
-* **Speed** – Slow, **Normal** (recommended) or Fast.  **How the photos change** – **Slide** (recommended) or Fade.
-* **Replace** or **Remove** a photo (there must always be at least one).
-* Click **Preview** to watch it, then **Publish**. Wide photos look best.
-
-![Homepage photos](img/20-homepage-photos.jpg)
+* **+ Add photos:** pick one or several, or drag them onto the box.
+* **Change the order:** hold **⠿ Drag** and slide the photo up or down. **Photo 1 shows first.**
+  Or click **Show first** on any photo.
+* **On phones, keep in view: Top / Middle / Bottom.** Phones show a narrower slice of the photo, so choose the
+  part that matters (a roofline → Top, a patio → Bottom).
+* **Speed:** Slow, **Normal** (recommended) or Fast. **How the photos change:** **Slide** (recommended) or Fade.
+* **Replace** or **Remove** a photo (there must always be at least one). Wide photos look best.
+* Then **Publish** at the bottom.
 
 ### Add, change or remove a client review
-On the editor's main page, click **Add, edit or remove reviews**.
-* **+ Add a review** – paste the client's words, add a short title and the date (the name is optional – only
-  if the client is OK with it). Click **Save**.
-* **Edit** – fix a review, then **Save**. **Remove** – takes it off the website.
-* Click **Preview** to look, then **Publish** at the bottom → **Yes, publish**.
+* **Fix one review:** go to **Testimonials** and click **✎ Edit** on that review. Change it, then click
+  **Save – show it on my page**.
+* **Add or remove reviews:** click **✎ Change reviews** (on the Testimonials page, or on the reviews row on
+  the homepage). Click **+ Add a review**, paste the client's words, add a short title and the date. The name is
+  optional; only add it if the client is OK with it. Click **Save**. **Remove** takes a review off.
+* Then **Publish** at the bottom.
+
+**Prefer the old screen?** Click **Open the list view** at the bottom of the editor.
 
 ### Anything else
 Want a different change – text, a new page, a listing? Just **text James**.

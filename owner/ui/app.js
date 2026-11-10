@@ -367,7 +367,7 @@ async function visualScreen() {
         <div class="drawer__body" id="drawer-body"></div>
       </aside>
     </div>
-    <p class="hint vis__foot">Prefer a simple list of your photos? <a href="#/list">Open the list view</a>. Need something else changed? Contact ${supportLine()}.</p>
+    <p class="hint vis__foot">Need something else changed on the website? Just text James.${me.role === 'maintainer' ? ` · <a href="#/request">Change requests${me.openRequests ? ` (${me.openRequests} waiting)` : ''}</a>` : ''} · Prefer a simple list of your photos? <a href="#/list">Open the list view</a>.</p>
     <div class="actions"><p class="actions__state" id="state"></p><div class="actions__in actions__in--2">
       <button type="button" class="btn" data-undo-all>Undo all changes</button>
       <button type="button" class="btn btn--primary btn--publish" data-publish>Publish</button>
