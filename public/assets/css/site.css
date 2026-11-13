@@ -259,6 +259,13 @@ p { margin: 0 0 1rem; }
 .cform__status { margin: .75rem 0 0; font-weight: 600; }
 .cform__status.is-ok { color: #1b6e2f; }
 .cform__status.is-bad { color: #a11; }
+/* New form (posts to /api/contact) needs JavaScript: without it, show the "please call or text" line instead. */
+.cform__nojs { display: none; font-weight: 600; }
+.no-js .cform__nojs { display: block; }
+.no-js .cform__js { display: none; }
+.cform__check:not(:empty) { margin-bottom: .75rem; }
+/* Email addresses are written without the "@" in the page code (spam harvesters); this draws it. See src/lib/mail.mjs */
+.eml-at::before { content: "@"; }
 .cform__note { background: #fff4c2; padding: .5rem .75rem; font-size: .95rem; }
 .contact-form { max-width: 560px; }
 .ask .cform p { text-align: left; }

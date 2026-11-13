@@ -11,32 +11,102 @@ document.documentElement.classList.remove('no-js');
     reveals.forEach(function (r) { io.observe(r); });
   }
 
+  // Email links: the address is not written in the page code (spam harvesters read it there). Put the real
+  // mailto: link and the readable address back now. Other half: src/lib/mail.mjs → scrambleMail().
+  function unscramble(v) { try { return decodeURIComponent(atob(v.split('').reverse().join(''))); } catch (e) { return ''; } }
+  document.querySelectorAll('a[data-mail]').forEach(function (a) {
+    var addr = unscramble(a.getAttribute('data-mail'));
+    var subject = a.getAttribute('data-mail-subject');
+    if (addr) a.href = 'mailto:' + addr + (subject ? '?subject=' + encodeURIComponent(subject) : '');
+  });
+  document.querySelectorAll('[data-mail-text]').forEach(function (el) {
+    var addr = unscramble(el.getAttribute('data-mail-text'));
+    if (addr) el.textContent = addr;
+  });
+
   // Contact form: send without leaving the page; on any problem, point to call/text instead.
+  // Forms with data-api post to this site's own /api/contact with a Cloudflare Turnstile token (the "are you a
+  // person" check – normally invisible). Forms with data-ajax are the older FormSubmit form.
+  var turnstileLoading = null;
+  function loadTurnstile() {
+    if (!turnstileLoading) {
+      turnstileLoading = new Promise(function (resolve, reject) {
+        if (window.turnstile) return resolve(window.turnstile);
+        var sc = document.createElement('script');
+        sc.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+        sc.async = true; sc.defer = true;
+        sc.onload = function () { window.turnstile ? window.turnstile.ready(function () { resolve(window.turnstile); }) : reject(new Error('turnstile')); };
+        sc.onerror = function () { turnstileLoading = null; reject(new Error('turnstile')); };
+        document.head.appendChild(sc);
+      });
+    }
+    return turnstileLoading;
+  }
   document.querySelectorAll('[data-cform]').forEach(function (form) {
     var status = form.querySelector('.cform__status');
     var btn = form.querySelector('.cform__send');
+    var api = form.getAttribute('data-api');
+    var isApi = form.classList.contains('cform--api');
+    var loadedAt = Date.now();
+    if (form._t) form._t.value = String(loadedAt);
+    // Turnstile: start it the first time the visitor touches the form (so other pages stay fast), keep its token.
+    var check = { id: null, token: '', waiting: null, started: false };
+    function startCheck() {
+      if (check.started || !api) return;
+      check.started = true;
+      loadTurnstile().then(function (ts) {
+        check.id = ts.render(form.querySelector('[data-turnstile]'), {
+          sitekey: form.getAttribute('data-sitekey'),
+          appearance: 'interaction-only', // nothing to see unless Cloudflare needs a click
+          size: 'flexible',
+          callback: function (token) { check.token = token; if (check.waiting) { var w = check.waiting; check.waiting = null; w.resolve(token); } },
+          'expired-callback': function () { check.token = ''; },
+          'error-callback': function () { check.token = ''; if (check.waiting) { var w = check.waiting; check.waiting = null; w.reject(new Error('check')); } return true; },
+        });
+      }).catch(function () { check.started = false; if (check.waiting) { var w = check.waiting; check.waiting = null; w.reject(new Error('check')); } });
+    }
+    function getToken() {
+      if (check.token) return Promise.resolve(check.token);
+      return new Promise(function (resolve, reject) {
+        check.waiting = { resolve: resolve, reject: reject };
+        startCheck();
+        setTimeout(function () { if (check.waiting) { check.waiting = null; reject(new Error('check')); } }, 30000);
+      });
+    }
+    function resetCheck() { check.token = ''; try { if (window.turnstile && check.id !== null) window.turnstile.reset(check.id); } catch (e) {} }
+    if (api) { form.addEventListener('focusin', startCheck); form.addEventListener('pointerdown', startCheck); }
+
     form.addEventListener('submit', function (e) {
-      if (!window.fetch || !window.FormData) return; // falls back to a normal form post
+      if (isApi) { e.preventDefault(); if (!api) return; } // previews: the form is switched off
+      else if (!window.fetch || !window.FormData) return; // older form falls back to a normal form post
       e.preventDefault();
       if (btn.disabled) return;
-      if (form._honey && form._honey.value) return; // spam trap
+      if (!isApi && form._honey && form._honey.value) return; // spam trap (the new form's is checked on the server)
       btn.disabled = true; var label = btn.textContent; btn.textContent = 'Sending…';
       status.className = 'cform__status'; status.textContent = '';
       var data = {};
-      new FormData(form).forEach(function (v, k) { if (k !== '_next') data[k] = v; });
-      fetch(form.dataset.ajax, { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify(data) })
-        .then(function (r) { return r.json().catch(function () { return {}; }).then(function (j) { if (!r.ok || String(j.success) === 'false') throw new Error(j.message || 'failed'); }); })
+      new FormData(form).forEach(function (v, k) { if (k !== '_next' && k !== 'cf-turnstile-response') data[k] = v; });
+      var ready = Promise.resolve();
+      if (isApi) {
+        data._sent = Date.now(); data.page = location.pathname;
+        ready = getToken().then(function (token) { data.token = token; });
+      }
+      ready
+        .then(function () { return fetch(isApi ? api : form.dataset.ajax, { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify(data) }); })
+        .then(function (r) { return r.json().catch(function () { return {}; }).then(function (j) { if (!r.ok || (isApi ? j.success !== true : String(j.success) === 'false')) throw new Error(j.message || 'failed'); }); })
         .then(function () {
           form.reset();
+          if (form._t) form._t.value = String(Date.now());
           status.classList.add('is-ok');
-          status.textContent = 'Thank you! Your message was sent. Dan will get back to you soon.';
+          status.textContent = form.getAttribute('data-msg-ok');
           btn.textContent = 'Sent ✓';
         })
         .catch(function () {
           status.classList.add('is-bad');
-          status.textContent = 'Sorry, your message could not be sent right now. Please call or text Dan instead.';
+          status.textContent = form.getAttribute('data-msg-bad');
           btn.disabled = false; btn.textContent = label;
-        });
+        })
+        .then(function () { if (isApi) resetCheck(); });
     });
   });
 

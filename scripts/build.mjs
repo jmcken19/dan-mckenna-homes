@@ -87,7 +87,7 @@ export function mainPages(theme = THEME) {
     ['/new-construction/', 'New Construction Buyer Agent', P.newConstructionPage, { description: 'Why work with an experienced buyer\'s agent when purchasing new construction in the Charlotte area.' }],
     ['/luxury-home-marketing/', 'Luxury Home Marketing', P.luxuryPage, { description: 'Luxury home marketing in the Charlotte area by Dan McKenna, Certified Luxury Home Marketing Specialist and GUILD member.' }],
     ['/testimonials/', 'Testimonials', P.testimonialsPage, { description: 'What clients say about working with Dan McKenna.' }],
-    ['/contact/', 'Contact', P.contactPage, { description: 'Call, text, or email Dan McKenna: 704-441-4556, danmckenna@kw.com.' }],
+    ['/contact/', 'Contact', P.contactPage, { description: 'Call, text, or email Dan McKenna: 704-441-4556.' }],
     ['/accessibility-2/', 'Accessibility', P.accessibilityPage, {}],
     ['/dmca-compliance-2/', 'Copyright', P.dmcaPage, {}],
   ];

@@ -4,6 +4,7 @@
 import { escapeHtml as e, formatPrice, factsList, STATUS_LABEL } from '../lib/listing.mjs';
 import { NAV, navLabel } from './layout.mjs';
 import { t } from '../lib/text.mjs';
+import { mailAttrs, mailText } from '../lib/mail.mjs';
 // Not the editor's design (the editor shows the classic one), but wording that is the same as in the classic design
 // uses the same keys (src/lib/text.mjs), so Dan's word changes show in both designs.
 import { sitePhoto } from '../lib/photos.mjs';
@@ -62,7 +63,7 @@ ${body}
       <section>
         <h2>${t(ctx, 'site.agent')}</h2>
         <p>${t(ctx, 'site.agentTitle')}<br>${t(ctx, 'site.brokerage')}</p>
-        <p><a href="${e(site.phoneHref)}">${t(ctx, 'site.phone')}</a><br><a href="mailto:${e(site.email)}">${t(ctx, 'site.email')}</a></p>
+        <p><a href="${e(site.phoneHref)}">${t(ctx, 'site.phone')}</a><br><a ${mailAttrs(ctx)}>${mailText(ctx)}</a></p>
       </section>
       <section>
         <h2>Explore</h2>
@@ -136,7 +137,7 @@ export function luxHome(ctx) {
       <h2 id="intro-h" class="lx-display">Dan McKenna</h2>
       <p class="lx-lede">Over 15 years ago, we relocated our family from New York to the Charlotte area, drawn by everything this wonderful region has to offer. Today, we're proud to help others discover the communities and lifestyle that make the Charlotte area so special.</p>
       <p>Full-time REALTOR® licensed in North Carolina and South Carolina · Certified Luxury Home Marketing Specialist (CLHMS) · GUILD member · Keller Williams Top Producer annually since 2015.</p>
-      <p class="lx-contact-line"><a href="${e(site.phoneHref)}">${t(ctx, 'site.phone')}</a><span aria-hidden="true">|</span><a href="mailto:${e(site.email)}">${t(ctx, 'site.email')}</a></p>
+      <p class="lx-contact-line"><a href="${e(site.phoneHref)}">${t(ctx, 'site.phone')}</a><span aria-hidden="true">|</span><a ${mailAttrs(ctx)}>${mailText(ctx)}</a></p>
       <p><a class="lx-link" href="${url('/about-us/')}">Meet Dan</a></p>
     </div>
   </div>

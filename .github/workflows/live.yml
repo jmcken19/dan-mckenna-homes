@@ -29,6 +29,18 @@ jobs:
           OUT_DIR: dist-prod
           SITE_URL: https://www.danmckennahomes.com
           BUILD_ID: ${{ github.sha }}
+      # Safety: the new contact form (content/site.json → turnstileSiteKey) may only go live when the Worker that is
+      # live right now already has its secrets and email binding. Otherwise stop here – the website stays as it is.
+      - name: Contact form – is the Worker ready?
+        run: |
+          KEY=$(node -p "require('./content/site.json').turnstileSiteKey || ''")
+          if [ -z "$KEY" ]; then echo "turnstileSiteKey not set – the website keeps the FormSubmit form."; exit 0; fi
+          READY=$(curl -fsS --max-time 20 https://www.danmckennahomes.com/api/contact || true)
+          echo "GET /api/contact → $READY"
+          if [ "$READY" != '{"ready":true}' ]; then
+            echo "::error::turnstileSiteKey is set, but the live Worker is not ready for the new contact form (secrets / send_email binding – docs/MAINTAINER.md → Contact form). Nothing was deployed."
+            exit 1
+          fi
       - name: Deploy to Cloudflare
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
