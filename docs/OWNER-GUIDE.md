@@ -15,8 +15,18 @@ on that laptop. Forgot the password? Click **Forgot your password?** on that pag
 
 ---
 
+### The start page: everything in one place
+Your **Website Editor** bookmark opens on a start page with big buttons:
+* **Edit your website** – change words, photos and reviews (explained below).
+* **See your website** – your real website, in a new tab.
+* **Request a change** – ask James for something you can't change yourself.
+* **Your accounts** – **Cloudflare** (where your website and its address are kept) and **Formspree** (messages from
+  your contact form). These open in a new tab and have their own sign-in. Your passwords are never kept in the editor.
+
+To come back to it from the editor, click **Start page** at the top right.
+
 ### How the editor works now: you edit right on your website
-The editor opens on **your own website**, exactly as visitors see it, but with any changes you haven't published yet.
+Click **Edit your website**. It opens **your own website**, exactly as visitors see it, but with any changes you haven't published yet.
 * **Every word on your website can be changed** – click the words (see **Change any wording** below).
 * Photos and reviews have a dark **✎ Change …** button on them. Click the button (or the photo itself).
   A panel opens on the right and your page shows a little smaller beside it. Click **Done** to close the panel.

@@ -276,6 +276,19 @@ the readable address back when the page loads. Without JavaScript the address st
 from the stylesheet) and the Email buttons go to the Contact page. Use `mailAttrs(ctx)` / `mailText(ctx)` for any new
 email link – `npm test` fails if a page contains `mailto:` or the address.
 
+## Editor start page (Nov 13, 2026)
+* The editor's plain address opens `#/home`: **Edit your website** (`#/`, editing on the page), **See your website**
+  (`PUBLIC_SITE_URL`), **Request a change**, and **Your accounts**.
+* **Your accounts** = `owner/wrangler.toml → MANAGE_LINKS`, a JSON list of `{ name, url, note }` (https links only,
+  at most 12; anything else is dropped by `owner/src/links.mjs`). They are plain links that open in a new tab – the
+  editor never signs in to them and no password or key belongs there. To add/remove one: edit the list, push
+  (the editor redeploys).
+* Today's list: Cloudflare (`dash.cloudflare.com`) and Formspree (`formspree.io/forms`). **The contact form is still
+  on FormSubmit** – the Formspree link shows Formspree's own sign-in until a Formspree account exists and the form
+  is moved to it.
+* A Cloudflare sign-in can change DNS and email records. Dan's own login is the account owner; keep that in mind
+  before pointing a client at it.
+
 ## Editor updates
 * `.github/workflows/editor.yml` deploys `owner/` (dmh-owner) when `owner/` or `src/` changes, using the same
   `CLOUDFLARE_API_TOKEN` secret. Dan's content publishes don't trigger it.

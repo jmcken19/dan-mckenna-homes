@@ -37,7 +37,7 @@ const pickPage = async (p) => { if (await page.$eval('#vpages', (el) => el.class
 const onPage = (p) => waitFrame((q) => location.search.includes(`path=${q}&`) && !!document.querySelector('meta[name="editor-preview"]') && document.readyState === 'complete', enc(p));
 const openPen = async (sel) => { const f = await frame(); await f.$eval(sel, (el) => { const host = el.tagName === 'IMG' ? el.parentElement : el; const pen = el.querySelector(':scope > .jte-pen, :scope > .wrap > .jte-pen') || [...host.querySelectorAll(':scope > .jte-pen')].pop(); pen.click(); }); };
 const barText = () => page.$eval('.vis__bar', (b) => b.innerText);
-const reload = async () => { await page.goto(E.url + '/', { waitUntil: 'networkidle0' }); await onPage(await page.$eval('#pagesel', (s) => s.value)); };
+const reload = async () => { await page.goto(E.url + '/?t=' + Date.now() + '#/', { waitUntil: 'networkidle0' }); await onPage(await page.$eval('#pagesel', (s) => s.value)); };
 const H = async () => (await E.call('GET', '/api/homepage')).data;
 const R = async () => (await E.call('GET', '/api/reviews')).data;
 const slowPhoto = `${out}/slow.jpg`;
@@ -53,7 +53,7 @@ const addReview = async (title, as) => { const r = await R(); const x = await E.
 
 try {
   writeFileSync(slowPhoto, await testJpeg({ width: 1400, height: 1800, color: '#3a8', label: 'SLOW' }));
-  await page.goto(E.url + '/', { waitUntil: 'networkidle0' });
+  await page.goto(E.url + '/?t=' + Date.now() + '#/', { waitUntil: 'networkidle0' });
   await onPage('/');
 
   /* 1. Unsaved review typing is never thrown away without asking (Done, Escape, another ✎, page switch, Publish). */
@@ -282,7 +282,7 @@ try {
 
   /* 9. A preview that can't be shown says so (server error, then signed out), with Try again. */
   rules.push({ when: (u) => u.pathname === '/api/homepage/preview', answer: failWith(500, { error: 'Something went wrong on our side.' }) });
-  await page.goto(E.url + '/', { waitUntil: 'networkidle0' });
+  await page.goto(E.url + '/?t=' + Date.now() + '#/', { waitUntil: 'networkidle0' });
   await page.waitForFunction(() => !document.querySelector('#over').hidden, { timeout: 30000 });
   assert.match(await page.$eval('#over', (o) => o.innerText), /couldn't be shown/);
   await shot('09-preview-error');
@@ -309,7 +309,7 @@ try {
   const S = await openEditor({ out: out + '/subpath', siteUrl: SITE + '/calm-site' });
   try {
     const { page: p, waitFrame: wf, frame: fr } = S;
-    await p.goto(S.E.url + '/', { waitUntil: 'networkidle0' });
+    await p.goto(S.E.url + '/?t=' + Date.now() + '#/', { waitUntil: 'networkidle0' });
     await wf(() => !!document.querySelector('meta[name="editor-preview"]') && document.readyState === 'complete');
     const pages = await p.$$eval('#pagesel option', (o) => o.map((x) => x.value));
     const other = pages.find((x) => x !== '/');

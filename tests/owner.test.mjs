@@ -247,6 +247,22 @@ test('cleanJpeg strips EXIF/GPS but keeps the picture', async () => {
   assert.equal(meta.width, 640);
 });
 
+test('start page links: /api/me lists the owner\'s other accounts from MANAGE_LINKS – https links only, never a password', async () => {
+  const { manageLinks } = await import('../owner/src/links.mjs');
+  const me = (await E.call('GET', '/api/me')).data;
+  assert.deepEqual(me.links, [
+    { name: 'Cloudflare', url: 'https://dash.cloudflare.com/', note: 'Where your website is kept.' },
+    { name: 'Formspree', url: 'https://formspree.io/forms', note: 'Messages from your contact form.' },
+  ], 'http:, javascript:, nameless and password-carrying links are left out');
+  assert.equal((await E.call('GET', '/api/me', { as: null })).status, 401, 'signed-out visitors learn nothing');
+  for (const bad of [undefined, '', 'not json', '{"name":"x"}', 'null', '[null, 5, "x"]']) assert.deepEqual(manageLinks({ MANAGE_LINKS: bad }), [], String(bad));
+  assert.equal(manageLinks({ MANAGE_LINKS: JSON.stringify(Array.from({ length: 30 }, (_, i) => ({ name: 'L' + i, url: 'https://example.com/' + i }))) }).length, 12, 'at most 12');
+  // The real setting in owner/wrangler.toml is valid and has what Dan was promised.
+  const toml = (await import('node:fs')).readFileSync(new URL('../owner/wrangler.toml', import.meta.url), 'utf8');
+  const real = manageLinks({ MANAGE_LINKS: /MANAGE_LINKS = '''([\s\S]*?)'''/.exec(toml)[1] });
+  assert.deepEqual(real.map((l) => l.name), ['Cloudflare', 'Formspree']);
+});
+
 test('security headers are present on editor pages and API', async () => {
   const r = await E.call('GET', '/api/me');
   assert.equal(r.headers.get('x-frame-options'), 'DENY');

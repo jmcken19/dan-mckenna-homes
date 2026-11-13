@@ -29,7 +29,7 @@ const dialog = async (value) => { await page.waitForSelector('dialog[open]'); aw
 const ran = [];
 
 try {
-  await page.goto(E.url + '/', { waitUntil: 'networkidle0' });
+  await page.goto(E.url + '/?t=' + Date.now() + '#/', { waitUntil: 'networkidle0' });
   let f = await ready('/');
   const start = await T();
 

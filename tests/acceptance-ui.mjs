@@ -64,7 +64,7 @@ try {
       imgs.push(f);
     }
     state.imgs = imgs; save();
-    await page.goto(E.url + '/', { waitUntil: 'networkidle0' });
+    await page.goto(E.url + '/?t=' + Date.now() + '#/', { waitUntil: 'networkidle0' });
     await shot('01-start');
     await clickText('a.big-choice', 'Manage listings');
     await page.waitForSelector('#q');
