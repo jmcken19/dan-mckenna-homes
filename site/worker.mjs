@@ -1,5 +1,8 @@
 // Serves the built website. Sends danmckennahomes.com → www.danmckennahomes.com, adds safety headers,
-// and keeps test addresses (workers.dev) out of Google.
+// and keeps test addresses (workers.dev) out of Google. Also answers the contact form (POST /api/contact – see contact.mjs).
+import { EmailMessage } from 'cloudflare:email';
+import { CONTACT_PATH, handleContact } from './contact.mjs';
+
 const MAIN = 'www.danmckennahomes.com';
 
 export default {
@@ -8,6 +11,11 @@ export default {
     if (url.hostname === 'danmckennahomes.com') {
       url.hostname = MAIN; url.protocol = 'https:'; url.port = '';
       return Response.redirect(url.toString(), 301);
+    }
+    if (url.pathname === CONTACT_PATH) {
+      const { EMAIL, CONTACT_RATE, CONTACT_KV, TURNSTILE_SECRET, CONTACT_TO, CONTACT_FROM, CONTACT_SUBJECT } = env;
+      return handleContact(request, { MAIN_HOST: MAIN, EMAIL, CONTACT_RATE, CONTACT_KV, TURNSTILE_SECRET, CONTACT_TO, CONTACT_FROM, CONTACT_SUBJECT },
+        { makeEmail: (from, to, raw) => new EmailMessage(from, to, raw) });
     }
     const res = await env.ASSETS.fetch(request);
     const out = new Response(res.body, res);

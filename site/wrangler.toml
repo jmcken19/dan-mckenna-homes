@@ -10,3 +10,39 @@ directory = "../dist-prod"
 binding = "ASSETS"
 not_found_handling = "404-page"
 run_worker_first = true
+
+# ---------------------------------------------------------------------------------------------------------
+# Contact form (POST /api/contact – site/contact.mjs). Setup steps: docs/MAINTAINER.md → "Contact form".
+# The new form is only used once ALL of this is in place AND content/site.json has "turnstileSiteKey".
+# Until then the website keeps the old FormSubmit form.
+# ---------------------------------------------------------------------------------------------------------
+[vars]
+# The address the messages are sent FROM. Its domain must have Cloudflare Email Routing switched on.
+CONTACT_FROM = "form@danmckennahomes.com"
+CONTACT_SUBJECT = "New message from danmckennahomes.com"
+
+# Short-burst limit per visitor IP: at most 5 form posts a minute. (The Workers Rate Limiting binding only allows
+# 10- or 60-second windows, so the "5 messages an hour" limit is the KV counter below.) Nothing to create in the
+# dashboard – namespace_id is just a number we pick.
+[[ratelimits]]
+name = "CONTACT_RATE"
+namespace_id = "1001"
+  [ratelimits.simple]
+  limit = 5
+  period = 60
+
+# Hourly limit per visitor IP (5 messages an hour), kept in a small KV counter.
+# To switch on: `npx wrangler kv namespace create CONTACT_KV` (in site/), paste the id it prints, remove the "#".
+# [[kv_namespaces]]
+# binding = "CONTACT_KV"
+# id = "PASTE-THE-ID-HERE"
+
+# Sends the email. REMOVE THE "#" ONLY AFTER Cloudflare Email Routing is switched on for the domain and the
+# destination address is verified – before that, `wrangler deploy` can fail and block every website publish.
+# No address is written here on purpose: where the mail goes is the CONTACT_TO secret.
+# [[send_email]]
+# name = "EMAIL"
+
+# Secrets – never in this file or the repository. Set them with (in site/):
+#   npx wrangler secret put TURNSTILE_SECRET   # the Turnstile widget's secret key
+#   npx wrangler secret put CONTACT_TO         # the verified address the messages go to

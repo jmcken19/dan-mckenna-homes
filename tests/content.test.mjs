@@ -88,3 +88,88 @@ test('reviews show in the order of content/testimonials.json (Dan arranges it) o
     assert.deepEqual(order(html), ['b-old', 'a-new', 'c-mid'], name);
   }
 });
+
+/* ---------- contact form + email links (spam protection) ---------- */
+const formCtx = (site, extra = {}) => ({ site: { email: 'owner@example.org', ...site }, text: TEXT, url: (p) => p, siteUrl: 'https://www.danmckennahomes.com', ...extra });
+
+test('contact form, old way (no turnstileSiteKey yet): unchanged FormSubmit form, same words', async () => {
+  const { contactForm } = await import('../src/templates/layout.mjs');
+  assert.equal(contactForm(formCtx({})), '', 'no form without an address or a key');
+  const old = contactForm(formCtx({ contactFormTo: 'a@b.com', turnstileSiteKey: '' }));
+  assert.match(old, /action="https:\/\/formsubmit\.co\/a%40b\.com" method="post" data-ajax="https:\/\/formsubmit\.co\/ajax\/a%40b\.com"/);
+  assert.match(old, /name="_subject" value="New message from danmckennahomes\.com"/);
+  assert.match(old, /name="_honey"/);
+  assert.doesNotMatch(old, /data-api|data-sitekey|cform__nojs|name="_t"/);
+  assert.match(old, /data-msg-ok="Thank you! Your message was sent\. Dan will get back to you soon\." data-msg-bad="Sorry, your message could not be sent right now\. Please call or text Dan instead\."/);
+});
+
+test('contact form, new way (turnstileSiteKey set): posts to /api/contact, no address in the page, call-or-text line without JavaScript, off on previews', async () => {
+  const { contactForm } = await import('../src/templates/layout.mjs');
+  const site = { contactFormTo: 'a@b.com', turnstileSiteKey: '0x4AAAAAAAtestkey' };
+  const live = contactForm(formCtx(site), { id: 'contact' });
+  assert.match(live, /<form class="cform cform--api" data-cform method="post" data-api="\/api\/contact" data-sitekey="0x4AAAAAAAtestkey"/);
+  assert.doesNotMatch(live, /formsubmit|a@b\.com|a%40b\.com|_captcha|_subject/, 'FormSubmit and the address are gone from the page code');
+  assert.match(live, /<input type="hidden" name="_t" value="">/); assert.match(live, /name="_honey"/); assert.match(live, /data-turnstile/);
+  assert.match(live, /<p class="cform__nojs">Sorry, your message could not be sent right now\. Please call or text Dan instead\.<\/p>\s*<div class="cform__js">/);
+  for (const [k, n] of [['name', 100], ['email', 200], ['phone', 40], ['message', 3000]]) assert.match(live, new RegExp(`name="${k}"[^>]*maxlength="${n}"`));
+  for (const words of ['Or send Dan a message', '>Name<', '>Email<', 'Phone <span class="cform__opt">(optional)</span>', '>Message<', '>Send message</button>']) assert.ok(live.includes(words), words);
+  assert.equal(contactForm(formCtx({ turnstileSiteKey: 'k' })).includes('data-api'), true, 'works without contactFormTo');
+  const preview = contactForm(formCtx(site, { preview: true }));
+  assert.match(preview, /switched off here/); assert.match(preview, / disabled>Send message/);
+  assert.doesNotMatch(preview, /data-api|data-sitekey/, 'nothing can be sent from a testing preview');
+  const edit = contactForm(formCtx(site, { preview: true, editMode: true }));
+  assert.doesNotMatch(edit, / disabled>|data-api|cform__nojs/);
+});
+
+test('email links: no address or mailto: in the page code; the Contact page is the no-JavaScript fallback; the editor keeps the plain address', async () => {
+  const { mailAttrs, mailText, scrambleMail } = await import('../src/lib/mail.mjs');
+  const c = formCtx({ email: 'dan.o\'neil+web@kw.com' });
+  const unscramble = (v) => decodeURIComponent(atob(v.split('').reverse().join(''))); // same as public/assets/js/site.js
+  assert.equal(unscramble(scrambleMail(c.site.email)), c.site.email);
+  assert.match(readTextFile(new URL('../public/assets/js/site.js', import.meta.url), 'utf8'), /decodeURIComponent\(atob\(v\.split\(''\)\.reverse\(\)\.join\(''\)\)\)/);
+  const a = mailAttrs(c, { subject: 'Question about 1 Main St' }), words = mailText(c);
+  assert.match(a, /^href="\/contact\/" data-mail="[A-Za-z0-9+/=]+" data-mail-subject="Question about 1 Main St"$/);
+  assert.match(words, /^<span class="eml" data-mail-text="[A-Za-z0-9+/=]+">dan\.o&#39;neil\+web<span class="eml-at"><\/span>kw\.com<\/span>$/);
+  assert.doesNotMatch(a + words, /mailto:|@/);
+  assert.match(readTextFile(new URL('../public/assets/css/site.css', import.meta.url), 'utf8'), /\.eml-at::before \{ content: "@"; \}/);
+  const ed = { ...c, editMode: true };
+  assert.equal(mailAttrs(ed, { subject: 'Hi there' }), 'href="mailto:dan.o&#39;neil+web@kw.com?subject=Hi%20there"');
+  assert.match(mailText(ed), /data-edit="text" data-edit-key="site\.email"/);
+});
+
+test('whole website: Dan\'s address is never written in a mailto: link; with the new form on it is nowhere in the page code', async () => {
+  const { mainPages, extraPages } = await import('../scripts/build.mjs');
+  const { layout } = await import('../src/templates/layout.mjs');
+  const { luxLayout } = await import('../src/templates/luxury.mjs');
+  const P = await import('../src/templates/pages.mjs');
+  const content = await loadContent();
+  const addr = /danmckenna(@|%40|&#64;|&commat;)kw\.com/i;
+  const render = (site, theme, preview) => {
+    const ctx = { ...content, site, preview, siteUrl: preview ? '' : 'https://www.danmckennahomes.com', buildId: 't', url: (p) => p };
+    const page = theme === 'luxury' ? luxLayout : layout;
+    return [...mainPages(theme).map(([path, title, fn, opts]) => ({ path, html: page(ctx, { path, title, body: fn(ctx), ...opts }) })), ...extraPages(ctx, page),
+      { path: '/404', html: page(ctx, { path: '/404', title: 'Page not found', body: P.notFoundPage(ctx) }) }];
+  };
+  for (const theme of ['classic', 'luxury']) for (const preview of [false, true]) {
+    for (const { path, html } of render({ ...content.site, turnstileSiteKey: '0x4AAAAAAAtestkey' }, theme, preview)) {
+      assert.doesNotMatch(html, addr, `${theme} ${path}: address in the page code`);
+      assert.doesNotMatch(html, /mailto:|formsubmit/i, `${theme} ${path}`);
+    }
+    // Today (key not set yet): the only place the address may still be is the old form's FormSubmit link.
+    for (const { path, html } of render({ ...content.site, turnstileSiteKey: '' }, theme, preview)) {
+      assert.doesNotMatch(html, /mailto:/i, `${theme} ${path}`);
+      assert.doesNotMatch(html.replace(/https:\/\/formsubmit\.co\/(ajax\/)?danmckenna%40kw\.com/g, ''), addr, `${theme} ${path}`);
+    }
+  }
+  const contact = render({ ...content.site, turnstileSiteKey: 'k' }, 'classic', false).find((p) => p.path === '/contact/').html;
+  assert.match(contact, /<a class="btn" href="\/contact\/" data-mail="[^"]+">Email Dan<\/a>/, 'the Email Dan button is still a button');
+  assert.match(contact, /danmckenna<span class="eml-at"><\/span>kw\.com/, 'the address still reads normally');
+});
+
+test('site.json: turnstileSiteKey is a public Turnstile site key or empty; the secrets are not in the repository', async () => {
+  const c = await loadContent();
+  assert.match(c.site.turnstileSiteKey ?? '', /^(|0x[0-9A-Za-z_-]{10,40}|[123]x0{19}[0-9A-F]{2})$/);
+  const toml = readTextFile(new URL('../site/wrangler.toml', import.meta.url), 'utf8');
+  assert.doesNotMatch(toml.replace(/^\s*#.*$/gm, ''), /TURNSTILE_SECRET|CONTACT_TO|@kw\.com/, 'secrets and Dan\'s address are not in wrangler.toml');
+  assert.match(toml, /CONTACT_FROM = "form@danmckennahomes\.com"/); assert.match(toml, /CONTACT_SUBJECT = "New message from danmckennahomes\.com"/);
+});

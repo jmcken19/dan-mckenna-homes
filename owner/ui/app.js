@@ -364,7 +364,7 @@ function laptopOnlyScreen() {
 // "Website Editor" at the top always goes back to the Home page.
 document.querySelector('.bar__home')?.addEventListener('click', (e) => {
   store.set(KEYS.page, '/');
-  if (location.hash === '#/' || location.hash === '') { e.preventDefault(); route(); }
+  if (location.hash === '#/') { e.preventDefault(); route(); }
 });
 
 async function route() {
@@ -374,6 +374,8 @@ async function route() {
     return;
   }
   unsavedGuard = null; escHandler = null; busy.subs.clear(); toast.clear();
+  // Opening the editor (its plain address, no #…) starts on the start page; "#/" is editing on the page.
+  if (location.hash === '') history.replaceState(null, '', '#/home');
   route.last = location.hash;
   document.body.classList.remove('is-visual');
   const h = location.hash.replace(/^#\/?/, '');
@@ -382,6 +384,7 @@ async function route() {
       try { me = await api('GET', '/me'); } catch (e) { if (e.data?.laptopOnly) return laptopOnlyScreen(); throw e; }
       document.getElementById('who').textContent = `Signed in as ${me.email}`;
     }
+    if (h === 'home') return hubScreen();
     if (h === '') return await visualScreen();
     if (h === 'list') return startScreen();
     // Listings editing is switched off: Dan doesn't add listings himself.
@@ -507,7 +510,7 @@ async function visualScreen() {
         <select class="vis__select" id="pagesel">${pages.map((p) => `<option value="${esc(p.path)}">${esc(p.title)}</option>`).join('')}</select>
       </div>
       <p class="vis__help">Click any <strong>words</strong> or a <strong>✎ Change</strong> button, then <strong>Publish</strong>.</p>
-      <p class="vis__more"><a href="#/list">List view</a> · <a href="#/request">Request a change${me.role === 'maintainer' && me.openRequests ? ` (${me.openRequests} waiting)` : ''}</a> · Help: ${supportShort()}</p>
+      <p class="vis__more"><a href="#/home">Start page</a> · <a href="#/list">List view</a> · <a href="#/request">Request a change${me.role === 'maintainer' && me.openRequests ? ` (${me.openRequests} waiting)` : ''}</a> · Help: ${supportShort()}</p>
     </div>
     <div id="vmsg" class="vis__msg"></div>
     <div class="vis__body" id="vbody">
@@ -2054,6 +2057,37 @@ async function reviewEditScreen(slug, root = app, opts = {}) {
 }
 
 /* ---------------- change requests ---------------- */
+
+/* ---------- start page: everything in one place ---------- */
+// Opens first (the editor's plain address). Big links to: editing the website, the live website, asking for a
+// change, and the owner's other accounts (owner/wrangler.toml → MANAGE_LINKS, sent in /api/me → links).
+// Links only: the other accounts open in a new tab on their own sign-in pages; nothing about them is stored here.
+function hubScreen() {
+  const host = (u) => { try { return new URL(u).host.replace(/^www\./, ''); } catch { return ''; } };
+  const tile = ({ href, title, note, cls = '', out = false, sub = '' }) => `<li><a class="hub__tile ${cls}" href="${esc(href)}"${out ? ' target="_blank" rel="noopener"' : ''}>
+      <span class="hub__name">${esc(title)}${out ? ' <span class="hub__out" aria-hidden="true">↗</span>' : ''}</span>
+      <span class="hub__note">${esc(note)}</span>
+      ${sub ? `<span class="hub__sub">${esc(sub)}${out ? ' – opens in a new tab' : ''}</span>` : ''}
+    </a></li>`;
+  const siteUrl = me.site?.url || '';
+  const links = Array.isArray(me.links) ? me.links : [];
+  const waiting = me.role === 'maintainer' && me.openRequests ? ` (${me.openRequests} waiting)` : '';
+  setScreen(`<div class="hub">
+  <h1>Your website – everything in one place</h1>
+  <h2 class="section-h">Your website</h2>
+  <ul class="hub__grid">
+    ${tile({ href: '#/', title: 'Edit your website', note: 'Change words, photos and client reviews, right on the page.', cls: 'hub__tile--main' })}
+    ${siteUrl ? tile({ href: siteUrl + '/', title: 'See your website', note: 'The website as your visitors see it.', out: true, sub: host(siteUrl) }) : ''}
+    ${tile({ href: '#/request', title: `Request a change${waiting}`, note: `Something you can't change yourself? Ask ${me.support?.name || 'James'}.` })}
+  </ul>
+  ${links.length ? `<h2 class="section-h">Your accounts</h2>
+  <p class="hint">These open in a new tab. Each one has its own sign-in – your passwords are never kept in this editor.</p>
+  <ul class="hub__grid">
+    ${links.map((l) => tile({ href: l.url, title: l.name, note: l.note || '', out: true, sub: host(l.url) })).join('')}
+  </ul>` : ''}
+  <p class="hint hub__help">Not sure about something? Contact ${supportLine()}.</p>
+</div>`);
+}
 
 async function requestScreen() {
   const data = await api('GET', '/requests');

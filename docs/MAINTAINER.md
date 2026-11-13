@@ -204,12 +204,90 @@ node tests/acceptance-ui.mjs   # end-to-end against the real repo – pushes com
 * Placester: cancelled Nov 8, 2026.
 
 ## Contact form
-* "Or send Dan a message" (name, email, phone optional, message) under the Call/Text/Email buttons and on the
-  Contact page. Sent through **FormSubmit** (formsubmit.co: free, no account) to `contactFormTo` in
-  `content/site.json`. Off on the testing link (no lead collection there).
-* First message ever triggers a one-time **Activate Form** email to that address – Dan must click it.
-  After activation FormSubmit gives a random alias: put it in `contactFormTo` so Dan's address isn't in the page code.
-* If sending fails, visitors are told to call or text Dan instead.
+"Or send Dan a message" (name, email, phone optional, message) sits under the Call/Text/Email buttons and on the
+Contact page. Off on the testing link (no lead collection there). If sending fails, visitors are told to call or text.
+
+**Two ways it can work – the website picks by `content/site.json → turnstileSiteKey`:**
+
+| | Old way (key empty – **today**) | New way (key set) |
+|---|---|---|
+| Where the browser sends it | FormSubmit (formsubmit.co) | this site's own `POST /api/contact` (`site/contact.mjs`, in the `dmh-site` Worker) |
+| Dan's address in the page code | **yes** (`contactFormTo`) – bots read it and post straight to FormSubmit | **no** – it is the Worker secret `CONTACT_TO` |
+| Spam checks | hidden trap field, in the browser only | on the server: own-site only (Origin), Cloudflare Turnstile, trap field, sent under 3 s, more than 2 links, length limits, rate limit per IP |
+| Email sent by | FormSubmit | Cloudflare Email Routing (`send_email` binding) from `form@danmckennahomes.com`, Reply-To = the visitor, subject "New message from danmckennahomes.com", with the page they were on |
+| Without JavaScript | normal form post | the "please call or text" line (the form needs JavaScript for Turnstile) |
+
+Spam that is dropped quietly gets a normal "sent" reply, so bots learn nothing. Nothing is stored: a message is
+checked, emailed, and gone. `GET https://www.danmckennahomes.com/api/contact` answers `{"ready":true}` only when the
+Worker has both secrets, the email binding and a rate limiter.
+
+**Rate limit – which one is used.** The Workers Rate Limiting binding (`CONTACT_RATE` in `site/wrangler.toml`) is on:
+5 posts a minute per IP. That binding only allows 10- or 60-second windows, so it cannot do "5 an hour"; the hourly
+limit (5 messages an hour per IP) is a small KV counter that switches on when the `CONTACT_KV` binding is added
+(optional – commented in `site/wrangler.toml`).
+
+### Switching the new form on (in this order – the live form never breaks)
+**Ask James before step 2: it changes DNS/email for the domain.**
+1. Cloudflare dashboard (Dan's account) → **Turnstile** → **Add widget**: name "Dan McKenna Homes contact form",
+   hostnames `danmckennahomes.com` and `www.danmckennahomes.com`, mode **Managed**. Copy the **site key** and the
+   **secret key**.
+2. **Email Routing – read this first** (checked against Cloudflare's docs and the live DNS, 13 Nov 2026).
+   On the free plan the Worker may only send *from* a domain that is onboarded to Email Routing, and only *to*
+   verified destination addresses. `danmckennahomes.com` still has the 5 Google Workspace MX records
+   (`aspmx.l.google.com` …) and the SPF record `v=spf1 include:dc-aa8e722993._spfm.danmckennahomes.com ~all`.
+   While those MX records exist, Email Routing **refuses to switch on** (error 2008 "Non-Cloudflare MX records
+   exist") – they have to be deleted first, and deleting them **stops Google mail for every @danmckennahomes.com
+   address**. A subdomain does not get around this (subdomains are added under the already-onboarded main domain).
+   So first find out whether anyone receives mail @danmckennahomes.com (Google Admin → Users / ask Dan).
+   * **Nobody does** (mail is all @kw.com): DNS → delete the 5 Google MX records → Compute → Email Service →
+     **Email Routing** → **Onboard Domain** → `danmckennahomes.com` (it adds its own MX + DKIM records). Then edit the
+     existing SPF record by hand to add Cloudflare:
+     `v=spf1 include:_spf.mx.cloudflare.net include:dc-aa8e722993._spfm.danmckennahomes.com ~all`.
+   * **Somebody does:** stop – leave the MX records alone and keep the FormSubmit form. The choices then are the
+     Workers Paid plan ($5/month) with **Email Sending** (it only adds records under `cf-bounce.` plus a `_dmarc`
+     record – check that record against Google's sending before accepting it), or sending from another domain.
+3. Compute → Email Service → Email Routing → **Destination Addresses** → add `danmckenna@kw.com` → Dan opens the
+   email from Cloudflare and selects **Verify email address**. It must show as verified.
+4. Secrets, from `site/` (they are typed into the terminal, never into a file):
+   `npx wrangler secret put TURNSTILE_SECRET` (the secret key from step 1) and
+   `npx wrangler secret put CONTACT_TO` (`danmckenna@kw.com`).
+5. In `site/wrangler.toml` remove the `#` from the two `[[send_email]]` lines (and, for the hourly limit, create the
+   KV namespace and un-comment `CONTACT_KV`). Commit, push to `main`, wait for **Publish live website** ✓.
+6. Open `https://www.danmckennahomes.com/api/contact` → must say `{"ready":true}`. The website still shows the old form.
+7. Put the **site key** from step 1 in `content/site.json → "turnstileSiteKey"`. Commit, push. The deploy first checks
+   step 6 again and stops (nothing deployed) if the Worker is not ready. After it, the new form is live and
+   `contactFormTo` is no longer written into any page (delete that line from `site.json` once the test below passes).
+8. **Test:** on the live Contact page send one message as a visitor would (wait a few seconds before Send). You see
+   "Thank you! Your message was sent…"; Dan's inbox gets "New message from danmckennahomes.com" from
+   `form@danmckennahomes.com` (check spam the first time); **Reply** goes to the address typed in the form. Also send
+   one from the "Have a question?" box on another page and check the "Page:" line. If it says "Sorry…": Cloudflare →
+   Workers → dmh-site → Logs shows why (`contact: …`).
+
+**Back to the old form at any time:** set `turnstileSiteKey` to `""` and push.
+
+**If Dan's email address changes:** the website's address is `content/site.json → email` (he can change it in the
+editor); where form messages go is the `CONTACT_TO` secret – verify the new address as a destination (step 3), then
+`npx wrangler secret put CONTACT_TO`.
+
+### Email links
+Dan's address is not written in the page code any more (spam harvesters collect `mailto:` links and anything shaped
+like an address). `src/lib/mail.mjs` writes it scrambled; `public/assets/js/site.js` puts the real `mailto:` link and
+the readable address back when the page loads. Without JavaScript the address still reads normally (the "@" comes
+from the stylesheet) and the Email buttons go to the Contact page. Use `mailAttrs(ctx)` / `mailText(ctx)` for any new
+email link – `npm test` fails if a page contains `mailto:` or the address.
+
+## Editor start page (Nov 13, 2026)
+* The editor's plain address opens `#/home`: **Edit your website** (`#/`, editing on the page), **See your website**
+  (`PUBLIC_SITE_URL`), **Request a change**, and **Your accounts**.
+* **Your accounts** = `owner/wrangler.toml → MANAGE_LINKS`, a JSON list of `{ name, url, note }` (https links only,
+  at most 12; anything else is dropped by `owner/src/links.mjs`). They are plain links that open in a new tab – the
+  editor never signs in to them and no password or key belongs there. To add/remove one: edit the list, push
+  (the editor redeploys).
+* Today's list: Cloudflare (`dash.cloudflare.com`) and Formspree (`formspree.io/forms`). **The contact form is still
+  on FormSubmit** – the Formspree link shows Formspree's own sign-in until a Formspree account exists and the form
+  is moved to it.
+* A Cloudflare sign-in can change DNS and email records. Dan's own login is the account owner; keep that in mind
+  before pointing a client at it.
 
 ## Editor updates
 * `.github/workflows/editor.yml` deploys `owner/` (dmh-owner) when `owner/` or `src/` changes, using the same

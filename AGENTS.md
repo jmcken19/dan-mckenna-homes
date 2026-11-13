@@ -55,6 +55,8 @@ public/                      copied as-is into the site
   listings/<id>/             listing photos: <photoId>-1800.jpg and <photoId>-900.jpg
 src/lib/listing.mjs          listing rules + validation (shared by build, editor, tests)
 src/templates/               page HTML (layout.mjs, pages.mjs, listing.mjs)
+site/                        the live-site Worker: worker.mjs (headers, www forward) + contact.mjs (contact form endpoint, POST /api/contact)
+src/lib/mail.mjs             email links without the address in the page code – use mailAttrs()/mailText(), never a plain mailto:
 scripts/build.mjs            the build
 scripts/prepare-site-images.mjs  regenerates public/assets/img from assets-src/
 owner/                       the owner editor (Worker code, UI, D1 migration, wrangler.toml)

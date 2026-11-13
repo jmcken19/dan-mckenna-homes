@@ -4,6 +4,7 @@
 import { escapeHtml as e } from '../lib/listing.mjs';
 import { t, tText } from '../lib/text.mjs';
 import { ownedBy } from '../lib/editables.mjs';
+import { mailAttrs, mailText } from '../lib/mail.mjs';
 
 /** Main menu: the words of each item are content/text.json → "nav.<key>". */
 export const NAV = [
@@ -61,7 +62,7 @@ ${preview ? `<div class="preview-bar" role="note"${ownedBy(ctx, 'preview')}>Test
   <div class="wrap topbar__in">
     <a href="${e(site.phoneHref)}">${ICON.phone}<span>${t(ctx, 'site.phone')}</span></a>
     <span class="topbar__dot" aria-hidden="true">·</span>
-    <a href="mailto:${e(site.email)}">${ICON.mail}<span>${t(ctx, 'site.email')}</span></a>
+    <a ${mailAttrs(ctx)}>${ICON.mail}<span>${mailText(ctx)}</span></a>
   </div>
 </div>
 <header class="site-header">
@@ -93,7 +94,7 @@ ${body}
         <h2>${t(ctx, 'footer.contactTitle')}</h2>
         <ul>
           <li><a href="${e(site.phoneHref)}">${t(ctx, 'site.phone')}</a></li>
-          <li><a href="mailto:${e(site.email)}">${t(ctx, 'site.email')}</a></li>
+          <li><a ${mailAttrs(ctx)}>${mailText(ctx)}</a></li>
           <li>${t(ctx, 'site.agent')}, ${t(ctx, 'site.agentTitle')}</li>
           <li>${t(ctx, 'site.brokerage')}</li>
         </ul>
@@ -118,42 +119,69 @@ ${body}
  *  heading/about are only used by the listing pages (switched off since Nov 2026). */
 export function askBox(ctx, { heading = '', about = '' } = {}) {
   const { site } = ctx;
-  const subject = about ? `?subject=${encodeURIComponent('Question about ' + about)}` : '';
   return `<aside class="ask" aria-labelledby="ask-h">
   <h2 id="ask-h">${heading ? e(heading) : t(ctx, 'ask.title')}</h2>
   <p>${about ? `Ask Dan about <strong>${e(about)}</strong>.` : t(ctx, 'ask.note')}</p>
   <a class="btn btn--accent" href="${e(site.phoneHref)}">${t(ctx, 'ask.call')} ${t(ctx, 'site.phone')}</a>
   <a class="btn" href="${e(site.smsHref)}">${t(ctx, 'ask.text')}</a>
-  <a class="btn" href="mailto:${e(site.email)}${subject}">${t(ctx, 'ask.email')}</a>
+  <a class="btn" ${mailAttrs(ctx, { subject: about ? 'Question about ' + about : '' })}>${t(ctx, 'ask.email')}</a>
   ${contactForm(ctx, { id: 'ask', about })}
 </aside>`;
 }
 
 /**
- * "Send Dan a message" form. Messages go through FormSubmit (formsubmit.co, free, no account)
- * to site.contactFormTo. Off on testing previews (no lead collection there).
+ * "Send Dan a message" form.
+ *
+ * NEW WAY (when content/site.json has "turnstileSiteKey"): the form posts to this site's own /api/contact
+ * (site/contact.mjs in the dmh-site Worker), which checks a Cloudflare Turnstile token and emails Dan. No address
+ * is in the page. It needs JavaScript; without it the visitor sees the "please call or text" line instead.
+ * OLD WAY (until the key is set): FormSubmit (formsubmit.co) to site.contactFormTo – that address is in the page.
+ * Either way the form is off on testing previews (no lead collection there).
  */
 export function contactForm(ctx, { id = 'cf', about = '' } = {}) {
   const { site } = ctx;
-  if (!site.contactFormTo) return '';
-  const to = encodeURIComponent(site.contactFormTo);
+  const siteKey = site.turnstileSiteKey || '';
+  if (!siteKey && !site.contactFormTo) return '';
   const off = ctx.preview;
-  const next = ctx.siteUrl ? `${ctx.siteUrl.replace(/\/$/, '')}/contact/?sent=1` : '';
   const f = (name, label, type, opts = '') => `<div class="cform__field"><label for="${id}-${name}">${label}</label><input id="${id}-${name}" name="${name}" type="${type}" ${opts}></div>`;
-  return `<form class="cform" data-cform action="https://formsubmit.co/${to}" method="post" data-ajax="https://formsubmit.co/ajax/${to}">
-  <h3 class="cform__title">${t(ctx, 'form.title')}</h3>
-  ${off ? `<p class="cform__note"${ownedBy(ctx, 'preview')}>Testing preview – this form is switched off here.</p>` : ''}
-  ${f('name', t(ctx, 'form.name'), 'text', 'autocomplete="name" required maxlength="100"')}
+  const words = ` data-msg-ok="${e(tText(ctx, 'form.sent'))}" data-msg-bad="${e(tText(ctx, 'form.failed'))}"`;
+  const fields = `${f('name', t(ctx, 'form.name'), 'text', 'autocomplete="name" required maxlength="100"')}
   ${f('email', t(ctx, 'form.email'), 'email', 'autocomplete="email" required maxlength="200"')}
   ${f('phone', `${t(ctx, 'form.phone')} <span class="cform__opt">${t(ctx, 'form.optional')}</span>`, 'tel', 'autocomplete="tel" maxlength="40"')}
-  <div class="cform__field"><label for="${id}-message">${t(ctx, 'form.message')}</label><textarea id="${id}-message" name="message" rows="4" required maxlength="3000">${about ? e(`I have a question about ${about}.`) : ''}</textarea></div>
+  <div class="cform__field"><label for="${id}-message">${t(ctx, 'form.message')}</label><textarea id="${id}-message" name="message" rows="4" required maxlength="3000">${about ? e(`I have a question about ${about}.`) : ''}</textarea></div>`;
+  const trap = '<div class="cform__trap" aria-hidden="true"><label>Leave this empty<input type="text" name="_honey" tabindex="-1" autocomplete="off"></label></div>';
+  const note = off ? `<p class="cform__note"${ownedBy(ctx, 'preview')}>Testing preview – this form is switched off here.</p>` : '';
+  const send = `<button class="btn btn--accent cform__send" type="submit"${off && !ctx.editMode ? ' disabled' : ''}>${t(ctx, 'form.send')}</button>
+  <p class="cform__status" role="status" aria-live="polite"></p>`;
+
+  if (siteKey) {
+    // data-api / data-sitekey are left out on previews, so nothing can be sent from there.
+    return `<form class="cform cform--api" data-cform method="post"${off ? '' : ` data-api="/api/contact" data-sitekey="${e(siteKey)}"`}${words}>
+  <h3 class="cform__title">${t(ctx, 'form.title')}</h3>
+  ${note}
+  ${ctx.editMode ? '' : `<p class="cform__nojs">${t(ctx, 'form.failed')}</p>`}
+  <div class="cform__js">
+  ${fields}
+  <input type="hidden" name="_t" value="">
+  ${trap}
+  <div class="cform__check" data-turnstile></div>
+  ${send}
+  </div>
+</form>`;
+  }
+
+  const to = encodeURIComponent(site.contactFormTo);
+  const next = ctx.siteUrl ? `${ctx.siteUrl.replace(/\/$/, '')}/contact/?sent=1` : '';
+  return `<form class="cform" data-cform action="https://formsubmit.co/${to}" method="post" data-ajax="https://formsubmit.co/ajax/${to}"${words}>
+  <h3 class="cform__title">${t(ctx, 'form.title')}</h3>
+  ${note}
+  ${fields}
   <input type="hidden" name="_subject" value="New message from danmckennahomes.com">
   <input type="hidden" name="_template" value="table">
   <input type="hidden" name="_captcha" value="false">
   ${next ? `<input type="hidden" name="_next" value="${e(next)}">` : ''}
-  <div class="cform__trap" aria-hidden="true"><label>Leave this empty<input type="text" name="_honey" tabindex="-1" autocomplete="off"></label></div>
-  <button class="btn btn--accent cform__send" type="submit"${off && !ctx.editMode ? ' disabled' : ''}>${t(ctx, 'form.send')}</button>
-  <p class="cform__status" role="status" aria-live="polite"></p>
+  ${trap}
+  ${send}
 </form>`;
 }
 

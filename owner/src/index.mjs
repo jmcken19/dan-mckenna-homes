@@ -13,6 +13,7 @@ import { homepageRoutes, EDITOR_PAGES } from './homepage.mjs';
 import { reviewsRoutes } from './reviews.mjs';
 import { textRoutes } from './text.mjs';
 import textContent from '../../content/text.json';
+import { manageLinks } from './links.mjs';
 
 const JSON_HEADERS = { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' };
 const DAILY_LIMITS = { upload: 400, request: 30, publish: 120, save: 1000 };
@@ -84,7 +85,7 @@ async function handleApi(request, env, url, ctx) {
 
   if (parts[0] === 'me' && method === 'GET') {
     const open = user.role === 'maintainer' ? (await db.prepare("SELECT COUNT(*) AS n FROM requests WHERE status != 'done'").first())?.n || 0 : 0;
-    return json({ email: user.email, role: user.role, support: supportInfo(env), site: { url: publicBase(env) }, emailNotifications: emailConfigured(env), openRequests: open, pages: EDITOR_PAGES });
+    return json({ email: user.email, role: user.role, support: supportInfo(env), site: { url: publicBase(env) }, links: manageLinks(env), emailNotifications: emailConfigured(env), openRequests: open, pages: EDITOR_PAGES });
   }
   if (parts[0] === 'listings') {
     if (parts.length === 1 && method === 'GET') return json(await listListings(A));
@@ -142,6 +143,7 @@ function supportInfo(env) {
   return { name: env.SUPPORT_NAME || 'James McKenna', email: env.SUPPORT_EMAIL || '', phone: env.SUPPORT_PHONE || '' };
 }
 function publicBase(env) { return (env.PUBLIC_SITE_URL || '').replace(/\/$/, ''); }
+
 
 async function logEvent(A, action, listingId = null, detail = null) {
   await A.db.prepare('INSERT INTO events (at, actor, listing_id, action, detail) VALUES (?, ?, ?, ?, ?)')

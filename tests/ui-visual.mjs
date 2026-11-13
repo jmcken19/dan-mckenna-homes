@@ -25,8 +25,22 @@ try {
   const big = `${out}/new-slide.jpg`; writeFileSync(big, await testJpeg({ width: 3000, height: 2000, color: '#3a6ea5', label: 'NEW SLIDE' }));
   const portrait = `${out}/portrait.jpg`; writeFileSync(portrait, await testJpeg({ width: 1400, height: 1800, color: '#a5573a', label: 'NEW HEADSHOT' }));
 
-  // 1. Opens straight onto the page, with ✎ buttons on the editable parts only.
+  // 0. The editor's own address opens the start page: big links to the website, its editor and the owner's accounts.
   await page.goto(E.url + '/', { waitUntil: 'networkidle0' });
+  await page.waitForSelector('.hub');
+  assert.equal(await page.evaluate(() => location.hash), '#/home');
+  const tiles = await page.$$eval('.hub__tile', (a) => a.map((x) => ({ name: x.querySelector('.hub__name').textContent.replace('↗', '').trim(), href: x.getAttribute('href'), target: x.target, rel: x.rel, h: Math.round(x.getBoundingClientRect().height) })));
+  assert.deepEqual(tiles.map((t) => t.name), ['Edit your website', 'See your website', 'Request a change', 'Cloudflare', 'Formspree']);
+  assert.deepEqual(tiles.slice(3).map((t) => t.href), ['https://dash.cloudflare.com/', 'https://formspree.io/forms'], 'only the safe https links from MANAGE_LINKS');
+  for (const t of tiles) { assert.ok(t.h >= 48, `${t.name}: big enough to click`); if (/^https?:/.test(t.href)) assert.deepEqual([t.target, t.rel], ['_blank', 'noopener'], `${t.name} opens in a new tab`); }
+  assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, 'no sideways scrolling');
+  await shot('00-start-page');
+  await page.click('.hub__tile--main');
+  await page.waitForSelector('#frame');
+  assert.equal(await page.$eval('.vis__more a', (a) => a.textContent + '|' + a.getAttribute('href')), 'Start page|#/home', 'and a way back from the editor');
+
+  // 1. Opens straight onto the page, with ✎ buttons on the editable parts only.
+  await page.goto(E.url + '/?t=' + Date.now() + '#/', { waitUntil: 'networkidle0' });
   let f = await waitFrame(() => document.querySelectorAll('.jte-pen').length >= 2);
   const pens = await f.$$eval('.jte-pen', (a) => a.map((x) => x.textContent));
   assert.ok(pens.includes('✎ Change slideshow'), 'slideshow has a ✎ button: ' + pens);

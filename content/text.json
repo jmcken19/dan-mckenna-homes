@@ -47,6 +47,8 @@
     "form.optional": "(optional)",
     "form.message": "Message",
     "form.send": "Send message",
+    "form.sent": "Thank you! Your message was sent. Dan will get back to you soon.",
+    "form.failed": "Sorry, your message could not be sent right now. Please call or text Dan instead.",
     "home.call": "Call Dan",
     "hero.pause": "Pause slideshow",
     "home.reviewsTitle": "What Clients Say About Working With Us",

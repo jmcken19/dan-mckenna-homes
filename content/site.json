@@ -34,5 +34,6 @@
   "heroSlideSeconds": 7,
   "heroFade": false,
   "heroAutoplay": true,
-  "contactFormTo": "danmckenna@kw.com"
+  "contactFormTo": "danmckenna@kw.com",
+  "turnstileSiteKey": ""
 }

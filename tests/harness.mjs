@@ -126,6 +126,12 @@ export async function startEditor({ resend = true, port, mirror = null, siteUrl 
       PUBLIC_SITE_URL: siteUrl, ACCESS_TEAM_DOMAIN: TEAM, ACCESS_AUD: AUD,
       OWNER_EMAILS: OWNER, MAINTAINER_EMAILS: MAINT, NOTIFY_TO: MAINT,
       SUPPORT_NAME: 'James', SUPPORT_EMAIL: MAINT, SUPPORT_PHONE: '555-0100',
+      MANAGE_LINKS: JSON.stringify([
+        { name: 'Cloudflare', url: 'https://dash.cloudflare.com/', note: 'Where your website is kept.' },
+        { name: 'Formspree', url: 'https://formspree.io/forms', note: 'Messages from your contact form.' },
+        { name: 'Not https', url: 'http://insecure.example/' }, { name: 'Script', url: 'javascript:alert(1)' }, { name: '', url: 'https://noname.example/' },
+        { name: 'Has a password', url: 'https://user:pw@example.com/' },
+      ]),
       ...(resend ? { RESEND_API_KEY: 're_test' } : {}),
     },
     serviceBindings: {

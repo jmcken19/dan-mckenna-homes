@@ -295,3 +295,16 @@ body.is-visual #toast { display: none; }
 .jte-tbar__note { color: #4a4a55; font-size: .98rem !important; }
 .jte-tbar [data-save] { background: #1d5fc4; border-color: #1d5fc4; color: #fff; } /* Save is blue – only Publish uses the brand colour */
 .jte-tbar [data-save]:hover { background: #174ea0; }
+
+/* Start page (#/home): big links to everything the owner manages */
+.hub__grid { list-style: none; margin: .75rem 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1rem; }
+.hub__tile { display: flex; flex-direction: column; gap: .35rem; height: 100%; box-sizing: border-box; min-height: 132px; padding: 1.1rem 1.25rem; border: 2px solid var(--line); border-radius: 12px; background: #fff; color: var(--ink); text-decoration: none; }
+.hub__tile:hover { border-color: var(--brand); background: var(--brand-tint); }
+.hub__tile:focus-visible { outline: 3px solid var(--brand); outline-offset: 2px; }
+.hub__tile--main { background: var(--brand); border-color: var(--brand); color: #fff; }
+.hub__tile--main:hover { background: var(--brand-dark); border-color: var(--brand-dark); }
+.hub__tile--main:focus-visible { outline-color: var(--ink); }
+.hub__name { font-size: 1.35rem; font-weight: 700; line-height: 1.25; }
+.hub__note { font-size: 1.05rem; line-height: 1.4; }
+.hub__sub { margin-top: auto; padding-top: .4rem; font-size: .95rem; color: var(--soft); word-break: break-word; }
+.hub__help { margin-top: 2rem; }

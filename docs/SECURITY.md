@@ -1,6 +1,6 @@
 # Security review
 
-Architecture: static public site (no server code, no forms) + owner editor Worker behind Cloudflare
+Architecture: static public site (its only server code is the contact form endpoint, `site/contact.mjs`) + owner editor Worker behind Cloudflare
 Access. Only the Worker can write, and only to this repo.
 
 Legend: **Tested** = automated test or acceptance run · **Host** = provided by Cloudflare/GitHub ·
@@ -33,7 +33,10 @@ Legend: **Tested** = automated test or acceptance run · **Host** = provided by 
 | Production config | `PREVIEW=1` only in the Pages workflow; production build omits it (indexable, canonical, sitemap) | Reviewed |
 | Duplicate submissions | Idempotency keys on create/upload/publish/requests; buttons disabled while sending | Tested |
 | Silent overwrites | Optimistic revision check on every save (409 + "Reload latest"); publish lock; non-forced Git ref update with retry | Tested |
-| Visitor personal data | None collected on preview (no form). **Launch:** if a lead form is added, deliver to an authorized inbox and verify with a test before calling it ready | N/A now |
+| Visitor personal data (contact form) | Off on previews. Nothing is stored: a message is checked and emailed to the owner, then gone. **Old way** (until `turnstileSiteKey` is set): the browser posts straight to FormSubmit; the owner's address is in the page code; trap field only. **New way:** `POST /api/contact` on the site Worker – JSON only, own Origin only, Cloudflare Turnstile verified server-side, trap field / under-3-seconds / more-than-2-links / over-length dropped quietly (reply looks like "sent"), rate limit per IP (Rate Limiting binding 5/min; optional KV counter 5/hour), sent by Cloudflare Email Routing to the verified address in the `CONTACT_TO` secret. Replies only ever contain `{success}` / `{ready}` – never an address or a reason | Tested (`tests/contact.test.mjs`, `tests/site-worker.test.mjs`) · **verify delivery with a real test after switching on** (docs/MAINTAINER.md) |
+| Email header injection | Visitor text never reaches a header except Reply-To, which must match a strict one-line address pattern; body is base64 | Tested |
+| Address harvesting | No `mailto:` link or written-out address in the page code; `src/lib/mail.mjs` scrambles it and `site.js` restores it for people | Tested |
+| Secrets (site Worker) | `TURNSTILE_SECRET`, `CONTACT_TO`: Worker secrets only (`wrangler secret put`), never in the repo. The Turnstile **site** key in `site.json` is public by design | Tested (not in `wrangler.toml`) |
 | Private material in public repo | Only published listings and their stripped photos are committed | Reviewed |
 
 Suggested `public/_headers` for Cloudflare Pages at launch:

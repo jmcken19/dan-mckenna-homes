@@ -4,6 +4,7 @@
 import { escapeHtml as e, STATUS_LABEL } from '../lib/listing.mjs';
 import { t, tBlock, tList, tText } from '../lib/text.mjs';
 import { pageWithSidebar, askBox, contactForm } from './layout.mjs';
+import { mailAttrs, mailText } from '../lib/mail.mjs';
 import { listingCard } from './listing.mjs';
 import { sitePhoto, PHOTO_SPOTS } from '../lib/photos.mjs';
 import { editMark, ownedBy } from '../lib/editables.mjs';
@@ -94,7 +95,7 @@ export function listingsIndexPage(ctx) {
   const empty = anyCurrent ? '' : `<div class="empty">
     <h2>No homes listed here right now</h2>
     <p>Dan's new listings appear on this page as soon as they hit the market. Looking for something specific? Call or text Dan and tell him what you're looking for.</p>
-    <p><a class="btn btn--accent" href="${e(site.phoneHref)}">Call ${e(site.phone)}</a> <a class="btn" href="mailto:${e(site.email)}">Email Dan</a></p>
+    <p><a class="btn btn--accent" href="${e(site.phoneHref)}">Call ${e(site.phone)}</a> <a class="btn" ${mailAttrs(ctx)}>Email Dan</a></p>
   </div>`;
   return `<div class="wrap page page--wide">
   <div class="page__main">
@@ -226,12 +227,12 @@ export function contactPage(ctx) {
         <p>${t(ctx, 'contact.license')}<br>${t(ctx, 'site.brokerage')}</p>
         <dl class="contact-list">
           <div><dt>${t(ctx, 'contact.mobile')}</dt><dd><a href="${e(site.phoneHref)}">${t(ctx, 'site.phone')}</a></dd></div>
-          <div><dt>${t(ctx, 'contact.email')}</dt><dd><a href="mailto:${e(site.email)}">${t(ctx, 'site.email')}</a></dd></div>
+          <div><dt>${t(ctx, 'contact.email')}</dt><dd><a ${mailAttrs(ctx)}>${mailText(ctx)}</a></dd></div>
         </dl>
         <p class="contact-actions">
           <a class="btn btn--accent" href="${e(site.phoneHref)}">${t(ctx, 'contact.call')}</a>
           <a class="btn" href="${e(site.smsHref)}">${t(ctx, 'contact.text')}</a>
-          <a class="btn" href="mailto:${e(site.email)}">${t(ctx, 'contact.emailButton')}</a>
+          <a class="btn" ${mailAttrs(ctx)}>${t(ctx, 'contact.emailButton')}</a>
         </p>
       </div>
     </div>
@@ -248,7 +249,7 @@ export function accessibilityPage(ctx) {
     content: `<h2>${t(ctx, 'accessibility.commitment.title')}</h2>
 ${tBlock(ctx, 'accessibility.commitment.text')}
 <h2>${t(ctx, 'accessibility.help.title')}</h2>
-<p>${t(ctx, 'accessibility.help.call')} <a href="${e(site.phoneHref)}">${t(ctx, 'site.phone')}</a> ${t(ctx, 'accessibility.help.orEmail')} <a href="mailto:${e(site.email)}">${t(ctx, 'site.email')}</a> ${t(ctx, 'accessibility.help.after')}</p>
+<p>${t(ctx, 'accessibility.help.call')} <a href="${e(site.phoneHref)}">${t(ctx, 'site.phone')}</a> ${t(ctx, 'accessibility.help.orEmail')} <a ${mailAttrs(ctx)}>${mailText(ctx)}</a> ${t(ctx, 'accessibility.help.after')}</p>
 <p>${t(ctx, 'accessibility.ssa.before')} <a href="https://www.ssa.gov/accessibility/">${t(ctx, 'accessibility.ssa.link')}</a> ${t(ctx, 'accessibility.ssa.after')}</p>`,
   });
 }
@@ -257,7 +258,7 @@ export function dmcaPage(ctx) {
   const { site } = ctx;
   return pageWithSidebar(ctx, {
     heading: t(ctx, 'dmca.title'),
-    content: `<p>${t(ctx, 'dmca.before')} ${t(ctx, 'site.agent')} ${t(ctx, 'dmca.at')} <a href="mailto:${e(site.email)}">${t(ctx, 'site.email')}</a> ${t(ctx, 'dmca.or')} <a href="${e(site.phoneHref)}">${t(ctx, 'site.phone')}</a> ${t(ctx, 'dmca.after')}</p>`,
+    content: `<p>${t(ctx, 'dmca.before')} ${t(ctx, 'site.agent')} ${t(ctx, 'dmca.at')} <a ${mailAttrs(ctx)}>${mailText(ctx)}</a> ${t(ctx, 'dmca.or')} <a href="${e(site.phoneHref)}">${t(ctx, 'site.phone')}</a> ${t(ctx, 'dmca.after')}</p>`,
   });
 }
 

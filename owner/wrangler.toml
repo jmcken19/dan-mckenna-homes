@@ -29,6 +29,12 @@ PUBLIC_SITE_URL = "https://www.danmckennahomes.com"
 ACCESS_TEAM_DOMAIN = "gentle-rice-8ea1.cloudflareaccess.com"
 ACCESS_AUD = "5110328a91ad0b4542aa6f0382d1306a0d35b99aef690e3e1fe8b10f93599da3"
 SUPPORT_NAME = "James McKenna"
+# Dan's other accounts, shown as links on the editor's start page ("Your accounts"). Links only – no passwords here,
+# ever. A JSON list of { name, url (https), note }. Add, remove or reorder freely; pushing redeploys the editor.
+MANAGE_LINKS = '''[
+  { "name": "Cloudflare", "url": "https://dash.cloudflare.com/", "note": "Where your website and its address (danmckennahomes.com) are kept." },
+  { "name": "Formspree", "url": "https://formspree.io/forms", "note": "Messages sent from your website's contact form." }
+]'''
 
 # Private settings – set with `npx wrangler secret put NAME` (kept out of this public repo):
 #   GITHUB_TOKEN       fine-grained token, this repo only (Contents RW, Actions RW)
