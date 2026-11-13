@@ -231,17 +231,23 @@ limit (5 messages an hour per IP) is a small KV counter that switches on when th
 1. Cloudflare dashboard (Dan's account) → **Turnstile** → **Add widget**: name "Dan McKenna Homes contact form",
    hostnames `danmckennahomes.com` and `www.danmckennahomes.com`, mode **Managed**. Copy the **site key** and the
    **secret key**.
-2. **Email Routing – read this first.** `danmckennahomes.com` has Google Workspace mail records (5 MX + SPF, see "Live
-   website" above). Switching Email Routing on for the domain itself wants to **replace those MX records, which stops
-   Google mail for every @danmckennahomes.com address**. Before touching it, confirm whether anyone still receives mail
-   there (Google Admin → Users; or `dig MX danmckennahomes.com`).
-   * Nobody does (mail is all @kw.com): Email Routing can be switched on for the domain (zone → Email → Email
-     Routing → Get started; let it add its MX/SPF records and remove the Google ones).
-   * Somebody does: **do not** switch it on for the domain. Use a subdomain instead (Email Routing → Settings →
-     Subdomains → add e.g. `mail.danmckennahomes.com`) and set `CONTACT_FROM = "form@mail.danmckennahomes.com"` in
-     `site/wrangler.toml`. The Google records on the main domain stay untouched.
-3. Email Routing → **Destination addresses** → add `danmckenna@kw.com` → Dan clicks the link in the email from
-   Cloudflare ("Verify email address"). It must show **Verified**.
+2. **Email Routing – read this first** (checked against Cloudflare's docs and the live DNS, 13 Nov 2026).
+   On the free plan the Worker may only send *from* a domain that is onboarded to Email Routing, and only *to*
+   verified destination addresses. `danmckennahomes.com` still has the 5 Google Workspace MX records
+   (`aspmx.l.google.com` …) and the SPF record `v=spf1 include:dc-aa8e722993._spfm.danmckennahomes.com ~all`.
+   While those MX records exist, Email Routing **refuses to switch on** (error 2008 "Non-Cloudflare MX records
+   exist") – they have to be deleted first, and deleting them **stops Google mail for every @danmckennahomes.com
+   address**. A subdomain does not get around this (subdomains are added under the already-onboarded main domain).
+   So first find out whether anyone receives mail @danmckennahomes.com (Google Admin → Users / ask Dan).
+   * **Nobody does** (mail is all @kw.com): DNS → delete the 5 Google MX records → Compute → Email Service →
+     **Email Routing** → **Onboard Domain** → `danmckennahomes.com` (it adds its own MX + DKIM records). Then edit the
+     existing SPF record by hand to add Cloudflare:
+     `v=spf1 include:_spf.mx.cloudflare.net include:dc-aa8e722993._spfm.danmckennahomes.com ~all`.
+   * **Somebody does:** stop – leave the MX records alone and keep the FormSubmit form. The choices then are the
+     Workers Paid plan ($5/month) with **Email Sending** (it only adds records under `cf-bounce.` plus a `_dmarc`
+     record – check that record against Google's sending before accepting it), or sending from another domain.
+3. Compute → Email Service → Email Routing → **Destination Addresses** → add `danmckenna@kw.com` → Dan opens the
+   email from Cloudflare and selects **Verify email address**. It must show as verified.
 4. Secrets, from `site/` (they are typed into the terminal, never into a file):
    `npx wrangler secret put TURNSTILE_SECRET` (the secret key from step 1) and
    `npx wrangler secret put CONTACT_TO` (`danmckenna@kw.com`).
